@@ -17,7 +17,7 @@ import { MenuSelect } from '../components/ui/MenuSelect'
 import { paragraphStarts, computeSelectionRange, splitParagraph, flatText } from '../lib/offsets'
 import { formatDate } from '../data'
 import { formatTimeOnly } from '../lib/export'
-import { HL_COLORS, HL_COLOR_LABELS, type HighlightColor, type ReaderSettings } from '../types'
+import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS, type Annotation, type AnnotationKind, type HighlightColor, type ReaderSettings, type UnderlineStyle } from '../types'
 
 interface PopoverState {
   x: number
@@ -74,10 +74,11 @@ export function ReadingPage() {
   const popoverRef = useRef<HTMLDivElement>(null)
   const annPopoverRef = useRef<HTMLDivElement>(null)
   const [popover, setPopover] = useState<PopoverState | null>(null)
-  const [annPopover, setAnnPopover] = useState<{ ids: string[]; x: number; y: number } | null>(null)
+  const [annPopover, setAnnPopover] = useState<{ ids: string[]; x: number; y: number; below?: boolean } | null>(null)
   const [pendingNote, setPendingNote] = useState<PendingNote | null>(null)
   const [hlColor, setHlColor] = useState<HighlightColor>('yellow')
-  const [openNoteId, setOpenNoteId] = useState<string | null>(null)
+  const [ulStyle, setUlStyle] = useState<UnderlineStyle>('solid')
+  const [openNoteIds, setOpenNoteIds] = useState<Set<string>>(new Set())
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [percent, setPercent] = useState(0)
@@ -254,45 +255,63 @@ export function ReadingPage() {
   }, [starts, hidePopover, hideAnnPopover])
 
   /** 添加标注；与现有同类型标注重叠时合并为并集区间，避免一段文字叠多条 */
-  const applyMark = (kind: 'highlight' | 'underline', color?: HighlightColor) => {
-    if (!article || !popover) return
-    const { start, end } = popover
+  const applyMark = (
+    kind: 'highlight' | 'underline',
+    opts?: { color?: HighlightColor; underlineStyle?: UnderlineStyle },
+  ): { id: string; x: number; y: number } | null => {
+    if (!article || !popover) return null
+    const { start, end, x, y } = popover
     const overlapped = articleAnnotations.filter(
       (a) => a.kind === kind && a.start < end && a.end > start,
     )
+    const base = {
+      articleId: article.id,
+      kind,
+      ...(opts?.color ? { color: opts.color } : {}),
+      ...(kind === 'underline' ? { underlineStyle: opts?.underlineStyle ?? 'solid' } : {}),
+    }
+    let created
     if (overlapped.length > 0) {
       const s = Math.min(start, ...overlapped.map((a) => a.start))
       const e = Math.max(end, ...overlapped.map((a) => a.end))
       removeMany(overlapped.map((a) => a.id))
-      addAnnotation({
-        articleId: article.id,
-        kind,
-        ...(color ? { color } : {}),
-        text: flatText(article.content).slice(s, e),
-        start: s,
-        end: e,
-      })
+      created = addAnnotation({ ...base, text: flatText(article.content).slice(s, e), start: s, end: e })
     } else {
-      addAnnotation({
-        articleId: article.id,
-        kind,
-        ...(color ? { color } : {}),
-        text: popover.text,
-        start,
-        end,
-      })
+      created = addAnnotation({ ...base, text: popover.text, start, end })
     }
     window.getSelection()?.removeAllRanges()
     hidePopover()
+    return { id: created.id, x, y }
   }
 
   const applyHighlight = (color: HighlightColor) => {
     setHlColor(color)
-    applyMark('highlight', color)
+    const created = applyMark('highlight', { color })
+    // 加完高亮立即弹出管理菜单（含删除高亮）
+    if (created) openAnnPopover([created.id], created.x, created.y)
   }
 
-  const applyUnderline = () => {
-    applyMark('underline')
+  const applyUnderline = (style?: UnderlineStyle) => {
+    const s = style ?? ulStyle
+    setUlStyle(s)
+    const created = applyMark('underline', { underlineStyle: s })
+    // 加完下划线立即弹出管理菜单（含删除下划线）
+    if (created) openAnnPopover([created.id], created.x, created.y)
+  }
+
+  /** 删除正在编辑且内容为空的笔记（没填就不保留） */
+  const removeEmptyDraftNote = () => {
+    if (!editingNoteId) return
+    const ann = articleAnnotations.find((a) => a.id === editingNoteId)
+    if (ann?.kind === 'note' && !(ann.noteText ?? '').trim()) {
+      removeAnnotation(ann.id)
+      setEditingNoteId(null)
+      setOpenNoteIds((cur) => {
+        const next = new Set(cur)
+        next.delete(ann.id)
+        return next
+      })
+    }
   }
 
   const startNote = () => {
@@ -302,45 +321,164 @@ export function ReadingPage() {
     hidePopover()
   }
 
-  /** 点击正文中的高亮/划线，弹出删除操作 */
+  /** 打开管理菜单：默认在选区上方，上方放不下则翻到下方 */
+  const openAnnPopover = (ids: string[], x: number, y: number) => {
+    const bodyRect = bodyRef.current?.getBoundingClientRect()
+    const below = bodyRect ? bodyRect.top + y - 100 < 0 : false
+    setAnnPopover({ ids, x, y, below })
+  }
+
+  /** 点击正文中的标注，弹出管理操作（切颜色 / 加下划线 / 加笔记 / 删除） */
   const showAnnActions = (e: React.MouseEvent<HTMLSpanElement>) => {
     e.stopPropagation()
+    removeEmptyDraftNote()
     const ids = (e.currentTarget.dataset.annIds ?? '').split(',').filter(Boolean)
     if (ids.length === 0) return
     const rect = e.currentTarget.getBoundingClientRect()
     const bodyRect = bodyRef.current?.getBoundingClientRect()
     if (!bodyRect) return
-    setAnnPopover({
-      ids,
-      x: rect.left + rect.width / 2 - bodyRect.left,
-      y: rect.top - bodyRect.top,
+    openAnnPopover(ids, rect.left + rect.width / 2 - bodyRect.left, rect.top - bodyRect.top)
+  }
+
+  /** 按类型删除该段标注（高亮/下划线/笔记单独删） */
+  const deleteAnnKind = (kind: AnnotationKind) => {
+    if (!annPopover) return
+    const targets = annPopover.ids
+      .map((id) => articleAnnotations.find((a) => a.id === id))
+      .filter((a): a is Annotation => a !== undefined && a.kind === kind)
+    removeMany(targets.map((a) => a.id))
+    setAnnPopover(null)
+    // 只关闭被删除的笔记，其他笔记保持展开
+    setOpenNoteIds((cur) => {
+      const next = new Set(cur)
+      targets.forEach((a) => {
+        if (a.kind === 'note') next.delete(a.id)
+      })
+      return next
     })
   }
 
-  const deleteAnn = () => {
+  /** 从管理面板打开该段文字的笔记 */
+  const viewAnnNote = () => {
     if (!annPopover) return
-    removeMany(annPopover.ids)
+    const noteIds = annPopover.ids
+      .map((id) => articleAnnotations.find((a) => a.id === id))
+      .filter((a) => a?.kind === 'note')
+      .map((a) => a!.id)
+    if (noteIds.length > 0) {
+      setOpenNoteIds((cur) => new Set([...cur, ...noteIds]))
+    }
     setAnnPopover(null)
-    setOpenNoteId(null)
+  }
+
+  /** 管理弹出层：id 集合内是否已有某类标注 */
+  const annPopoverHas = (kind: AnnotationKind) =>
+    annPopover
+      ? annPopover.ids.some((id) => articleAnnotations.find((a) => a.id === id)?.kind === kind)
+      : false
+
+  const annPopoverFirst = (kind: AnnotationKind) => {
+    if (!annPopover) return undefined
+    for (const id of annPopover.ids) {
+      const a = articleAnnotations.find((x) => x.id === id)
+      if (a?.kind === kind) return a
+    }
+    return undefined
+  }
+
+  /** 切换高亮颜色 / 下划线样式（点击已有标注后） */
+  const switchAnnColor = (color: HighlightColor) => {
+    const a = annPopoverFirst('highlight')
+    if (a) updateAnnotation(a.id, { color })
+  }
+
+  const switchAnnUnderlineStyle = (style: UnderlineStyle) => {
+    const a = annPopoverFirst('underline')
+    if (a) updateAnnotation(a.id, { underlineStyle: style })
+  }
+
+
+  /** 在已有标注的文字上追加其他标注类型 */
+  const addKindToAnn = (
+    kind: 'highlight' | 'underline' | 'note',
+    opts?: { color?: HighlightColor; underlineStyle?: UnderlineStyle },
+  ) => {
+    if (!article || !annPopover) return
+    removeEmptyDraftNote()
+    // 段内任意标注都可作为取区间依据（纯笔记段也能继续加高亮/下划线/笔记）
+    const primary = annPopover.ids
+      .map((id) => articleAnnotations.find((a) => a.id === id))
+      .find(Boolean)
+    if (!primary) return
+    if (
+      kind !== 'note' &&
+      articleAnnotations.some((a) => a.kind === kind && a.start < primary.end && a.end > primary.start)
+    ) {
+      return
+    }
+    const text = flatText(article.content).slice(primary.start, primary.end)
+    if (kind === 'note') {
+      // 创建笔记并直接进入编辑（聚焦文本框，可立即输入）；同时展开该段全部笔记
+      const n = addAnnotation({
+        articleId: article.id,
+        kind: 'note',
+        text,
+        start: primary.start,
+        end: primary.end,
+        noteText: '',
+      })
+      const noteIds = articleAnnotations
+        .filter((a) => a.kind === 'note' && a.start < primary.end && a.end > primary.start)
+        .map((a) => a.id)
+      setOpenNoteIds((cur) => new Set([...cur, ...noteIds, n.id]))
+      setEditingNoteId(n.id)
+      setNoteDraft('')
+      setAnnPopover(null)
+    } else {
+      addAnnotation({
+        articleId: article.id,
+        kind,
+        ...(kind === 'underline' ? { underlineStyle: opts?.underlineStyle ?? 'solid' } : {}),
+        ...(kind === 'highlight' && opts?.color ? { color: opts.color } : {}),
+        text,
+        start: primary.start,
+        end: primary.end,
+      })
+    }
   }
 
   const saveNote = () => {
     if (!article || !pendingNote) return
+    const content = noteDraft.trim()
+    if (!content) {
+      // 内容为空：不保存笔记
+      setPendingNote(null)
+      setNoteDraft('')
+      return
+    }
     const ann = addAnnotation({
       articleId: article.id,
       kind: 'note',
       text: pendingNote.text,
       start: pendingNote.start,
       end: pendingNote.end,
-      noteText: noteDraft.trim(),
+      noteText: content,
     })
     setPendingNote(null)
     setNoteDraft('')
-    setOpenNoteId(ann.id)
+    setOpenNoteIds((cur) => new Set(cur).add(ann.id))
   }
 
-  const toggleNote = (id: string) => {
-    setOpenNoteId((cur) => (cur === id ? null : id))
+  /** 展开/收起某段文字的全部笔记 */
+  const toggleSegmentNotes = (ids: string[]) => {
+    removeEmptyDraftNote()
+    setOpenNoteIds((cur) => {
+      const next = new Set(cur)
+      const allOpen = ids.every((id) => cur.has(id))
+      if (allOpen) ids.forEach((id) => next.delete(id))
+      else ids.forEach((id) => next.add(id))
+      return next
+    })
     setEditingNoteId(null)
   }
 
@@ -350,7 +488,17 @@ export function ReadingPage() {
   }
 
   const saveEditNote = (id: string) => {
-    updateAnnotation(id, { noteText: noteDraft.trim() })
+    const content = noteDraft.trim()
+    if (!content) {
+      removeAnnotation(id)
+      setOpenNoteIds((cur) => {
+        const next = new Set(cur)
+        next.delete(id)
+        return next
+      })
+    } else {
+      updateAnnotation(id, { noteText: content })
+    }
     setEditingNoteId(null)
     setNoteDraft('')
   }
@@ -402,36 +550,41 @@ export function ReadingPage() {
                     {segments.map((seg, j) => {
                       if (seg.annotations.length === 0) return <Fragment key={j}>{seg.text}</Fragment>
                       const note = seg.annotations.find((a) => a.kind === 'note')
-                      if (note) {
-                        return (
+                      const anns = seg.annotations.filter((a) => a.kind !== 'note')
+                      const cls = [
+                        note ? 'note-mark' : '',
+                        ...anns.map((a) =>
+                          a.kind === 'highlight'
+                            ? `highlighted hl-${a.color ?? 'yellow'}`
+                            : `underlined${a.underlineStyle && a.underlineStyle !== 'solid' ? ` ul-${a.underlineStyle}` : ''}`,
+                        ),
+                      ]
+                        .filter(Boolean)
+                        .join(' ')
+                      return (
+                        <span className="note-wrap" key={j}>
                           <span
-                            key={j}
-                            className="note-mark"
-                            onClick={() => toggleNote(note.id)}
-                            role="button"
-                            tabIndex={0}
+                            className={cls}
+                            data-ann-ids={seg.annotations.map((a) => a.id).join(',')}
+                            onClick={showAnnActions}
+                            title="点击管理标注"
                           >
                             {seg.text}
                           </span>
-                        )
-                      }
-                      const anns = seg.annotations.filter((a) => a.kind !== 'note')
-                      const cls = anns
-                        .map((a) =>
-                          a.kind === 'highlight'
-                            ? `highlighted hl-${a.color ?? 'yellow'}`
-                            : 'underlined',
-                        )
-                        .join(' ')
-                      return (
-                        <span
-                          key={j}
-                          className={cls}
-                          data-ann-ids={anns.map((a) => a.id).join(',')}
-                          onClick={showAnnActions}
-                          title="点击管理此标注"
-                        >
-                          {seg.text}
+                          {note && (
+                            <span
+                              className="note-star"
+                              onClick={() =>
+                                toggleSegmentNotes(
+                                  seg.annotations.filter((a) => a.kind === 'note').map((a) => a.id),
+                                )
+                              }
+                              title="展开/收起笔记"
+                              aria-label="展开/收起笔记"
+                            >
+                              ✦
+                            </span>
+                          )}
                         </span>
                       )
                     })}
@@ -455,7 +608,7 @@ export function ReadingPage() {
                   )}
 
                   {openNotes.map((n) => (
-                    <div className={`inline-note${openNoteId === n.id ? ' show' : ''}`} key={n.id}>
+                    <div className={`inline-note${openNoteIds.has(n.id) ? ' show' : ''}`} key={n.id}>
                       <div className="note-head">
                         <span>NOTE　/　{formatTimeOnly(n.createdAt)}</span>
                         <span>
@@ -510,10 +663,21 @@ export function ReadingPage() {
                   />
                 ))}
               </div>
+              <div className="ul-dots">
+                {UNDERLINE_STYLES.map((st) => (
+                  <button
+                    key={st}
+                    className={`ul-dot ${st}${ulStyle === st ? ' active' : ''}`}
+                    onClick={() => applyUnderline(st)}
+                    title={`下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
+                    aria-label={`下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
+                  />
+                ))}
+              </div>
               <button onClick={() => applyHighlight(hlColor)}>
                 <Highlighter size={12} /> 高亮
               </button>
-              <button onClick={applyUnderline}>
+              <button onClick={() => applyUnderline(ulStyle)}>
                 <UnderlineIcon size={12} /> 下划线
               </button>
               <button onClick={startNote}>
@@ -521,15 +685,69 @@ export function ReadingPage() {
               </button>
             </div>
 
-            {/* 标注操作（点击高亮/划线后出现） */}
+            {/* 标注管理（点击高亮/划线后出现） */}
             <div
-              className={`selection-popover ann-popover${annPopover ? ' show' : ''}`}
+              className={`selection-popover ann-popover${annPopover ? ' show' : ''}${annPopover?.below ? ' below' : ''}`}
               ref={annPopoverRef}
               style={annPopover ? { left: annPopover.x, top: annPopover.y } : undefined}
             >
-              <span className="ann-popover-label">已标注</span>
-              <button onClick={deleteAnn}>删除标注</button>
-              <button onClick={hideAnnPopover}>取消</button>
+              <span className="ann-popover-label">
+                {annPopover && annPopoverHas('highlight') && '高亮'}
+                {annPopover && annPopoverHas('underline') && '下划线'}
+                {annPopover && annPopoverHas('note') && '笔记'}
+              </span>
+              {/* 高亮色点：已有高亮则切换颜色，否则添加高亮 */}
+              {annPopover && (
+                <div className="hl-dots">
+                  {HL_COLORS.map((c) => {
+                    const has = annPopoverHas('highlight')
+                    const cur = annPopoverFirst('highlight')?.color
+                    return (
+                      <button
+                        key={c}
+                        className={`hl-dot ${c}${has && cur === c ? ' active' : ''}`}
+                        onClick={() =>
+                          has ? switchAnnColor(c) : addKindToAnn('highlight', { color: c })
+                        }
+                        title={has ? `切换高亮颜色 · ${HL_COLOR_LABELS[c]}` : `添加高亮 · ${HL_COLOR_LABELS[c]}`}
+                        aria-label={has ? `切换高亮颜色 · ${HL_COLOR_LABELS[c]}` : `添加高亮 · ${HL_COLOR_LABELS[c]}`}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+              {/* 下划线样式点：仅当存在真实下划线时显示，只能切换样式（新增走选中文字） */}
+              {annPopover && annPopoverHas('underline') && (
+                <div className="ul-dots">
+                  {UNDERLINE_STYLES.map((st) => {
+                    const cur = annPopoverFirst('underline')?.underlineStyle ?? 'solid'
+                    return (
+                      <button
+                        key={st}
+                        className={`ul-dot ${st}${cur === st ? ' active' : ''}`}
+                        onClick={() => switchAnnUnderlineStyle(st)}
+                        title={`切换下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
+                        aria-label={`切换下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+              {annPopover && (
+                <button onClick={() => addKindToAnn('note')}>加笔记</button>
+              )}
+              {annPopover && annPopoverHas('note') && (
+                <button onClick={viewAnnNote}>查看/编辑笔记</button>
+              )}
+              {annPopover && annPopoverHas('highlight') && (
+                <button onClick={() => deleteAnnKind('highlight')}>删除高亮</button>
+              )}
+              {annPopover && annPopoverHas('underline') && (
+                <button onClick={() => deleteAnnKind('underline')}>删除下划线</button>
+              )}
+              {annPopover && annPopoverHas('note') && (
+                <button onClick={() => deleteAnnKind('note')}>删除笔记</button>
+              )}
             </div>
           </div>
         </article>

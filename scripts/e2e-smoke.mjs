@@ -99,10 +99,12 @@ async function selectRange(paraIndex, from, to) {
   await page.waitForTimeout(200)
 }
 
-/** 点击弹出工具栏中文字匹配的按钮 */
+/** 点击创建工具栏（第一个 .selection-popover，排除管理菜单）中文字匹配的按钮 */
 async function clickPopoverButton(matchText) {
   await page.evaluate((m) => {
-    const btns = document.querySelectorAll('.selection-popover button')
+    const pop = document.querySelector('.selection-popover')
+    if (!pop) return
+    const btns = pop.querySelectorAll('button')
     for (const b of btns) if (b.textContent.includes(m)) b.click()
   }, matchText)
   await page.waitForTimeout(250)
@@ -231,6 +233,137 @@ check('重叠高亮合并为一条', hlMerged.length === 1, `${hlMerged.length} 
 check('合并区间取并集', hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24, `[${hlMerged[0]?.start},${hlMerged[0]?.end})`)
 check('合并后正文单段高亮', (await page.locator('.article-body .highlighted').count()) === 1)
 
+// ---------- 点击标注管理：切颜色 / 加下划线 ----------
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .highlighted')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('点击高亮弹出管理', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
+await page.evaluate(() => {
+  const d = document.querySelector('.ann-popover .hl-dot.pink')
+  if (d) d.click()
+})
+await page.waitForTimeout(250)
+const afterColor = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+const hlAfter = afterColor.find((a) => a.kind === 'highlight' && a.articleId === 'p0001')
+check('点击高亮切换颜色', hlAfter?.color === 'pink', `color=${hlAfter?.color ?? 'none'}`)
+check('切换颜色后渲染', (await page.locator('.article-body .highlighted.hl-pink').count()) >= 1)
+check('无下划线时菜单不显示样式点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0)
+check('无下划线时无删除下划线', (await page.evaluate(() => [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')))) === false)
+// 下划线经选中文字创建（菜单只切换不新增）
+await selectRange(0, 10, 24)
+await page.evaluate(() => { const d = document.querySelector('.ul-dot.solid'); if (d) d.click() })
+await page.waitForTimeout(250)
+const withUl = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+const ulAnn = withUl.find((a) => a.kind === 'underline' && a.articleId === 'p0001' && a.end === 24)
+check('选中文字创建下划线', Boolean(ulAnn), `start=${ulAnn?.start} end=${ulAnn?.end}`)
+check('同段下划线渲染', (await page.locator('.article-body .underlined').count()) >= 1)
+
+// 加笔记：创建锚点但不直接展开编辑
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .highlighted')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+await page.evaluate(() => {
+  const btns = document.querySelectorAll('.ann-popover button')
+  for (const b of btns) if (b.textContent.includes('加笔记')) b.click()
+})
+await page.waitForTimeout(250)
+check('加笔记直接进入编辑', (await page.locator('.inline-note.show textarea').count()) === 1)
+// 填内容并保存第一条笔记（避免空笔记被自动删除）
+await page.locator('.inline-note.show textarea').fill('第一条笔记内容')
+await page.evaluate(() => {
+  const btns = document.querySelectorAll('.inline-note.show button')
+  for (const b of btns) if (b.textContent.includes('保存')) b.click()
+})
+await page.waitForTimeout(250)
+check('加笔记锚点出现', (await page.locator('.article-body .note-mark').count()) >= 1)
+// 空笔记自动删除：再加一条但不填，执行其他操作后被清理
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .highlighted')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+await page.evaluate(() => {
+  const btns = document.querySelectorAll('.ann-popover button')
+  for (const b of btns) if (b.textContent.includes('加笔记')) b.click()
+})
+await page.waitForTimeout(250)
+const beforeEmpty = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+const emptyCountBefore = beforeEmpty.filter((a) => a.kind === 'note' && a.articleId === 'p0001').length
+// 不填内容，直接点正文其他标注（执行其他操作）
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .underlined')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(250)
+const afterEmpty = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+const emptyCountAfter = afterEmpty.filter((a) => a.kind === 'note' && a.articleId === 'p0001').length
+// 空笔记应被清理，已保存笔记保留：after = before - 1
+check('空笔记自动删除', emptyCountAfter === emptyCountBefore - 1, `${emptyCountBefore} → ${emptyCountAfter}`)
+
+// 点击右上角星标：直接展开/收起笔记（同段含高亮+下划线也不受影响）
+await page.evaluate(() => {
+  const star = document.querySelector('.article-body .note-star')
+  if (star) star.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('星标可收起笔记', (await page.locator('.inline-note.show').count()) === 0)
+await page.evaluate(() => {
+  const star = document.querySelector('.article-body .note-star')
+  if (star) star.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('点击星标直接展开笔记', (await page.locator('.inline-note.show').count()) === 1)
+
+// 同一段话可添加多条笔记
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .highlighted')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+await page.evaluate(() => {
+  const btns = document.querySelectorAll('.ann-popover button')
+  for (const b of btns) if (b.textContent.includes('加笔记')) b.click()
+})
+await page.waitForTimeout(250)
+check('同段可加第二条笔记', (await page.locator('.article-body .note-star').count()) >= 1)
+// 两条笔记同时展开（填内容保存第二条，避免空笔记被删）
+await page.locator('.inline-note.show textarea').fill('第二条笔记内容')
+await page.evaluate(() => {
+  const btns = document.querySelectorAll('.inline-note.show button')
+  for (const b of btns) if (b.textContent.includes('保存')) b.click()
+})
+await page.waitForTimeout(250)
+check('两条笔记同时展开', (await page.locator('.inline-note.show').count()) === 2)
+// 星标切换：收起全部 → 再展开全部
+await page.evaluate(() => {
+  const star = document.querySelector('.article-body .note-star')
+  if (star) star.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('星标收起全部笔记', (await page.locator('.inline-note.show').count()) === 0)
+await page.evaluate(() => {
+  const star = document.querySelector('.article-body .note-star')
+  if (star) star.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('星标展开全部笔记', (await page.locator('.inline-note.show').count()) === 2)
+// 执行其他操作（切颜色）时笔记保持展开
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .highlighted')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+await page.evaluate(() => {
+  const d = document.querySelector('.ann-popover .hl-dot.violet')
+  if (d) d.click()
+})
+await page.waitForTimeout(250)
+check('切换颜色后笔记保持展开', (await page.locator('.inline-note.show').count()) === 2)
+
 // ---------- 跨文章隔离：a01 的高亮不能出现在 a02 ----------
 await open('/reading/p0002')
 check('其他文章无串标', (await page.locator('.article-body .highlighted').count()) === 0)
@@ -238,10 +371,16 @@ await open('/reading/p0001')
 await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 
-// ---------- 阅读页：下划线 ----------
+// ---------- 阅读页：下划线（波浪样式） ----------
 await selectRange(1, 2, 10)
-await clickPopoverButton('下划线')
-check('下划线标记渲染', (await page.locator('.article-body .underlined').count()) >= 1)
+await page.evaluate(() => {
+  const d = document.querySelector('.ul-dot.wavy')
+  if (d) d.click()
+})
+await page.waitForTimeout(250)
+check('波浪下划线渲染', (await page.locator('.article-body .underlined.ul-wavy').count()) >= 1)
+
+
 
 // ---------- 阅读页：笔记 ----------
 await selectRange(2, 2, 14)
@@ -256,6 +395,23 @@ await page.waitForTimeout(250)
 check('笔记锚点渲染', (await page.locator('.article-body .note-mark').count()) >= 1)
 check('inline note 展开', (await page.locator('.inline-note.show').count()) === 1)
 
+// 纯笔记段（无高亮/划线）：菜单统一含色点/样式点，点色点即可加高亮
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .note-mark:not(.highlighted):not(.underlined)')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('纯笔记段菜单含高亮色点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .hl-dot').length)) === 5)
+check('纯笔记段菜单无下划线样式点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0)
+check('纯笔记段无删除下划线', (await page.evaluate(() => [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')))) === false)
+// 点色点给纯笔记段加高亮
+await page.evaluate(() => {
+  const d = document.querySelector('.ann-popover .hl-dot.pink')
+  if (d) d.click()
+})
+await page.waitForTimeout(250)
+check('纯笔记段点色点加高亮', (await page.locator('.article-body .highlighted.hl-pink').count()) >= 1)
+
 // ---------- 我的摘录 ----------
 await open('/notes')
 // 离开阅读页后，实测时长已落盘
@@ -264,6 +420,19 @@ const spent = afterLeave.state?.progress?.['p0001']?.timeSpentSec
 check('阅读时长持久化', spent >= 1, `timeSpentSec=${spent}`)
 const noteRows = await page.locator('.note-row').count()
 check('摘录列表', noteRows >= 3, `${noteRows} 行`)
+const markerCounts = await page.evaluate(() => ({
+  hl: document.querySelectorAll('.note-row .hl-swatch').length,
+  ul: document.querySelectorAll('.note-row .ul-swatch').length,
+  note: document.querySelectorAll('.note-row .note-swatch').length,
+}))
+check('摘录标记可区分', markerCounts.hl > 0 && markerCounts.ul > 0 && markerCounts.note > 0, JSON.stringify(markerCounts))
+check('一段话多条笔记标记', (await page.evaluate(() => document.body.innerText.includes('✦×2'))))
+await page.evaluate(() => {
+  const row = [...document.querySelectorAll('.note-row')].find((r) => r.innerText.includes('规划建议提出'))
+  if (row) row.click()
+})
+await page.waitForTimeout(200)
+check('详情展示多条笔记', (await page.locator('.detail-note').count()) >= 2, `${await page.locator('.detail-note').count()} 条`)
 check('摘录详情面板', (await page.locator('.note-detail blockquote').count()) === 1)
 await page.locator('.note-search input').fill('测试笔记内容')
 await page.waitForTimeout(300)
@@ -276,38 +445,54 @@ await page.locator('.detail-source a').first().click()
 await page.waitForTimeout(500)
 check('打开原文跳转', new URL(page.url()).pathname.startsWith('/reading/'))
 
-// ---------- 原文内删除：高亮 ----------
+// ---------- 原文内删除：按类型逐个删 ----------
+// 删除高亮（该段还有下划线/笔记，应只删高亮）
 await page.evaluate(() => {
   const el = document.querySelector('.article-body .highlighted')
   if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('点击高亮出现删除操作', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
+check('点击标注弹出管理', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
 await page.evaluate(() => {
   const btns = document.querySelectorAll('.ann-popover button')
-  for (const b of btns) if (b.textContent.includes('删除')) b.click()
+  for (const b of btns) if (b.textContent.includes('删除高亮')) b.click()
 })
-await page.waitForTimeout(250)
-check('删除后高亮消失', (await page.locator('.article-body .highlighted').count()) === 0)
-const annAfterDel = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
-check('删除后持久化同步', !annAfterDel.some((a) => a.kind === 'highlight'))
+await page.waitForTimeout(500)
+check('删除高亮后消失', (await page.locator('.article-body .highlighted').count()) <= 1)
+const delAnns1 = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+check('删除高亮持久化', !delAnns1.some((a) => a.kind === 'highlight' && a.start === 4 && a.end === 24))
+// 同段下划线仍在
+check('同段下划线保留', delAnns1.some((a) => a.kind === 'underline' && a.articleId === 'p0001' && a.end === 24))
 
-// ---------- 原文内删除：笔记 ----------
-// 先点击 ✦ 锚点展开 inline note（默认收起）
+// 删除下划线（该段单独删，不影响其它下划线）
 await page.evaluate(() => {
-  const mark = document.querySelector('.article-body .note-mark')
-  if (mark) mark.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  const el = document.querySelector('.article-body .underlined')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('点击锚点展开笔记', (await page.locator('.inline-note.show').count()) === 1)
 await page.evaluate(() => {
-  const btns = document.querySelectorAll('.inline-note.show .note-head button')
-  for (const b of btns) if (b.textContent.includes('删除')) b.click()
+  const btns = document.querySelectorAll('.ann-popover button')
+  for (const b of btns) if (b.textContent.includes('删除下划线')) b.click()
+})
+await page.waitForTimeout(500)
+const delAnns2 = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+check('删除下划线', !delAnns2.some((a) => a.kind === 'underline' && a.articleId === 'p0001' && a.end === 24))
+check('其他下划线保留', delAnns2.filter((a) => a.kind === 'underline' && a.articleId === 'p0001').length >= 1)
+
+// 删除该段笔记（点击 → 管理菜单 → 删除笔记）
+await page.evaluate(() => {
+  const el = document.querySelector('.article-body .note-mark')
+  if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+})
+await page.waitForTimeout(200)
+check('点击笔记弹出管理', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
+await page.evaluate(() => {
+  const btns = document.querySelectorAll('.ann-popover button')
+  for (const b of btns) if (b.textContent.includes('删除笔记')) b.click()
 })
 await page.waitForTimeout(250)
-check('删除笔记后锚点消失', (await page.locator('.article-body .note-mark').count()) === 0)
-const annAfterNoteDel = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
-check('笔记删除持久化同步', !annAfterNoteDel.some((a) => a.kind === 'note'))
+const delAnns3 = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+check('删除该段笔记', !delAnns3.some((a) => a.kind === 'note' && a.start === 4 && a.end === 24))
 
 // ---------- 设置页 ----------
 await open('/settings')

@@ -154,6 +154,7 @@
 
 .underlined {
   text-decoration-line: underline;
+  text-decoration-style: solid;
   text-decoration-thickness: 3px;
   text-decoration-color: var(--underline-color);
   text-underline-offset: 5px;
@@ -161,20 +162,45 @@
   -webkit-box-decoration-break: clone;
 }
 
+.underlined.ul-double {
+  text-decoration-style: double;
+  text-decoration-thickness: 3px;
+}
+
+.underlined.ul-wavy {
+  text-decoration-style: wavy;
+  text-decoration-thickness: 3px;
+}
+
+.underlined.ul-dotted {
+  text-decoration-style: dotted;
+  text-decoration-thickness: 3px;
+}
+
+.note-wrap {
+  position: relative;
+  display: inline;
+}
+
 .note-mark {
   border-bottom: 2px solid var(--accent);
-  position: relative;
   cursor: pointer;
 }
 
-.note-mark::after {
-  content: '✦';
+/* 右上角星标：独立可点击，直接展开笔记（不受同段其他标注影响） */
+.note-star {
   position: absolute;
-  top: -12px;
-  right: -8px;
+  top: -13px;
+  right: -9px;
   color: var(--accent);
   font: 12px var(--sans);
-  opacity: 0.9;
+  cursor: pointer;
+  user-select: none;
+  z-index: 2;
+}
+
+.note-star:hover {
+  opacity: 0.75;
 }
 
 /* inline note */
@@ -248,6 +274,16 @@
   display: flex;
 }
 
+/* 上方放不下时翻到选区下方 */
+.selection-popover.below {
+  transform: translate(-50%, 10px);
+}
+
+.selection-popover.below::after {
+  top: -5px;
+  bottom: auto;
+}
+
 .selection-popover button {
   border: 0;
   background: transparent;
@@ -298,25 +334,87 @@
 
 /* 色板固定使用品牌色（选择器在深色弹出条上，不随主题透明度变化） */
 .selection-popover .hl-dot.yellow {
-  background: #d9eb73;
+  background: #e9dc66;
 }
 
 .selection-popover .hl-dot.blue {
-  background: #b6cbf2;
+  background: #9db9ea;
 }
 
 .selection-popover .hl-dot.green {
-  background: #a8dfb6;
+  background: #93d8a8;
 }
 
 .selection-popover .hl-dot.pink {
-  background: #f5bccd;
+  background: #f2aec4;
 }
 
 .selection-popover .hl-dot.violet {
-  background: #cdb5fb;
+  background: #c6aaf5;
 }
 
+/* 下划线样式选择点 */
+.selection-popover .ul-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-right: 1px solid color-mix(in srgb, var(--paper) 22%, transparent);
+}
+
+.selection-popover .ul-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 240, 233, 0.35);
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  display: block;
+  background: transparent;
+  transition: transform 0.15s;
+}
+
+.selection-popover .ul-dot:hover {
+  transform: scale(1.2);
+}
+
+.selection-popover .ul-dot.active {
+  outline: 1.5px solid #fff;
+  outline-offset: 1.5px;
+}
+
+.selection-popover .ul-dot::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 4px;
+  height: 1.5px;
+  background: #f4f0e9;
+}
+
+.selection-popover .ul-dot.double::after {
+  height: 1.5px;
+  background: #f4f0e9;
+  box-shadow: 0 -2.5px 0 0 #f4f0e9;
+}
+
+.selection-popover .ul-dot.wavy::after {
+  background: none;
+  border-bottom: 1.5px solid #f4f0e9;
+  border-radius: 0 0 100% 100%;
+  height: 2.5px;
+}
+
+.selection-popover .ul-dot.dotted::after {
+  background: none;
+  border-bottom: 1.5px dotted #f4f0e9;
+}
+
+/* 下划线颜色选择点（实心圆） */
 /* 摘录里的颜色小圆点 */
 .hl-swatch {
   display: inline-block;

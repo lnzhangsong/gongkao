@@ -98,7 +98,7 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 - [x] 数据**导入 / 导出**（设置页整包导出含主题、阅读设置、**文章正文**、进度、摘录；导入兼容整包格式与摘录数组格式，文章按 id 覆盖/追加、进度按文章合并、摘录按 id 去重，可跨设备迁移）
 - [x] 首页显示继续阅读状态（继续阅读主卡 + 最近阅读）
 
-文章数据：24 篇预置精选 + **517 篇人民日报评论年编 2025**（人民时评 191 / 人民论坛 128 / 人民观点 20 / 评论员观察 175，解析自 Word 年编文档）。
+文章数据：**517 篇人民日报评论年编 2025**（人民时评 191 / 人民论坛 128 / 人民观点 20 / 评论员观察 175，解析自 Word 年编文档，已移除最初的 24 篇 demo 数据）。
 
 ### 文章数据管线（Word → SQLite → 源码）
 
@@ -110,7 +110,7 @@ npm run db:all      # 两步一起
 
 - 解析规则：按「（20xx年x月x日）」行切分文章；标题 / 作者行 / 导语（短行无句号）/ 正文分段自动识别；标题关键词自动归类到 12 个主题
 - SQLite 表 `articles(id, title, summary, source, topic, date, column_name, content_json, read_time, …)` 为规范数据源，生成的 `articlesParsed.ts` 是应用实际读取的源码
-- 应用内不再解析 Word（已移除运行时 mammoth 导入）
+- 应用内不再解析 Word（已移除运行时 mammoth 导入）；文章仅来自 SQLite 生成数据，无 demo 内容
 
 ## 端到端冒烟测试
 

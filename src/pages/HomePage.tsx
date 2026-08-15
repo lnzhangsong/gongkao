@@ -12,7 +12,6 @@ export function HomePage() {
     void loadDisplayFont()
   }, [])
   const articles = useArticleStore((s) => s.articles)
-  const apiReady = useArticleStore((s) => s._apiReady)
   const progress = useArticleStore((s) => s.progress)
   const navigate = useNavigate()
 
@@ -43,32 +42,6 @@ export function HomePage() {
   }, [articles, featured, continueList])
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
-
-  // 文章数据（API）加载中：骨架占位
-  if (!apiReady) {
-    return (
-      <section id="home" className="page-section">
-        <main className="hero">
-          <div className="hero-copy">
-            <div className="eyebrow">A DAILY READING PRACTICE　/　NO. 024</div>
-            <h1>
-              读懂时代，
-              <br />
-              <span>写好答案。</span>
-            </h1>
-          </div>
-        </main>
-        <section className="content">
-          <div className="reading">
-            <article className="main-card">
-              <span className="tag">加载文章…</span>
-              <h3 className="skeleton-line" style={{ width: '70%', height: '1.4em' }} />
-            </article>
-          </div>
-        </section>
-      </section>
-    )
-  }
 
   return (
     <section id="home" className="page-section">

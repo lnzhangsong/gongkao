@@ -268,7 +268,12 @@
 
 .about-line strong {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 400;
+}
+
+.about-brand {
+  font: 400 22px/1 var(--display);
+  letter-spacing: 0.02em;
 }
 
 @media (max-width: 800px) {

@@ -80,9 +80,18 @@ export function ReadingPage() {
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
 
-  /* 进入阅读页或切换字体时，按需加载正文字体（其余字体不下载） */
+  /* 进入阅读页或切换字体时，按需加载正文字体（其余字体不下载）。
+     字体就绪前保持骨架，避免刷新后先系统字体后 swap 跳变 */
+  const [fontReady, setFontReady] = useState(false)
   useEffect(() => {
-    void loadFontFamily(settings.fontFamily)
+    let alive = true
+    setFontReady(false)
+    void loadFontFamily(settings.fontFamily).then(() => {
+      if (alive) setFontReady(true)
+    })
+    return () => {
+      alive = false
+    }
   }, [settings.fontFamily])
 
   const annotations = useAnnotationStore((s) => s.annotations)
@@ -546,38 +555,18 @@ export function ReadingPage() {
     return map
   }, [articleAnnotations, article, starts])
 
-  // 文章数据（API）尚未加载或正文未就绪：先显示骨架，不跳转
-  if (!article || !contentReady || !article.content) {
-    if (!article) {
-      return (
-        <section className="reading-page">
-          <main className="reading-layout">
-            <article>
-              <header className="article-head">
-                <div className="tag">READBOOK</div>
-                <h1>加载文章…</h1>
-              </header>
-              <div className="article-body reading-loading">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <p key={i} className="skeleton-line" style={{ width: `${92 - i * 6}%` }} />
-                ))}
-              </div>
-            </article>
-          </main>
-        </section>
-      )
-    }
-    // 正文尚未就绪：显示加载骨架（meta 已渲染标题，正文段落异步拉取）
+  // 正文或字体未就绪：骨架占位（meta 已就绪则渲染标题，正文/字体异步就绪）
+  if (!article?.content || !contentReady || !fontReady) {
     return (
       <section className="reading-page">
         <main className="reading-layout">
           <article>
             <header className="article-head">
               <div className="tag">
-                {article.source} · {article.topic}　/　{formatDate(article.date)}
+                {article ? `${article.source} · ${article.topic}　/　${formatDate(article.date)}` : 'READBOOK'}
               </div>
-              <h1>{article.title}</h1>
-              <p className="dek">{article.summary}</p>
+              <h1>{article?.title ?? '加载文章…'}</h1>
+              {article?.summary && <p className="dek">{article.summary}</p>}
             </header>
             <div className="article-body reading-loading">
               {Array.from({ length: 6 }).map((_, i) => (

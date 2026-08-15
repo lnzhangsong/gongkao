@@ -11,6 +11,15 @@
   src: url('/fonts/lxgw-wenkai.woff2') format('woff2');
 }
 
+/* 马善政楷书（自托管子集 37KB：仅首页/文库大标题用字；@fontsource 分片懒加载导致刷新后回退系统楷体） */
+@font-face {
+  font-family: 'Ma Shan Zheng';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ma-shan-zheng.woff2') format('woff2');
+}
+
 /* 仓耳今楷05（自托管子集 960KB；已改家族名为「仓耳今楷」，免安装） */
 @font-face {
   font-family: '仓耳今楷';

@@ -5,9 +5,15 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // 开发时把 /api 转发到本地 API server（node:sqlite）
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
-    // 文章数据（517 篇年编）随主包加载，体积预期较大
     chunkSizeWarningLimit: 3000,
   },
 })

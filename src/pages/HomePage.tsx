@@ -6,6 +6,7 @@ import type { Article } from '../types'
 
 export function HomePage() {
   const articles = useArticleStore((s) => s.articles)
+  const apiReady = useArticleStore((s) => s._apiReady)
   const progress = useArticleStore((s) => s.progress)
   const navigate = useNavigate()
 
@@ -30,11 +31,38 @@ export function HomePage() {
 
   /** 今日推荐 3 篇（避开继续阅读主卡） */
   const picks = useMemo(() => {
+    if (!featured) return []
     const used = new Set([featured.id, ...continueList.map((c) => c.article.id)])
     return articles.filter((a) => !used.has(a.id)).slice(0, 3)
   }, [articles, featured, continueList])
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
+
+  // 文章数据（API）加载中：骨架占位
+  if (!apiReady) {
+    return (
+      <section id="home" className="page-section">
+        <main className="hero">
+          <div className="hero-copy">
+            <div className="eyebrow">A DAILY READING PRACTICE　/　NO. 024</div>
+            <h1>
+              读懂时代，
+              <br />
+              <span>写好答案。</span>
+            </h1>
+          </div>
+        </main>
+        <section className="content">
+          <div className="reading">
+            <article className="main-card">
+              <span className="tag">加载文章…</span>
+              <h3 className="skeleton-line" style={{ width: '70%', height: '1.4em' }} />
+            </article>
+          </div>
+        </section>
+      </section>
+    )
+  }
 
   return (
     <section id="home" className="page-section">

@@ -1,7 +1,17 @@
-/* 端到端冒烟测试：用本机 Edge 无头浏览器验证路由、渲染、标注、删除与持久化 */
+/* 端到端冒烟测试：用本机 Edge 无头浏览器验证路由、渲染、标注、删除与持久化
+ * 依赖：本地 API server（node:sqlite 提供 /api），由本脚本自动拉起 */
 import { chromium } from 'playwright-core'
+import { spawn } from 'node:child_process'
 
 const BASE = 'http://localhost:5173'
+const API_PORT = 8787
+
+// 启动本地 API server（数据：data/articles.db）
+const apiServer = spawn(process.execPath, ['scripts/api-server.mjs', String(API_PORT)], {
+  stdio: 'ignore',
+  detached: false,
+})
+await new Promise((r) => setTimeout(r, 1200))
 const results = []
 const errors = []
 
@@ -27,6 +37,11 @@ function check(name, ok, detail = '') {
 async function open(path) {
   await page.goto(BASE + path, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(700)
+  // 阅读页：正文异步拉取，等待段落渲染
+  if (path.includes('/reading/')) {
+    await page.waitForSelector('[data-para]', { timeout: 8000 }).catch(() => {})
+    await page.waitForTimeout(200)
+  }
 }
 
 /** 从 IndexedDB 读取持久化数据（文章/进度/摘录已迁移到 IDB） */
@@ -594,4 +609,5 @@ if (errors.length) {
   errors.slice(0, 10).forEach((e) => console.log('  ', e))
 }
 await browser.close()
+apiServer.kill()
 process.exit(fails.length > 0 || errors.length > 0 ? 1 : 0)

@@ -1,9 +1,6 @@
-import { PARSED_ARTICLES } from './articlesParsed'
-import type { Article, ArticleTopic } from '../types'
+import type { ArticleTopic } from '../types'
 
-/** 全部文章：由 data/articles.db（SQLite）生成，见 scripts/articles-pipeline.mjs */
-export const ARTICLES: Article[] = PARSED_ARTICLES
-
+/** 主题分类（构建期数据） */
 export const TOPICS: ArticleTopic[] = [
   '基层治理',
   '民生保障',
@@ -19,9 +16,12 @@ export const TOPICS: ArticleTopic[] = [
   '对外开放',
 ]
 
-export function getArticle(id: string): Article | undefined {
-  return ARTICLES.find((a) => a.id === id)
-}
+/**
+ * 文章数据不再打包进前端（2.1MB 年编正文）：
+ * - meta 列表：GET /api/articles（不含正文，轻量，供首页/文章库/搜索/管理）
+ * - 单篇全文：GET /api/articles/:id（含正文段落，阅读页按需拉取）
+ * 数据源：data/articles.db（SQLite），由 Vercel Functions / 本地 api-server 只读提供。
+ */
 
 /** 按字数估算阅读分钟数（录入文章时使用） */
 export function computeReadTime(content: string[]): number {

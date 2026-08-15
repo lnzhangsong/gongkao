@@ -9,6 +9,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminEditPage } from './pages/AdminEditPage'
 import { useThemeStore } from './stores/themeStore'
+import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
 
 function App() {
@@ -24,6 +25,11 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion)
   }, [reducedMotion])
+
+  /* 启动时从 API 加载文章列表（meta，不含正文） */
+  useEffect(() => {
+    void useArticleStore.getState().hydrate()
+  }, [])
 
   return (
     <BrowserRouter>

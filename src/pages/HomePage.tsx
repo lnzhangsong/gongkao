@@ -2,9 +2,15 @@ import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useArticleStore } from '../stores/articleStore'
 import { formatDate } from '../data'
+import { loadDisplayFont } from '../lib/fonts'
+import { useEffect } from 'react'
 import type { Article } from '../types'
 
 export function HomePage() {
+  /* 首页大标题需要装饰字体（马善政楷书），按需加载 */
+  useEffect(() => {
+    void loadDisplayFont()
+  }, [])
   const articles = useArticleStore((s) => s.articles)
   const apiReady = useArticleStore((s) => s._apiReady)
   const progress = useArticleStore((s) => s.progress)

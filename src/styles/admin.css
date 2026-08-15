@@ -124,7 +124,65 @@
 .admin-field-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.admin-field-row .admin-field {
+  margin-bottom: 0;
+}
+
+/* 元信息行：标签与控件间距统一，避免视觉乱 */
+.admin-field-row .admin-field > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-field-row select,
+.admin-field-row input {
+  height: 44px;
+}
+
+/* 元信息（主题/来源/日期）：横排「标签-控件」紧凑布局 */
+.admin-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--soft) 55%, transparent);
+}
+
+.admin-meta-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
+}
+
+.admin-meta-row > span {
+  flex: 0 0 auto;
+  min-width: 34px;
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+
+.admin-meta-row select,
+.admin-meta-row input {
+  flex: 1;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  padding: 0 10px;
+  font: 13px var(--sans);
+  outline: none;
+}
+
+.admin-meta-row select:focus,
+.admin-meta-row input:focus {
+  border-color: var(--accent);
 }
 
 .admin-hint {
@@ -165,4 +223,73 @@
   .admin-edit {
     padding: 26px 20px 60px;
   }
+}
+
+/* 正文编辑区：编辑 / 预览切换 */
+.admin-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.admin-field-head > span {
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+
+.admin-mode-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.admin-mode-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: 11px var(--mono);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.admin-mode-toggle button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-content-input {
+  font: 14px/1.9 var(--serif) !important;
+  min-height: 380px;
+}
+
+.admin-content-preview {
+  min-height: 380px;
+  max-height: 520px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  padding: 16px 20px;
+  background: var(--soft);
+}
+
+.admin-content-preview .admin-preview-para {
+  font: 15px/1.95 var(--serif);
+  color: var(--ink);
+  margin: 0 0 1em;
+  text-indent: 2em;
+}
+
+.admin-preview-empty {
+  font: 13px var(--sans);
+  color: var(--muted);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.admin-preview-more {
+  font: 12px var(--mono);
+  color: var(--muted);
+  text-align: center;
 }

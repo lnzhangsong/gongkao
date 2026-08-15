@@ -83,9 +83,6 @@ export function AdminPage() {
                 <Link className="text-btn" to={`/reading/${a.id}`}>
                   阅读 ↗
                 </Link>
-                <button className="text-btn" onClick={() => navigate(`/admin/edit/${a.id}`)}>
-                  编辑
-                </button>
               </div>
             </div>
           ))}

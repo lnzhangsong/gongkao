@@ -525,7 +525,7 @@ check('主题跨页保持', (await page.evaluate(() => document.documentElement.
 await open('/notes')
 check('刷新后摘录仍在', (await page.locator('.note-row').count()) >= 1)
 
-// ---------- 文章管理：列表与编辑分页（/admin 列表，/admin/new + /admin/edit/:id 编辑） ----------
+// ---------- 文章管理：仅允许添加（/admin 列表 + /admin/new 录入；编辑/删除已移除） ----------
 await open('/admin')
 await page.locator('.toolbar-tools button.ghost').click()
 await page.waitForTimeout(500)
@@ -544,26 +544,20 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(500)
 check('录入文章可阅读', (await page.locator('.reading-page').count()) === 1)
+// 列表行只保留「阅读」入口（编辑已移除）
 await open('/admin')
-await page.evaluate(() => {
+const rowBtns = await page.evaluate(() => {
   const row = [...document.querySelectorAll('.admin-row')].find((r) => r.innerText.includes('测试录入'))
-  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('编辑')) b.click()
+  return row ? [...row.querySelectorAll('button, a')].map((b) => b.textContent) : []
 })
-await page.waitForTimeout(500)
-check('进入编辑页', (await page.evaluate(() => window.location.pathname.startsWith('/admin/edit/'))))
-await page.locator('.admin-edit input[placeholder="文章标题"]').fill('测试录入：基层减负要久久为功（改）')
-await page.locator('.admin-form-actions .ghost').first().click()
-await page.waitForTimeout(400)
-check('编辑保存生效', (await page.evaluate(() => window.location.pathname === '/admin' && document.body.innerText.includes('（改）'))))
-// 删除统一在编辑器页执行（列表行不再提供删除）
-await page.evaluate(() => {
-  const row = [...document.querySelectorAll('.admin-row')].find((r) => r.innerText.includes('测试录入'))
-  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('编辑')) b.click()
-})
-await page.waitForTimeout(500)
-await page.locator('.admin-form-actions .ghost.danger').click()
-await page.waitForTimeout(400)
-check('删除文章（编辑器页）', (await page.evaluate(() => window.location.pathname === '/admin' && !document.body.innerText.includes('测试录入'))))
+check('列表行无编辑入口', !rowBtns.some((t) => t.includes('编辑')), rowBtns.join('/'))
+// 新建页无删除按钮
+await open('/admin/new')
+const newPageBtns = await page.evaluate(() =>
+  [...document.querySelectorAll('.admin-form-actions button')].map((b) => b.textContent),
+)
+check('新建页无删除按钮', !newPageBtns.some((t) => t.includes('删除')), newPageBtns.join('/'))
+await open('/admin')
 
 // ---------- 已读文章标题置灰 ----------
 await open('/library')

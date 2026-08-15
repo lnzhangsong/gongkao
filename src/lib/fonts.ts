@@ -127,6 +127,43 @@ async function doLoad(key: FontKey): Promise<void> {
   }
 }
 
+/** 装饰性标题字体（马善政楷书）：首页/文库大标题用，进入页面时按需加载 */
+const DISPLAY_SOURCE = {
+  css: ['ma-shan-zheng@5.3.0/400.css'],
+  family: 'Ma Shan Zheng',
+  label: '马善政楷书',
+}
+
+let displayLoaded = false
+let displayInflight: Promise<void> | null = null
+
+export function loadDisplayFont(): Promise<void> {
+  if (displayLoaded) return Promise.resolve()
+  if (displayInflight) return displayInflight
+  const id = ++reqId
+  useFontLoad.setState({ loading: true, progress: 0.1, label: DISPLAY_SOURCE.label })
+  displayInflight = (async () => {
+    try {
+      await injectCSS(`${CDN}/${DISPLAY_SOURCE.css[0]}`)
+      if (id === reqId) useFontLoad.setState({ progress: 0.6 })
+      try {
+        await document.fonts.load('16px "' + DISPLAY_SOURCE.family + '"', '读本')
+      } catch {
+        /* 忽略 */
+      }
+      displayLoaded = true
+    } finally {
+      if (id === reqId) {
+        useFontLoad.setState({ progress: 1 })
+        setTimeout(() => {
+          if (id === reqId) useFontLoad.setState({ loading: false, progress: 0 })
+        }, 400)
+      }
+    }
+  })()
+  return displayInflight
+}
+
 /** 按需加载阅读字体：已加载/系统字体立即完成，同一字体并发调用共享同一任务 */
 export function loadFontFamily(key: FontKey): Promise<void> {
   if (loadedKeys.has(key)) return Promise.resolve()

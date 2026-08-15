@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Save, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Eye, PencilLine, Save } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
+import { MenuSelect } from '../components/ui/MenuSelect'
 import { TOPICS, computeReadTime } from '../data'
-import type { Article, ArticleInput, ArticleSource, ArticleTopic } from '../types'
+import type { ArticleInput, ArticleSource, ArticleTopic } from '../types'
 
 const EMPTY: ArticleInput = {
   title: '',
@@ -16,91 +17,43 @@ const EMPTY: ArticleInput = {
   finishNote: '',
 }
 
-/** 文章编辑器：/admin/new 新建，/admin/edit/:id 编辑 */
+/** 文章录入页：仅支持新建（编辑/删除已移除） */
 export function AdminEditPage() {
-  const { id } = useParams()
   const navigate = useNavigate()
-  const getArticle = useArticleStore((s) => s.getArticle)
-  const ensureContent = useArticleStore((s) => s.ensureContent)
   const addArticle = useArticleStore((s) => s.addArticle)
-  const updateArticle = useArticleStore((s) => s.updateArticle)
-  const removeArticle = useArticleStore((s) => s.removeArticle)
 
-  const editing = Boolean(id)
   const [form, setForm] = useState<ArticleInput & { contentText: string }>({
     ...EMPTY,
     contentText: '',
   })
   const [error, setError] = useState('')
+  /** 正文区模式：edit 编辑 / preview 预览 */
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
-  /* 编辑模式：按 id 预填表单（正文未在 meta 中则按需拉取） */
-  useEffect(() => {
-    let alive = true
-    const fill = (a: Article) => {
-      if (!alive) return
-      setForm({
-        title: a.title,
-        summary: a.summary,
-        content: a.content ?? [],
-        source: a.source,
-        topic: a.topic,
-        date: a.date,
-        pullquote: a.pullquote ?? '',
-        finishNote: a.finishNote ?? '',
-        contentText: (a.content ?? []).join('\n'),
-      })
-      setError('')
-    }
-    if (!id) {
-      setForm({ ...EMPTY, contentText: '' })
-      setError('')
-      return
-    }
-    const a = getArticle(id)
-    if (a?.content?.length) {
-      fill(a)
-      return
-    }
-    // meta 无正文：拉取单篇全文
-    void ensureContent(id).then((full) => {
-      if (full) fill(full)
-    })
-    return () => {
-      alive = false
-    }
-  }, [id, getArticle, ensureContent])
+  const paragraphs = form.contentText.split('\n').map((s) => s.trim()).filter(Boolean)
+  const previewParas = paragraphs.slice(0, 30)
 
   const save = () => {
     const title = form.title.trim()
-    const content = form.contentText.split('\n').map((s) => s.trim()).filter(Boolean)
     if (!title) {
       setError('请填写文章标题')
       return
     }
-    if (content.length === 0) {
+    if (paragraphs.length === 0) {
       setError('请至少填写一段正文（每行一段）')
       return
     }
     const input: ArticleInput = {
       title,
       summary: form.summary.trim(),
-      content,
+      content: paragraphs,
       source: form.source,
       topic: form.topic,
       date: form.date || new Date().toISOString().slice(0, 10),
       pullquote: form.pullquote?.trim() || undefined,
       finishNote: form.finishNote?.trim() || undefined,
     }
-    if (id) updateArticle(id, input)
-    else addArticle(input)
-    navigate('/admin')
-  }
-
-  const remove = () => {
-    if (!id) return
-    const ok = window.confirm(`确定删除《${form.title.trim() || '这篇文章'}》吗？其阅读进度与摘录也会一并删除。`)
-    if (!ok) return
-    removeArticle(id)
+    addArticle(input)
     navigate('/admin')
   }
 
@@ -108,16 +61,14 @@ export function AdminEditPage() {
     <section className="admin-edit-page page-section">
       <header className="subpage-header">
         <div>
-          <div className="eyebrow">ARTICLE EDITOR　/　{editing ? '编辑文章' : '新建文章'}</div>
+          <div className="eyebrow">ARTICLE EDITOR　/　新建文章</div>
           <h1>
-            {editing ? '编辑' : '录入'}你的
+            录入你的
             <br />
             <span>文章。</span>
           </h1>
         </div>
-        <p className="subpage-copy">
-          {editing ? '修改标题、正文或元信息，保存后立即生效。' : '填写标题与正文（每行一段），保存后进入文章库。'}
-        </p>
+        <p className="subpage-copy">填写标题与正文（每行一段），保存后进入文章库。</p>
       </header>
 
       <div className="admin-edit-back">
@@ -142,35 +93,35 @@ export function AdminEditPage() {
             value={form.summary}
             onChange={(e) => setForm({ ...form, summary: e.target.value })}
             placeholder="一句话概括文章内容，展示在列表与阅读页"
-            rows={3}
+            rows={2}
           />
         </label>
 
-        <div className="admin-field-row">
-          <label className="admin-field">
+        <div className="admin-meta">
+          <div className="admin-meta-row">
             <span>主题</span>
-            <select
+            <MenuSelect
+              form
               value={form.topic}
-              onChange={(e) => setForm({ ...form, topic: e.target.value as ArticleTopic })}
-            >
-              {TOPICS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="admin-field">
+              options={TOPICS.map((t) => ({ key: t, label: t }))}
+              onChange={(key) => setForm({ ...form, topic: key as ArticleTopic })}
+              ariaLabel="主题"
+            />
+          </div>
+          <div className="admin-meta-row">
             <span>来源</span>
-            <select
+            <MenuSelect
+              form
               value={form.source}
-              onChange={(e) => setForm({ ...form, source: e.target.value as ArticleSource })}
-            >
-              <option>人民日报</option>
-              <option>申论精读</option>
-            </select>
-          </label>
-          <label className="admin-field">
+              options={[
+                { key: '人民日报', label: '人民日报' },
+                { key: '申论精读', label: '申论精读' },
+              ]}
+              onChange={(key) => setForm({ ...form, source: key as ArticleSource })}
+              ariaLabel="来源"
+            />
+          </div>
+          <label className="admin-meta-row">
             <span>日期</span>
             <input
               type="date"
@@ -180,34 +131,68 @@ export function AdminEditPage() {
           </label>
         </div>
 
-        <label className="admin-field">
-          <span>正文 *（每行一段）</span>
-          <textarea
-            value={form.contentText}
-            onChange={(e) => setForm({ ...form, contentText: e.target.value })}
-            placeholder={'第一段……\n第二段……'}
-            rows={18}
-          />
+        {/* 正文：编辑 / 预览 切换 */}
+        <div className="admin-field admin-content-block">
+          <div className="admin-field-head">
+            <span>正文 *（每行一段）</span>
+            <div className="admin-mode-toggle">
+              <button
+                className={mode === 'edit' ? 'active' : ''}
+                onClick={() => setMode('edit')}
+                aria-label="编辑模式"
+              >
+                <PencilLine size={12} /> 编辑
+              </button>
+              <button
+                className={mode === 'preview' ? 'active' : ''}
+                onClick={() => setMode('preview')}
+                aria-label="预览模式"
+              >
+                <Eye size={12} /> 预览
+              </button>
+            </div>
+          </div>
+
+          {mode === 'edit' ? (
+            <textarea
+              className="admin-content-input"
+              value={form.contentText}
+              onChange={(e) => setForm({ ...form, contentText: e.target.value })}
+              placeholder={'第一段……\n第二段……'}
+              rows={18}
+              autoFocus
+            />
+          ) : (
+            <div className="admin-content-preview">
+              {previewParas.length === 0 ? (
+                <p className="admin-preview-empty">还没有正文，切回「编辑」开始输入。</p>
+              ) : (
+                previewParas.map((p, i) => (
+                  <p key={i} className="admin-preview-para">
+                    {p}
+                  </p>
+                ))
+              )}
+              {paragraphs.length > previewParas.length && (
+                <p className="admin-preview-more">
+                  … 还有 {paragraphs.length - previewParas.length} 段未显示（仅预览前 30 段）
+                </p>
+              )}
+            </div>
+          )}
+
           <small className="admin-hint">
-            预计阅读约 {computeReadTime(form.contentText.split('\n').filter((s) => s.trim()))} 分钟
+            预计阅读约 {computeReadTime(paragraphs)} 分钟　/　{paragraphs.length} 段
           </small>
-        </label>
+        </div>
 
         <label className="admin-field">
-          <span>金句（引用块）</span>
-          <input
+          <span>金句（可多句，每行一句）</span>
+          <textarea
             value={form.pullquote ?? ''}
             onChange={(e) => setForm({ ...form, pullquote: e.target.value })}
-            placeholder="正文中的一句话，展示为引用块"
-          />
-        </label>
-
-        <label className="admin-field">
-          <span>结尾摘录金句</span>
-          <input
-            value={form.finishNote ?? ''}
-            onChange={(e) => setForm({ ...form, finishNote: e.target.value })}
-            placeholder="阅读结束时展示的一句话"
+            placeholder={'例如：\n基层是服务群众的最后一公里。\n减负不是减责任，而是把干部从形式主义中解放出来。'}
+            rows={3}
           />
         </label>
 
@@ -217,11 +202,6 @@ export function AdminEditPage() {
           <button className="ghost" onClick={save}>
             <Save size={12} /> 保存文章
           </button>
-          {editing && (
-            <button className="ghost danger" onClick={remove}>
-              <Trash2 size={12} /> 删除这篇文章
-            </button>
-          )}
           <button className="ghost" onClick={() => navigate('/admin')}>
             取消
           </button>

@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { loadDisplayFont } from '../lib/fonts'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PenLine, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
+import { MenuSelect } from '../components/ui/MenuSelect'
 import type { Article, ArticleSource } from '../types'
 
 const PAGE_SIZE = 8
@@ -32,6 +34,10 @@ const SORTS: { key: SortKey; label: string }[] = [
 ]
 
 export function LibraryPage() {
+  /* 文库大标题需要装饰字体（马善政楷书），按需加载 */
+  useEffect(() => {
+    void loadDisplayFont()
+  }, [])
   const articles = useArticleStore((s) => s.articles)
   const progress = useArticleStore((s) => s.progress)
   const navigate = useNavigate()
@@ -139,13 +145,13 @@ export function LibraryPage() {
           </label>
           <div className="sort">
             SORT BY{' '}
-            <select value={sort} onChange={(e) => setParam('sort', e.target.value)}>
-              {SORTS.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+            <MenuSelect
+              compact
+              value={sort}
+              options={SORTS.map((s) => ({ key: s.key, label: s.label }))}
+              onChange={(key) => setParam('sort', key)}
+              ariaLabel="排序方式"
+            />
           </div>
           <button className="ghost" onClick={() => navigate('/admin')}>
             <PenLine size={12} /> 录入文章

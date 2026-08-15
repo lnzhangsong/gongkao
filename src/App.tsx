@@ -42,7 +42,6 @@ function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/new" element={<AdminEditPage />} />
-          <Route path="/admin/edit/:id" element={<AdminEditPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

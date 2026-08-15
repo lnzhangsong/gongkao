@@ -44,10 +44,84 @@
   gap: 20px;
 }
 
+/* 来源 + 状态：两组筛选并排，各自带小标题，避免混成一行看不出分组 */
+.filter-groups {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-group-label {
+  font: 12px var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.filters {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
 .toolbar-tools {
   display: flex;
   align-items: center;
   gap: 24px;
+}
+
+.toolbar-tools-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* 主题筛选独立一行：带小标题 + 展开/收起 */
+.topic-toolbar {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 38px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.topic-label {
+  padding-top: 8px;
+}
+
+.topic-filters {
+  flex: 1;
+}
+
+.topic-toggle {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--mono);
+  cursor: pointer;
+  padding: 8px 0;
+  white-space: nowrap;
+}
+
+.topic-toggle:hover {
+  color: var(--accent);
+}
+
+.topic-toggle svg {
+  transition: transform 0.15s;
+}
+
+.topic-toggle svg.up {
+  transform: rotate(180deg);
 }
 
 .library-content {
@@ -165,13 +239,14 @@
 /* 文章列表行 */
 .article-row {
   display: grid;
-  grid-template-columns: 65px 1fr 150px 85px;
+  grid-template-columns: 65px minmax(0, 1fr) 150px 85px;
   align-items: center;
   gap: 20px;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
   transition: padding 0.3s, background 0.3s;
   width: 100%;
+  min-width: 0;
   background: transparent;
   border-top: 0;
   border-left: 0;
@@ -196,6 +271,8 @@
   font: 500 20px var(--serif);
   letter-spacing: -0.05em;
   margin: 0;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 /* 已读文章：标题置灰（替代行尾状态文字） */
@@ -225,6 +302,10 @@
     display: block;
     padding: 42px 20px 32px;
   }
+  /* 副标题（如「反复阅读的文字。」）用 nowrap，字号需按视口收紧，否则窄屏会横向溢出 */
+  .subpage-header h1 {
+    font-size: clamp(30px, 9vw, 46px);
+  }
   .subpage-copy {
     margin-top: 20px;
   }
@@ -232,12 +313,57 @@
     display: block;
     padding: 17px 20px;
   }
+  .filter-groups {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .filter-group {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .filter-group-label {
+    padding-top: 6px;
+  }
   .toolbar-tools {
     display: block;
+    margin-top: 18px;
+  }
+  .toolbar-tools-row {
+    margin-top: 14px;
+    justify-content: space-between;
   }
   .search-box {
     width: 100%;
-    margin-top: 15px;
+  }
+  /* 主题筛选：移动端默认收成一行（隐藏溢出），展开后正常换行 */
+  .topic-toolbar {
+    padding: 14px 20px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .topic-label {
+    padding-top: 0;
+  }
+  .topic-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 7px;
+    flex: 1;
+    min-width: 0;
+  }
+  .topic-filters .filter-pill {
+    flex-shrink: 0;
+  }
+  .topic-filters.expanded {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .topic-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-left: 10px;
   }
   .library-content {
     padding: 26px 20px 45px;
@@ -246,16 +372,16 @@
     grid-template-columns: 1fr;
   }
   .article-row {
-    grid-template-columns: 40px 1fr 28px;
-    gap: 12px;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 10px;
   }
   .article-topic {
     display: none;
   }
   .article-title {
-    font-size: 17px;
+    font-size: 16px;
   }
   .article-time {
-    font-size: 12px;
+    font-size: 11px;
   }
 }

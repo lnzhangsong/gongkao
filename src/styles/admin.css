@@ -225,6 +225,38 @@
   }
 }
 
+/* 小屏（手机）：列表行、元信息网格、表单操作按钮换成竖排，避免横向挤压/溢出 */
+@media (max-width: 640px) {
+  .admin-edit-back {
+    padding: 16px 20px 0;
+  }
+  .admin-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  .admin-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+    margin-top: 4px;
+  }
+  .admin-field-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .admin-meta {
+    grid-template-columns: 1fr;
+    padding: 12px 14px;
+  }
+  .admin-form-actions {
+    flex-wrap: wrap;
+  }
+  .admin-mode-toggle {
+    flex-wrap: wrap;
+  }
+}
+
 /* 正文编辑区：编辑 / 预览切换 */
 .admin-field-head {
   display: flex;

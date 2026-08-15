@@ -289,6 +289,8 @@ export function ReadingPage() {
       const clampedX = Math.min(Math.max(rawX, HALF), Math.max(window.innerWidth - HALF, HALF))
       // 工具栏 translate(-100%) 使底部贴在 y；上方模式 y=选区顶-6 间距；下方模式 y=选区底+6
       const GAP = 6
+      // 选中新文字时，若「标注管理菜单」还开着，先关掉，避免两个 fixed 弹层重叠
+      setAnnPopover(null)
       setPopover({
         x: clampedX,
         y: below ? selRect.bottom + GAP : selRect.top - GAP,
@@ -425,6 +427,9 @@ export function ReadingPage() {
     const rect = e.currentTarget.getBoundingClientRect()
     const bodyRect = bodyRef.current?.getBoundingClientRect()
     if (!bodyRect) return
+    // 点击已有标注时，若「添加标注工具栏」还开着（残留选区），先关掉，避免两个 fixed 弹层重叠
+    setPopover(null)
+    window.getSelection()?.removeAllRanges()
     openAnnPopover(ids, rect.left + rect.width / 2 - bodyRect.left, rect.top - bodyRect.top)
   }
 

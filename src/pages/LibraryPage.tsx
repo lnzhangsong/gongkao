@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { loadDisplayFont } from '../lib/fonts'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { PenLine, Search } from 'lucide-react'
+import { ChevronDown, PenLine, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
@@ -98,6 +98,9 @@ export function LibraryPage() {
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
+  /* 主题筛选：移动端默认收起为一行，展开后显示全部（桌面端始终展开） */
+  const [topicsExpanded, setTopicsExpanded] = useState(false)
+
   return (
     <section id="library" className="page-section">
       <header className="subpage-header">
@@ -113,26 +116,35 @@ export function LibraryPage() {
       </header>
 
       <div className="toolbar">
-        <div className="filters" style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-          {SOURCE_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              className={`filter-pill${source === f.key ? ' active' : ''}`}
-              onClick={() => setParam('source', f.key === 'all' ? '' : f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
-          <span style={{ width: 8 }} />
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              className={`filter-pill${status === f.key ? ' active' : ''}`}
-              onClick={() => setParam('status', f.key === 'all' ? '' : f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="filter-groups">
+          <div className="filter-group">
+            <span className="filter-group-label">来源</span>
+            <div className="filters">
+              {SOURCE_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  className={`filter-pill${source === f.key ? ' active' : ''}`}
+                  onClick={() => setParam('source', f.key === 'all' ? '' : f.key)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="filter-group">
+            <span className="filter-group-label">状态</span>
+            <div className="filters">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  className={`filter-pill${status === f.key ? ' active' : ''}`}
+                  onClick={() => setParam('status', f.key === 'all' ? '' : f.key)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="toolbar-tools">
           <label className="search-box">
@@ -143,25 +155,28 @@ export function LibraryPage() {
               onChange={(e) => setParam('q', e.target.value)}
             />
           </label>
-          <div className="sort">
-            SORT BY{' '}
-            <MenuSelect
-              compact
-              value={sort}
-              options={SORTS.map((s) => ({ key: s.key, label: s.label }))}
-              onChange={(key) => setParam('sort', key)}
-              ariaLabel="排序方式"
-            />
+          <div className="toolbar-tools-row">
+            <div className="sort">
+              SORT BY{' '}
+              <MenuSelect
+                compact
+                value={sort}
+                options={SORTS.map((s) => ({ key: s.key, label: s.label }))}
+                onChange={(key) => setParam('sort', key)}
+                ariaLabel="排序方式"
+              />
+            </div>
+            <button className="ghost" onClick={() => navigate('/admin')}>
+              <PenLine size={12} /> 录入文章
+            </button>
           </div>
-          <button className="ghost" onClick={() => navigate('/admin')}>
-            <PenLine size={12} /> 录入文章
-          </button>
         </div>
       </div>
 
-      {/* 主题筛选 */}
-      <div className="toolbar" style={{ borderBottom: '1px solid var(--line)', padding: '12px 38px' }}>
-        <div className="filters" style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+      {/* 主题筛选：移动端默认只显示「全部主题」+ 当前选中 + 展开按钮，避免占满首屏 */}
+      <div className="toolbar topic-toolbar">
+        <span className="filter-group-label topic-label">主题</span>
+        <div className={`filters topic-filters${topicsExpanded ? ' expanded' : ''}`}>
           <button
             className={`filter-pill${!topic ? ' active' : ''}`}
             onClick={() => setParam('topic', '')}
@@ -178,6 +193,15 @@ export function LibraryPage() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="topic-toggle"
+          onClick={() => setTopicsExpanded((v) => !v)}
+          aria-expanded={topicsExpanded}
+        >
+          {topicsExpanded ? '收起' : '更多主题'}
+          <ChevronDown size={12} className={topicsExpanded ? 'up' : ''} />
+        </button>
       </div>
 
       <main className="library-content">

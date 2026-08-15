@@ -44,11 +44,19 @@ export function ArticleToolsMenu({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
+    // 正文选中文字时会弹出「添加标注工具栏」，与本菜单同为 fixed 定位，
+    // 若不收起会在屏幕上重叠——选区变化时自动关闭本菜单
+    const onSelectionChange = () => {
+      const sel = window.getSelection()
+      if (sel && !sel.isCollapsed) setOpen(false)
+    }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
+    document.addEventListener('selectionchange', onSelectionChange)
     return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
+      document.removeEventListener('selectionchange', onSelectionChange)
     }
   }, [open])
 

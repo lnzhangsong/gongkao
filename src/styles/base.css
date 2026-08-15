@@ -39,12 +39,25 @@ a {
 }
 
 /* ---------- 页面外壳 ---------- */
+/* 通栏铺满（纸色覆盖全屏，宽屏/4K 无深色留白条）；内容分区各自限宽居中 */
 .page {
-  max-width: 1920px;
-  margin: auto;
+  width: 100%;
   background: var(--paper);
   min-height: 100vh;
   position: relative;
+}
+
+/* 内容分区版心上限（4K 下居中，两侧为纸色留白） */
+.hero,
+.content,
+.subpage-header,
+.toolbar,
+.library-content,
+.notes-workspace,
+.settings-header {
+  max-width: 1920px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ---------- 顶部导航 ---------- */

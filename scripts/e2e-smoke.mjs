@@ -66,6 +66,11 @@ for (const [path, sel] of [
   await open(path)
   check(`路由 ${path} 渲染`, (await page.locator(sel).count()) > 0)
 }
+// 阅读页刷新不 404（HashRouter 静态托管安全）
+await open('/reading/a01')
+await page.reload({ waitUntil: 'domcontentloaded' })
+await page.waitForTimeout(700)
+check('阅读页刷新不 404', (await page.locator('.reading-page').count()) > 0)
 
 // ---------- 首页 ----------
 await open('/')

@@ -34,8 +34,11 @@ export interface Article {
   title: string
   /** 导语 / 摘要 */
   summary: string
-  /** 正文段落（按段存储，便于基于文本偏移量的标注） */
-  content: string[]
+  /**
+   * 正文段落（按段存储，便于基于文本偏移量的标注）
+   * meta 列表（GET /api/articles）不含正文；单篇（GET /api/articles/:id）含
+   */
+  content?: string[]
   /** 金句（引用块） */
   pullquote?: string
   /** 阅读结尾的摘录金句 */

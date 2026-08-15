@@ -1,20 +1,41 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Article, ArticleInput, ReadingProgress } from '../types'
-import { ARTICLES, computeReadTime } from '../data'
+import { computeReadTime } from '../data'
+import { fetchMetaList, fetchArticle } from '../lib/api'
 import { idbStorage } from '../lib/idbStorage'
 import { useAnnotationStore } from './annotationStore'
 
 interface ArticleState {
-  /** 文章列表：mock 种子 + 用户录入/编辑（持久化，IndexedDB） */
+  /**
+   * 合并后的文章列表（视图）：
+   * - 年编文章（p 前缀）：来自 GET /api/articles（meta，无正文）
+   * - 本地录入/编辑（u 前缀或 localEdits 覆盖）：带正文
+   * 不持久化：每次启动由 hydrate() 从 API + localEdits 重建
+   */
   articles: Article[]
+  /**
+   * 本地编辑覆盖 / 新增文章（持久化，IndexedDB）
+   * key = articleId：用户编辑过的年编文章（完整覆盖）、或录入的新文章
+   */
+  localEdits: Record<string, Article>
+  /** 用户删除的年编文章 id（持久化，避免刷新后从 API 复活） */
+  deletedIds: string[]
+  /** 已拉取的单篇全文缓存（运行时，不持久化）：ensureContent 结果 */
+  contentCache: Record<string, Article>
   /** 阅读进度 / 收藏（持久化） */
   progress: Record<string, ReadingProgress>
   /** IndexedDB 异步水合是否完成（读取前等待，避免丢失首屏状态） */
   _hasHydrated: boolean
+  /** 文章数据（API）是否已加载 */
+  _apiReady: boolean
 
   getArticle: (id: string) => Article | undefined
   getProgress: (id: string) => ReadingProgress | undefined
+  /** 启动时加载：API meta + 本地覆盖合并 */
+  hydrate: () => Promise<void>
+  /** 确保某篇有正文：本地编辑有则用之，否则按需拉取单篇全文（结果缓存） */
+  ensureContent: (id: string) => Promise<Article | undefined>
   /** 打开文章：记录开始时间与阅读次数 */
   startReading: (id: string) => void
   /** 保存滚动进度 */
@@ -25,11 +46,11 @@ interface ArticleState {
   importProgress: (map: Record<string, ReadingProgress>) => void
   /** 录入新文章，返回生成的 Article */
   addArticle: (input: ArticleInput) => Article
-  /** 更新文章（重算阅读时长） */
+  /** 更新文章（重算阅读时长；年编文章写本地覆盖） */
   updateArticle: (id: string, input: ArticleInput) => void
-  /** 删除文章（连同其进度与摘录） */
+  /** 删除文章（连同其进度与摘录；年编文章记入 deletedIds） */
   removeArticle: (id: string) => void
-  /** 导入文章（按 id 覆盖/追加） */
+  /** 导入文章（按 id 覆盖/追加到本地编辑） */
   upsertArticles: (list: Article[]) => void
   toggleFavorite: (id: string) => void
   clearAll: () => void
@@ -46,22 +67,85 @@ const empty = (id: string): ReadingProgress => ({
   timeSpentSec: 0,
 })
 
+/** 用 API meta + localEdits/deletedIds 重建合并视图 */
+function buildArticles(
+  apiMeta: Article[],
+  localEdits: Record<string, Article>,
+  deletedIds: string[],
+): Article[] {
+  const gone = new Set(deletedIds)
+  const merged: Article[] = []
+  for (const a of apiMeta) {
+    if (gone.has(a.id)) continue
+    merged.push(localEdits[a.id] ?? a)
+  }
+  // 本地新增（不在 API 中）
+  for (const a of Object.values(localEdits)) {
+    if (!apiMeta.some((m) => m.id === a.id)) merged.push(a)
+  }
+  return merged
+}
+
 export const useArticleStore = create<ArticleState>()(
   persist(
     (set, get) => ({
-      articles: ARTICLES,
+      articles: [],
+      localEdits: {},
+      deletedIds: [],
+      contentCache: {},
       progress: {},
       _hasHydrated: false,
+      _apiReady: false,
 
-      getArticle: (id) => get().articles.find((a) => a.id === id),
+      getArticle: (id) => get().contentCache[id] ?? get().articles.find((a) => a.id === id),
 
       getProgress: (id) => get().progress[id],
+
+      hydrate: async () => {
+        try {
+          const { articles } = await fetchMetaList()
+          set((s) => ({
+            articles: buildArticles(articles, s.localEdits, s.deletedIds),
+            _apiReady: true,
+          }))
+        } catch (e) {
+          console.error('加载文章列表失败', e)
+          set((s) => ({
+            articles: buildArticles([], s.localEdits, s.deletedIds),
+            _apiReady: true,
+          }))
+        }
+      },
+
+      ensureContent: async (id) => {
+        const cached = get().contentCache[id]
+        if (cached?.content?.length) return cached
+        const current = get().articles.find((a) => a.id === id)
+        if (current?.content?.length) {
+          set((s) => ({ contentCache: { ...s.contentCache, [id]: current } }))
+          return current
+        }
+        const local = get().localEdits[id]
+        if (local?.content?.length) {
+          set((s) => ({ contentCache: { ...s.contentCache, [id]: local } }))
+          return local
+        }
+        try {
+          const full = await fetchArticle(id)
+          set((s) => ({
+            contentCache: { ...s.contentCache, [id]: full },
+            articles: s.articles.map((a) => (a.id === id ? full : a)),
+          }))
+          return full
+        } catch {
+          return undefined
+        }
+      },
 
       startReading: (id) =>
         set((s) => {
           const prev = s.progress[id]
           if (prev && prev.startedAt) {
-            // 已开始过：仅累加一次阅读次数（每次进入页面都计数）
             return { progress: { ...s.progress, [id]: { ...prev, readCount: prev.readCount + 1 } } }
           }
           const now = new Date().toISOString()
@@ -111,33 +195,60 @@ export const useArticleStore = create<ArticleState>()(
         const article: Article = {
           id: `u${Date.now().toString(36)}`,
           ...input,
-          readTime: computeReadTime(input.content),
+          readTime: computeReadTime(input.content ?? []),
         }
-        set((s) => ({ articles: [...s.articles, article] }))
+        set((s) => ({
+          localEdits: { ...s.localEdits, [article.id]: article },
+          articles: [...s.articles, article],
+        }))
         return article
       },
 
       updateArticle: (id, input) =>
-        set((s) => ({
-          articles: s.articles.map((a) =>
-            a.id === id ? { ...a, ...input, readTime: computeReadTime(input.content) } : a,
-          ),
-        })),
+        set((s) => {
+          const prev = s.localEdits[id] ?? s.articles.find((a) => a.id === id)
+          const updated: Article = {
+            ...prev,
+            id,
+            ...input,
+            readTime: computeReadTime(input.content ?? []),
+          }
+          return {
+            localEdits: { ...s.localEdits, [id]: updated },
+            articles: s.articles.map((a) => (a.id === id ? updated : a)),
+          }
+        }),
 
       removeArticle: (id) => {
         set((s) => {
           const progress = { ...s.progress }
           delete progress[id]
-          return { articles: s.articles.filter((a) => a.id !== id), progress }
+          const localEdits = { ...s.localEdits }
+          delete localEdits[id]
+          // 年编文章：记入 deletedIds，避免刷新后复活；本地文章：直接移除
+          const deletedIds = s.deletedIds.includes(id) ? s.deletedIds : [...s.deletedIds, id]
+          return {
+            articles: s.articles.filter((a) => a.id !== id),
+            localEdits,
+            deletedIds,
+            progress,
+          }
         })
         useAnnotationStore.getState().removeForArticle(id)
       },
 
       upsertArticles: (list) =>
         set((s) => {
-          const map = new Map(s.articles.map((a) => [a.id, a]))
-          for (const a of list) map.set(a.id, a)
-          return { articles: [...map.values()] }
+          const localEdits = { ...s.localEdits }
+          for (const a of list) localEdits[a.id] = a
+          return {
+            localEdits,
+            articles: buildArticles(
+              s.articles.filter((a) => !list.some((n) => n.id === a.id)),
+              localEdits,
+              s.deletedIds,
+            ),
+          }
         }),
 
       toggleFavorite: (id) =>
@@ -150,17 +261,20 @@ export const useArticleStore = create<ArticleState>()(
     }),
     {
       name: 'readbook:articles',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => idbStorage),
-      partialize: (s) => ({ articles: s.articles, progress: s.progress }),
-      // v1：文章内容改为源码数据（SQLite 生成），丢弃持久化中的旧 demo 文章，进度保留
+      // 年编文章由 API 提供，不持久化；只持久化本地覆盖/删除标记与进度
+      partialize: (s) => ({ localEdits: s.localEdits, deletedIds: s.deletedIds, progress: s.progress }),
       migrate: (persisted) => {
-        const p = persisted as { articles?: unknown }
-        if ('articles' in p) delete p.articles
+        const p = persisted as { localEdits?: unknown; deletedIds?: unknown }
+        // v1 → v2：文章改为 API 只读 + 本地覆盖，丢弃旧的 articles 快照
+        const old = persisted as { articles?: unknown }
+        if ('articles' in old) delete old.articles
+        if (!p.localEdits) p.localEdits = {}
+        if (!p.deletedIds) p.deletedIds = []
         return p as never
       },
       onRehydrateStorage: () => () => {
-        // 必须用 setState 通知订阅者（直接赋值不会触发重渲染）
         useArticleStore.setState({ _hasHydrated: true })
       },
     },

@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Bookmark, Highlighter, Minus, Plus, StickyNote, Underline as UnderlineIcon } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss, FONT_FAMILIES } from '../stores/readerStore'
@@ -47,7 +47,27 @@ function fmtDuration(totalSec: number): string {
 export function ReadingPage() {
   const { articleId = '' } = useParams()
 
-  const article = useArticleStore((s) => s.articles.find((a) => a.id === articleId))
+  const getArticle = useArticleStore((s) => s.getArticle)
+  const ensureContent = useArticleStore((s) => s.ensureContent)
+  const article = getArticle(articleId)
+  const [contentReady, setContentReady] = useState(false)
+
+  /* 正文按需拉取（meta 不含正文）；缓存命中或拉取完成后置位 */
+  useEffect(() => {
+    let alive = true
+    if (!articleId) return
+    if (article?.content?.length) {
+      setContentReady(true)
+      return
+    }
+    setContentReady(false)
+    void ensureContent(articleId).then((full) => {
+      if (alive && full?.content?.length) setContentReady(true)
+    })
+    return () => {
+      alive = false
+    }
+  }, [articleId, article?.content, ensureContent])
   const getProgress = useArticleStore((s) => s.getProgress)
   const startReading = useArticleStore((s) => s.startReading)
   const saveProgress = useArticleStore((s) => s.saveProgress)
@@ -92,7 +112,7 @@ export function ReadingPage() {
   const lastSavedRef = useRef(0)
   const saveTimerRef = useRef<number>(0)
 
-  const starts = useMemo(() => (article ? paragraphStarts(article.content) : []), [article])
+  const starts = useMemo(() => (article?.content ? paragraphStarts(article.content) : []), [article])
   const progress = article ? getProgress(article.id) : undefined
 
   /** 仅取当前文章的标注（避免跨文章串标） */
@@ -140,19 +160,12 @@ export function ReadingPage() {
     }, 400)
   }, [articleId, saveProgress])
 
+  // 滚动监听：不依赖文章数据就绪，进入页面即注册（进度保存只用到 articleId）
   useEffect(() => {
-    if (!article || !storeHydrated) return
-    startReading(article.id)
-    // 恢复上次阅读位置（即时滚动，不做平滑动画）
-    const p = getProgress(article.id)
-    if (p && p.lastPosition > 0) {
-      requestAnimationFrame(() => window.scrollTo({ top: p.lastPosition, behavior: 'instant' }))
-    }
-    setPercent(p?.percent ?? 0)
     const onScroll = () => requestAnimationFrame(computePercent)
     window.addEventListener('scroll', onScroll, { passive: true })
     const flush = () => {
-      saveProgress(article.id, percentRef.current, window.scrollY)
+      saveProgress(articleId, percentRef.current, window.scrollY)
     }
     const onHide = () => flush()
     window.addEventListener('pagehide', onHide)
@@ -163,7 +176,19 @@ export function ReadingPage() {
       flush()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articleId, storeHydrated])
+  }, [articleId, computePercent])
+
+  // 打开文章记录 + 恢复阅读位置：等文章数据与水合就绪
+  useEffect(() => {
+    if (!article || !storeHydrated) return
+    startReading(article.id)
+    const p = getProgress(article.id)
+    if (p && p.lastPosition > 0) {
+      requestAnimationFrame(() => window.scrollTo({ top: p.lastPosition, behavior: 'instant' }))
+    }
+    setPercent(p?.percent ?? 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleId, article, storeHydrated])
 
   const percentRef = useRef(percent)
   useEffect(() => {
@@ -174,7 +199,7 @@ export function ReadingPage() {
      离开/切后台时再补一次（IDB 异步写入在页面卸载时可能被中断，周期性落盘兜底） ---------- */
   const pendingTimeRef = useRef(0)
   useEffect(() => {
-    if (!article) return
+    // 计时器不依赖文章数据就绪：只要知道 articleId 即可累计时长
     let ticks = 0
     const tick = () => {
       if (document.visibilityState !== 'visible') return
@@ -184,7 +209,7 @@ export function ReadingPage() {
       if (ticks >= 3) {
         ticks = 0
         if (pendingTimeRef.current > 0) {
-          addReadingTime(article.id, pendingTimeRef.current)
+          addReadingTime(articleId, pendingTimeRef.current)
           pendingTimeRef.current = 0
         }
       }
@@ -192,7 +217,7 @@ export function ReadingPage() {
     const timer = window.setInterval(tick, 1000)
     const flushTime = () => {
       if (pendingTimeRef.current > 0) {
-        addReadingTime(article.id, pendingTimeRef.current)
+        addReadingTime(articleId, pendingTimeRef.current)
         pendingTimeRef.current = 0
       }
     }
@@ -281,7 +306,7 @@ export function ReadingPage() {
       const s = Math.min(start, ...overlapped.map((a) => a.start))
       const e = Math.max(end, ...overlapped.map((a) => a.end))
       removeMany(overlapped.map((a) => a.id))
-      created = addAnnotation({ ...base, text: flatText(article.content).slice(s, e), start: s, end: e })
+      created = addAnnotation({ ...base, text: flatText(article.content!).slice(s, e), start: s, end: e })
     } else {
       created = addAnnotation({ ...base, text: popover.text, start, end })
     }
@@ -422,7 +447,7 @@ export function ReadingPage() {
     ) {
       return
     }
-    const text = flatText(article.content).slice(primary.start, primary.end)
+    const text = flatText(article.content!).slice(primary.start, primary.end)
     if (kind === 'note') {
       // 创建笔记并直接进入编辑（聚焦文本框，可立即输入）；同时展开该段全部笔记
       const n = addAnnotation({
@@ -515,13 +540,55 @@ export function ReadingPage() {
     if (!article) return map
     for (const a of articleAnnotations) {
       if (a.kind !== 'note') continue
-      const idx = starts.findIndex((s, i) => a.start >= s && a.start < s + article.content[i].length)
+      const idx = starts.findIndex((s, i) => a.start >= s && a.start < s + article.content![i].length)
       if (idx >= 0) map[a.id] = idx
     }
     return map
   }, [articleAnnotations, article, starts])
 
-  if (!article) return <Navigate to="/library" replace />
+  // 文章数据（API）尚未加载或正文未就绪：先显示骨架，不跳转
+  if (!article || !contentReady || !article.content) {
+    if (!article) {
+      return (
+        <section className="reading-page">
+          <main className="reading-layout">
+            <article>
+              <header className="article-head">
+                <div className="tag">READBOOK</div>
+                <h1>加载文章…</h1>
+              </header>
+              <div className="article-body reading-loading">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <p key={i} className="skeleton-line" style={{ width: `${92 - i * 6}%` }} />
+                ))}
+              </div>
+            </article>
+          </main>
+        </section>
+      )
+    }
+    // 正文尚未就绪：显示加载骨架（meta 已渲染标题，正文段落异步拉取）
+    return (
+      <section className="reading-page">
+        <main className="reading-layout">
+          <article>
+            <header className="article-head">
+              <div className="tag">
+                {article.source} · {article.topic}　/　{formatDate(article.date)}
+              </div>
+              <h1>{article.title}</h1>
+              <p className="dek">{article.summary}</p>
+            </header>
+            <div className="article-body reading-loading">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <p key={i} className="skeleton-line" style={{ width: `${92 - i * 6}%` }} />
+              ))}
+            </div>
+          </article>
+        </main>
+      </section>
+    )
+  }
 
   const p = progress
   const isFavorite = p?.favorite ?? false

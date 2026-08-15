@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Save, Trash2 } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, computeReadTime } from '../data'
-import type { ArticleInput, ArticleSource, ArticleTopic } from '../types'
+import type { Article, ArticleInput, ArticleSource, ArticleTopic } from '../types'
 
 const EMPTY: ArticleInput = {
   title: '',
@@ -21,6 +21,7 @@ export function AdminEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const getArticle = useArticleStore((s) => s.getArticle)
+  const ensureContent = useArticleStore((s) => s.ensureContent)
   const addArticle = useArticleStore((s) => s.addArticle)
   const updateArticle = useArticleStore((s) => s.updateArticle)
   const removeArticle = useArticleStore((s) => s.removeArticle)
@@ -32,29 +33,42 @@ export function AdminEditPage() {
   })
   const [error, setError] = useState('')
 
-  /* 编辑模式：按 id 预填表单 */
+  /* 编辑模式：按 id 预填表单（正文未在 meta 中则按需拉取） */
   useEffect(() => {
+    let alive = true
+    const fill = (a: Article) => {
+      if (!alive) return
+      setForm({
+        title: a.title,
+        summary: a.summary,
+        content: a.content ?? [],
+        source: a.source,
+        topic: a.topic,
+        date: a.date,
+        pullquote: a.pullquote ?? '',
+        finishNote: a.finishNote ?? '',
+        contentText: (a.content ?? []).join('\n'),
+      })
+      setError('')
+    }
     if (!id) {
       setForm({ ...EMPTY, contentText: '' })
       setError('')
       return
     }
     const a = getArticle(id)
-    if (a) {
-      setForm({
-        title: a.title,
-        summary: a.summary,
-        content: a.content,
-        source: a.source,
-        topic: a.topic,
-        date: a.date,
-        pullquote: a.pullquote ?? '',
-        finishNote: a.finishNote ?? '',
-        contentText: a.content.join('\n'),
-      })
-      setError('')
+    if (a?.content?.length) {
+      fill(a)
+      return
     }
-  }, [id, getArticle])
+    // meta 无正文：拉取单篇全文
+    void ensureContent(id).then((full) => {
+      if (full) fill(full)
+    })
+    return () => {
+      alive = false
+    }
+  }, [id, getArticle, ensureContent])
 
   const save = () => {
     const title = form.title.trim()

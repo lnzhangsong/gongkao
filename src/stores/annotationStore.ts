@@ -12,6 +12,8 @@ interface AnnotationState {
   remove: (id: string) => void
   removeMany: (ids: string[]) => void
   removeForArticle: (articleId: string) => void
+  /** 导入摘录（按 id 去重，已有的跳过） */
+  importAnnotations: (list: Annotation[]) => void
   setVisible: (v: boolean) => void
   clearAll: () => void
 }
@@ -49,6 +51,14 @@ export const useAnnotationStore = create<AnnotationState>()(
 
       removeForArticle: (articleId) =>
         set((s) => ({ annotations: s.annotations.filter((a) => a.articleId !== articleId) })),
+
+      importAnnotations: (list) =>
+        set((s) => {
+          const existing = new Set(s.annotations.map((a) => a.id))
+          const fresh = list.filter((a) => !existing.has(a.id))
+          if (fresh.length === 0) return s
+          return { annotations: [...s.annotations, ...fresh] }
+        }),
 
       setVisible: (v) => set({ visible: v }),
 

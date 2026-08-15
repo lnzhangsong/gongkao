@@ -20,6 +20,8 @@ interface ReaderState {
   setReaderTheme: (theme: ThemeName | '') => void
   setReducedMotion: (v: boolean) => void
   setShowAnnotations: (v: boolean) => void
+  /** 应用导入的阅读器设置（缺省字段保持默认） */
+  applySettings: (patch: Partial<ReaderSettings>) => void
   resetSettings: () => void
 }
 
@@ -46,6 +48,7 @@ export const useReaderStore = create<ReaderState>()(
       setReaderTheme: (theme) => set((s) => ({ settings: { ...s.settings, readerTheme: theme } })),
       setReducedMotion: (v) => set((s) => ({ settings: { ...s.settings, reducedMotion: v } })),
       setShowAnnotations: (v) => set((s) => ({ settings: { ...s.settings, showAnnotations: v } })),
+      applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     { name: 'readbook:reader' },

@@ -243,6 +243,30 @@ check('主题跨页保持', (await page.evaluate(() => document.documentElement.
 await open('/notes')
 check('刷新后摘录仍在', (await page.locator('.note-row').count()) >= 1)
 
+// ---------- 数据导入 ----------
+await open('/settings')
+const importPayload = {
+  exportedAt: '2024-06-01T00:00:00.000Z',
+  theme: 'night',
+  readerSettings: { fontSize: 20, lineHeight: 2.0, fontFamily: 'kaiti', readerTheme: '', reducedMotion: false, showAnnotations: true },
+  articles: [{ id: 'a05', title: 'x', topic: '时政评论', source: '申论精读', date: '2024-05-06', progress: { articleId: 'a05', percent: 42, lastPosition: 0, lastReadAt: '2024-06-01T00:00:00.000Z', completed: false, readCount: 1, favorite: false, timeSpentSec: 120 } }],
+  annotations: [{ id: 'imp-1', articleId: 'a05', kind: 'highlight', text: '导入测试高亮文字', start: 1, end: 5, createdAt: '2024-06-01T00:00:00.000Z', color: 'green' }],
+}
+// confirm（导入确认）与 alert（结果提示）都接受
+page.on('dialog', (d) => d.accept())
+await page.setInputFiles('input[type="file"]', {
+  name: 'readbook-import.json',
+  mimeType: 'application/json',
+  buffer: Buffer.from(JSON.stringify(importPayload)),
+})
+await page.waitForTimeout(500)
+const impTheme = await page.evaluate(() => document.documentElement.dataset.theme)
+check('导入主题生效', impTheme === 'night', impTheme)
+const impArt = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:articles') || '{}'))
+check('导入进度合并', impArt.state?.progress?.['a05']?.percent === 42, `percent=${impArt.state?.progress?.['a05']?.percent}`)
+const impAnn = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))
+check('导入摘录合并', (impAnn.state?.annotations ?? []).some((a) => a.id === 'imp-1'))
+
 // ---------- 摘要 ----------
 console.log('\n================ 测试摘要 ================')
 const fails = results.filter((r) => !r.ok)

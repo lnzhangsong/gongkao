@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, Minus, Plus, Trash2 } from 'lucide-react'
+import { Download, Minus, Plus, Trash2, Upload } from 'lucide-react'
 import { useThemeStore, THEMES } from '../stores/themeStore'
 import { useReaderStore, FONT_FAMILIES } from '../stores/readerStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { Toggle } from '../components/ui/Toggle'
 import { downloadJSON } from '../lib/export'
+import { parseImportData } from '../lib/import'
 
 const SECTIONS = [
   { id: 'reading', label: '阅读偏好' },
@@ -30,10 +31,14 @@ export function SettingsPage() {
   const annotationsVisible = useAnnotationStore((s) => s.visible)
   const annotationCount = useAnnotationStore((s) => s.annotations.length)
   const clearAnnotations = useAnnotationStore((s) => s.clearAll)
+  const importAnnotations = useAnnotationStore((s) => s.importAnnotations)
 
   const articles = useArticleStore((s) => s.articles)
   const progress = useArticleStore((s) => s.progress)
   const clearArticleData = useArticleStore((s) => s.clearAll)
+  const importProgress = useArticleStore((s) => s.importProgress)
+
+  const applySettings = useReaderStore((s) => s.applySettings)
 
   const [active, setActive] = useState('reading')
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
@@ -78,6 +83,35 @@ export function SettingsPage() {
         annotations: useAnnotationStore.getState().annotations,
       },
     )
+  }
+
+  /** 导入数据（支持设置页整包导出 + 摘录页导出两种格式） */
+  const importFileRef = useRef<HTMLInputElement>(null)
+  const onImportFile = (file: File | undefined) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const parsed = parseImportData(String(reader.result ?? ''))
+      if ('error' in parsed) {
+        window.alert(`导入失败：${parsed.error}`)
+        return
+      }
+      const nAnn = parsed.annotations.length
+      const nProg = Object.keys(parsed.progress ?? {}).length
+      const ok = window.confirm(
+        `将导入：${parsed.theme ? '主题 1 项，' : ''}${parsed.readerSettings ? '阅读设置 1 项，' : ''}${nProg} 篇文章进度，${nAnn} 条摘录。` +
+          '\n阅读进度按文章合并覆盖，摘录按 id 去重合并。确定导入？',
+      )
+      if (!ok) return
+      if (parsed.theme) setTheme(parsed.theme)
+      if (parsed.readerSettings) applySettings(parsed.readerSettings)
+      if (parsed.progress) importProgress(parsed.progress)
+      if (nAnn > 0) importAnnotations(parsed.annotations)
+      window.alert(`导入完成：${nProg} 篇进度、${nAnn} 条摘录已合并到本地数据。`)
+    }
+    reader.readAsText(file)
+    // 允许重复选择同一文件
+    if (importFileRef.current) importFileRef.current.value = ''
   }
 
   const clearAllData = () => {
@@ -276,6 +310,25 @@ export function SettingsPage() {
                 <button className="ghost" onClick={exportAll}>
                   <Download size={12} /> 导出
                 </button>
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">导入数据</div>
+                <div className="setting-desc">恢复本应用导出的 JSON，或合并另一设备上的摘录</div>
+              </div>
+              <div className="setting-control">
+                <button className="ghost" onClick={() => importFileRef.current?.click()}>
+                  <Upload size={12} /> 导入
+                </button>
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".json,application/json"
+                  style={{ display: 'none' }}
+                  onChange={(e) => onImportFile(e.target.files?.[0])}
+                />
               </div>
             </div>
 

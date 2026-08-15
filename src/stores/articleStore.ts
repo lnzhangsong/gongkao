@@ -17,6 +17,8 @@ interface ArticleState {
   saveProgress: (id: string, percent: number, lastPosition: number) => void
   /** 累计实测阅读时长（秒） */
   addReadingTime: (id: string, seconds: number) => void
+  /** 导入进度（按 articleId 合并覆盖） */
+  importProgress: (map: Record<string, ReadingProgress>) => void
   toggleFavorite: (id: string) => void
   clearAll: () => void
 }
@@ -88,6 +90,9 @@ export const useArticleStore = create<ArticleState>()(
             },
           }
         }),
+
+      importProgress: (map) =>
+        set((s) => ({ progress: { ...s.progress, ...map } })),
 
       toggleFavorite: (id) =>
         set((s) => {

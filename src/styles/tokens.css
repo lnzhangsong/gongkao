@@ -35,11 +35,11 @@
   --highlight-bg: #d9eb73;
   --underline-color: #e96448;
   /* 高亮色板 */
-  --hl-yellow: #d9eb73;
-  --hl-blue: #c9d8f1;
-  --hl-green: #bfe6c8;
-  --hl-pink: #f5cfd8;
-  --hl-violet: #d9c9ff;
+  --hl-yellow: #e9dc66;
+  --hl-blue: #9db9ea;
+  --hl-green: #93d8a8;
+  --hl-pink: #f2aec4;
+  --hl-violet: #c6aaf5;
 
   /* 字体栈：Google Fonts 优先，随后按平台回退（Windows: 微软雅黑/宋体/楷体；macOS: 苹方/华文） */
   --serif: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif;
@@ -61,11 +61,11 @@
   --body-bg: #10141d;
   --highlight-bg: #c8d5ff;
   --underline-color: #667ff0;
-  --hl-yellow: #d9e28a;
-  --hl-blue: #c8d5ff;
-  --hl-green: #b7e0c4;
-  --hl-pink: #f3c9d6;
-  --hl-violet: #d2c2fb;
+  --hl-yellow: #e0d95f;
+  --hl-blue: #9db9ea;
+  --hl-green: #8fd6a4;
+  --hl-pink: #f0a8c0;
+  --hl-violet: #c0a8f2;
 }
 
 :root[data-theme='night'] {
@@ -81,11 +81,11 @@
   --body-bg: #0d0e0c;
   --highlight-bg: #4a4f3a;
   --underline-color: #d7f267;
-  --hl-yellow: rgba(217, 235, 115, 0.3);
-  --hl-blue: rgba(160, 196, 242, 0.3);
-  --hl-green: rgba(140, 210, 160, 0.3);
-  --hl-pink: rgba(240, 170, 190, 0.3);
-  --hl-violet: rgba(200, 170, 255, 0.3);
+  --hl-yellow: rgba(233, 220, 102, 0.32);
+  --hl-blue: rgba(157, 185, 234, 0.32);
+  --hl-green: rgba(147, 216, 168, 0.32);
+  --hl-pink: rgba(242, 174, 196, 0.32);
+  --hl-violet: rgba(198, 170, 245, 0.32);
 }
 
 :root[data-theme='violet'] {
@@ -101,11 +101,11 @@
   --body-bg: #13101c;
   --highlight-bg: #d9c9ff;
   --underline-color: #aa7bff;
-  --hl-yellow: #e3df9a;
-  --hl-blue: #c9c6f8;
-  --hl-green: #c2e0cc;
-  --hl-pink: #f0ccdd;
-  --hl-violet: #d9c9ff;
+  --hl-yellow: #e2da6b;
+  --hl-blue: #a9aef2;
+  --hl-green: #94d4aa;
+  --hl-pink: #efa9c4;
+  --hl-violet: #c9b3f7;
 }
 
 /* 阅读器变量（由 readerStore 写入内联 style） */

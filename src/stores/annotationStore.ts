@@ -11,7 +11,7 @@ interface AnnotationState {
   _hasHydrated: boolean
 
   add: (a: Omit<Annotation, 'id' | 'createdAt'>) => Annotation
-  update: (id: string, patch: Partial<Pick<Annotation, 'noteText' | 'tags'>>) => void
+  update: (id: string, patch: Partial<Pick<Annotation, 'noteText' | 'tags' | 'color' | 'underlineStyle'>>) => void
   remove: (id: string) => void
   removeMany: (ids: string[]) => void
   removeForArticle: (articleId: string) => void

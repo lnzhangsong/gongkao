@@ -145,11 +145,11 @@
 
 .note-row {
   display: grid;
-  grid-template-columns: 42px 1fr 105px 65px;
-  gap: 13px;
+  grid-template-columns: 34px 40px minmax(0, 1fr) 110px 62px;
+  gap: 12px;
   align-items: center;
   border-top: 1px solid var(--line);
-  padding: 16px 0;
+  padding: 12px 0;
   cursor: pointer;
   transition: background 0.2s, padding 0.2s;
 }
@@ -179,12 +179,39 @@
 }
 
 .note-text {
-  font: 500 15px/1.6 var(--serif);
+  font: 500 15px/1.7 var(--serif);
   letter-spacing: -0.035em;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+/* 同段多类型标注的角标 */
+.note-kinds {
+  font-style: normal;
+  margin-left: 6px;
+  color: var(--accent);
+  font: 10px var(--mono);
+}
+
+.ul-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 2.5px;
+  border-radius: 1px;
+  margin-right: 7px;
+  vertical-align: 3px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+
+.note-swatch {
+  display: inline-block;
+  margin-right: 7px;
+  color: var(--accent);
+  font-size: 11px;
+  flex-shrink: 0;
 }
 
 .note-topic,
@@ -396,8 +423,8 @@
     width: 100%;
   }
   .note-row {
-    grid-template-columns: 34px 1fr 50px;
-    gap: 9px;
+    grid-template-columns: 30px 30px minmax(0, 1fr) 46px;
+    gap: 8px;
   }
   .note-topic {
     display: none;

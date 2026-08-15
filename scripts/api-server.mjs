@@ -22,13 +22,23 @@ const json = (data, status = 200, extra = {}) =>
 
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`)
-  const m = /^\/api\/articles\/([^/]+)$/.exec(url.pathname)
   const respond = async (resp) => {
     res.writeHead(resp.status, Object.fromEntries(resp.headers))
     res.end(await resp.text())
   }
 
   if (url.pathname === '/api/articles' && req.method === 'GET') {
+    // 单篇全文：?id=p0001
+    const singleId = url.searchParams.get('id')
+    if (singleId) {
+      const article = queryArticle(singleId)
+      if (!article) {
+        void respond(json({ error: 'not found' }, 404))
+        return
+      }
+      void respond(json(article))
+      return
+    }
     const q = url.searchParams.get('q')?.trim() ?? ''
     const topic = url.searchParams.get('topic')?.trim() ?? ''
     const source = url.searchParams.get('source')?.trim() ?? ''
@@ -44,16 +54,6 @@ const server = createServer((req, res) => {
     if (sort === 'title') list = [...list].sort((a, b) => a.title.localeCompare(b.title, 'zh'))
     if (limit > 0) list = list.slice(0, limit)
     void respond(json({ articles: list, total: list.length }))
-    return
-  }
-
-  if (m && req.method === 'GET') {
-    const article = queryArticle(m[1])
-    if (!article) {
-      void respond(json({ error: 'not found' }, 404))
-      return
-    }
-    void respond(json(article))
     return
   }
 

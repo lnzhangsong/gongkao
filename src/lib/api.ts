@@ -31,5 +31,5 @@ export function fetchMetaList(params?: { q?: string; topic?: string; source?: st
 
 /** 单篇全文 */
 export function fetchArticle(id: string): Promise<Article> {
-  return getJSON<Article>(`/api/articles/${encodeURIComponent(id)}`)
+  return getJSON<Article>(`/api/articles?id=${encodeURIComponent(id)}`)
 }

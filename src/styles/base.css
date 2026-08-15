@@ -555,3 +555,71 @@ a {
   background: var(--accent);
   transition: width 0.25s ease;
 }
+
+/* MenuSelect：占位文案样式 */
+.menu-select .menu-select-trigger.placeholder {
+  color: var(--muted);
+}
+
+/* MenuSelect：紧凑模式（工具条内，如 SORT BY） */
+.menu-select.compact .menu-select-trigger {
+  font: 12px var(--mono);
+  border-bottom: 1px dashed var(--line);
+}
+
+/* MenuSelect：表单内模式（录入页元信息，替代原生 select 外观） */
+.menu-select.form .menu-select-trigger {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: 13px var(--sans);
+  justify-content: space-between;
+}
+
+.menu-select.form .menu-select-trigger:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.menu-select.form .menu-select-pop {
+  top: calc(100% + 2px);
+  right: 0;
+  left: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+/* 设置页的下拉也统一为表单样式 */
+.setting-control .menu-select {
+  width: 100%;
+  max-width: 240px;
+}
+
+.setting-control .menu-select .menu-select-trigger {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: 13px var(--sans);
+  justify-content: space-between;
+}
+
+.setting-control .menu-select .menu-select-trigger:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.setting-control .menu-select .menu-select-pop {
+  top: calc(100% + 2px);
+  right: 0;
+  left: 0;
+  min-width: 0;
+  width: 100%;
+}

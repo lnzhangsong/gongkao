@@ -94,27 +94,24 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 - [x] 正文中添加笔记（锚点 + inline note，可编辑 / 删除）
 - [x] 刷新后数据仍然存在（localStorage）
 - [x] 摘录可在「我的摘录」查看（搜索 / 主题筛选 / 日期分组 / 详情 / 标签 / 删除 / 批量 / 导出 JSON）
-- [x] **文章管理**（`/admin` 列表页 + `/admin/new`、`/admin/edit/:id` 独立编辑器：搜索 / 分页 / 删除在列表页，录入与编辑在编辑器页；文章存 IndexedDB，数据源为 SQLite 生成的年编文章）
+- [x] **文章管理**（`/admin` 列表页 + `/admin/new`、`/admin/edit/:id` 独立编辑器：搜索 / 分页 / 删除在列表页，录入与编辑在编辑器页；年编文章来自 API 只读，本地录入/编辑存 IndexedDB）
 - [x] 数据**导入 / 导出**（设置页整包导出含主题、阅读设置、**文章正文**、进度、摘录；导入兼容整包格式与摘录数组格式，文章按 id 覆盖/追加、进度按文章合并、摘录按 id 去重，可跨设备迁移）
 - [x] 首页显示继续阅读状态（继续阅读主卡 + 最近阅读）
 
-文章数据：**517 篇人民日报评论年编 2025**（人民时评 191 / 人民论坛 128 / 人民观点 20 / 评论员观察 175，解析自 Word 年编文档，已移除最初的 24 篇 demo 数据）。
+文章数据：**517 篇人民日报评论年编 2025**（人民时评 191 / 人民论坛 128 / 人民观点 20 / 评论员观察 175）。
 
-### 文章数据管线（Word → SQLite → 源码）
+### 文章数据（SQLite → API）
 
-```bash
-npm run db:import   # 解析 /Users/nif/Documents/人民时评/*.docx → data/articles.db（SQLite，node:sqlite 零依赖）
-npm run db:gen      # 从 data/articles.db 生成 src/data/articlesParsed.ts（写入源码）
-npm run db:all      # 两步一起
-```
-
-- 解析规则：按「（20xx年x月x日）」行切分文章；标题 / 作者行 / 导语（短行无句号）/ 正文分段自动识别；标题关键词自动归类到 12 个主题
-- SQLite 表 `articles(id, title, summary, source, topic, date, column_name, content_json, read_time, …)` 为规范数据源，生成的 `articlesParsed.ts` 是应用实际读取的源码
-- 应用内不再解析 Word（已移除运行时 mammoth 导入）；文章仅来自 SQLite 生成数据，无 demo 内容
+- 数据源：`data/articles.db`（SQLite，517 篇），随部署打包
+- 运行时读取：Vercel Function `/api/articles`（node:sqlite 只读）→ 前端按需拉取
+  - `GET /api/articles` → meta 列表（不含正文，供首页/文库/搜索）
+  - `GET /api/articles?id=p0001` → 单篇全文（阅读页按需）
+- 本地开发：`node scripts/api-server.mjs` 提供同路由 API（Vite dev 已配置 `/api` 代理）
+- Word 导入功能已移除（不再解析 docx）
 
 ## 端到端冒烟测试
 
-`scripts/e2e-smoke.mjs` 用本机 Microsoft Edge 无头模式跑通核心链路（31 项断言）：
+`scripts/e2e-smoke.mjs` 用本机 Microsoft Edge 无头模式跑通核心链路（94 项断言，自动拉起本地 API server）：
 
 ```bash
 npm i -D playwright-core          # 需要本机安装 Microsoft Edge

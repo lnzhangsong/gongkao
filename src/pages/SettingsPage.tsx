@@ -7,6 +7,7 @@ import { loadFontFamily } from '../lib/fonts'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { Toggle } from '../components/ui/Toggle'
+import { MenuSelect } from '../components/ui/MenuSelect'
 import { downloadJSON } from '../lib/export'
 import { parseImportData } from '../lib/import'
 import { idbStorage } from '../lib/idbStorage'
@@ -177,21 +178,16 @@ export function SettingsPage() {
                 <div className="setting-desc">文章正文使用的字体</div>
               </div>
               <div className="setting-control">
-                <select
-                  className="select"
+                <MenuSelect
                   value={settings.fontFamily}
-                  onChange={(e) => {
-                    const key = e.target.value as typeof settings.fontFamily
-                    setFontFamily(key)
-                    void loadFontFamily(key)
+                  options={FONT_FAMILIES.map((f) => ({ key: f.key, label: f.label }))}
+                  onChange={(key) => {
+                    const k = key as typeof settings.fontFamily
+                    setFontFamily(k)
+                    void loadFontFamily(k)
                   }}
-                >
-                  {FONT_FAMILIES.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
+                  ariaLabel="默认字体"
+                />
               </div>
             </div>
 
@@ -282,18 +278,13 @@ export function SettingsPage() {
                 <div className="setting-desc">阅读正文时单独使用的主题（可覆盖页面主题）</div>
               </div>
               <div className="setting-control">
-                <select
-                  className="select"
+                <MenuSelect
                   value={settings.readerTheme}
-                  onChange={(e) => setReaderTheme(e.target.value as typeof settings.readerTheme)}
-                >
-                  <option value="">跟随页面</option>
-                  {THEMES.map((t) => (
-                    <option key={t.name} value={t.name}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
+                  options={THEMES.map((t) => ({ key: t.name, label: t.label }))}
+                  onChange={(key) => setReaderTheme(key as typeof settings.readerTheme)}
+                  placeholder="跟随页面"
+                  ariaLabel="阅读页主题"
+                />
               </div>
             </div>
 

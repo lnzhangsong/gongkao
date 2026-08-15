@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Download, Search, Trash2, X } from 'lucide-react'
 import { useAnnotationStore } from '../stores/annotationStore'
-import { getArticle, formatDate } from '../data'
+import { useArticleStore } from '../stores/articleStore'
+import { formatDate } from '../data'
 import { downloadJSON, formatDateTime, monthOf } from '../lib/export'
 import { Pagination } from '../components/ui/Pagination'
 import type { Annotation, AnnotationKind } from '../types'
@@ -38,6 +39,7 @@ export function NotesPage() {
   const remove = useAnnotationStore((s) => s.remove)
   const removeMany = useAnnotationStore((s) => s.removeMany)
   const update = useAnnotationStore((s) => s.update)
+  const getArticle = useArticleStore((s) => s.getArticle)
 
   const [quick, setQuick] = useState<QuickKey>('all')
   const [topic, setTopic] = useState('')

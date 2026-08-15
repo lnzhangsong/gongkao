@@ -8,6 +8,7 @@ import './styles/library.css'
 import './styles/reading.css'
 import './styles/notes.css'
 import './styles/settings.css'
+import './styles/admin.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

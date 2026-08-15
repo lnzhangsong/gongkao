@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, Minus, Plus, Trash2, Upload } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { BookOpen, Download, Minus, Plus, Trash2, Upload } from 'lucide-react'
 import { useThemeStore, THEMES } from '../stores/themeStore'
 import { useReaderStore, FONT_FAMILIES } from '../stores/readerStore'
 import { useAnnotationStore } from '../stores/annotationStore'
@@ -39,6 +40,9 @@ export function SettingsPage() {
   const importProgress = useArticleStore((s) => s.importProgress)
 
   const applySettings = useReaderStore((s) => s.applySettings)
+  const upsertArticles = useArticleStore((s) => s.upsertArticles)
+
+  const navigate = useNavigate()
 
   const [active, setActive] = useState('reading')
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
@@ -73,11 +77,7 @@ export function SettingsPage() {
         theme,
         readerSettings: settings,
         articles: articles.map((a) => ({
-          id: a.id,
-          title: a.title,
-          topic: a.topic,
-          source: a.source,
-          date: a.date,
+          ...a,
           progress: progress[a.id] ?? null,
         })),
         annotations: useAnnotationStore.getState().annotations,
@@ -105,9 +105,12 @@ export function SettingsPage() {
       if (!ok) return
       if (parsed.theme) setTheme(parsed.theme)
       if (parsed.readerSettings) applySettings(parsed.readerSettings)
+      if (parsed.articles) upsertArticles(parsed.articles)
       if (parsed.progress) importProgress(parsed.progress)
       if (nAnn > 0) importAnnotations(parsed.annotations)
-      window.alert(`导入完成：${nProg} 篇进度、${nAnn} 条摘录已合并到本地数据。`)
+      window.alert(
+        `导入完成：${parsed.articles?.length ?? 0} 篇文章、${nProg} 篇进度、${nAnn} 条摘录已合并到本地数据。`,
+      )
     }
     reader.readAsText(file)
     // 允许重复选择同一文件
@@ -315,8 +318,20 @@ export function SettingsPage() {
 
             <div className="setting-row">
               <div>
+                <div className="setting-title">管理文章</div>
+                <div className="setting-desc">录入、编辑或删除本地文章（保存在当前设备）</div>
+              </div>
+              <div className="setting-control">
+                <button className="ghost" onClick={() => navigate('/admin')}>
+                  <BookOpen size={12} /> 管理文章
+                </button>
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
                 <div className="setting-title">导入数据</div>
-                <div className="setting-desc">恢复本应用导出的 JSON，或合并另一设备上的摘录</div>
+                <div className="setting-desc">恢复本应用导出的 JSON，或合并另一设备上的文章与摘录</div>
               </div>
               <div className="setting-control">
                 <button className="ghost" onClick={() => importFileRef.current?.click()}>

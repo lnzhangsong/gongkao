@@ -1,6 +1,18 @@
 /** 文章来源 */
 export type ArticleSource = '人民日报' | '申论精读'
 
+/** 录入/编辑文章时的输入 */
+export interface ArticleInput {
+  title: string
+  summary: string
+  content: string[]
+  source: ArticleSource
+  topic: ArticleTopic
+  date: string
+  pullquote?: string
+  finishNote?: string
+}
+
 /** 文章主题（共 12 个） */
 export type ArticleTopic =
   | '基层治理'

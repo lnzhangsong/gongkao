@@ -1,5 +1,14 @@
-import type { Annotation, ReaderSettings, ReadingProgress, ThemeName } from '../types'
+import type {
+  Annotation,
+  Article,
+  ArticleSource,
+  ArticleTopic,
+  ReaderSettings,
+  ReadingProgress,
+  ThemeName,
+} from '../types'
 import { THEMES } from '../stores/themeStore'
+import { TOPICS, computeReadTime } from '../data'
 
 export interface ParsedImport {
   theme?: ThemeName
@@ -8,6 +17,8 @@ export interface ParsedImport {
   progress?: Record<string, ReadingProgress>
   /** 摘录（按 id 去重合并） */
   annotations: Annotation[]
+  /** 文章（带正文内容，按 id 覆盖/追加） */
+  articles?: Article[]
 }
 
 export interface ImportFailure {
@@ -33,6 +44,43 @@ function isProgressShape(v: unknown): v is ReadingProgress {
   if (!v || typeof v !== 'object') return false
   const p = v as Record<string, unknown>
   return typeof p.articleId === 'string' && typeof p.percent === 'number'
+}
+
+/** 从整包导出中提取带正文的文章 */
+function parseArticles(v: unknown): Article[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const out: Article[] = []
+  for (const item of v) {
+    const a = item as Record<string, unknown>
+    if (
+      !a ||
+      typeof a.id !== 'string' ||
+      typeof a.title !== 'string' ||
+      !Array.isArray(a.content)
+    ) {
+      continue
+    }
+    const content = (a.content as unknown[]).filter((p): p is string => typeof p === 'string')
+    if (content.length === 0) continue
+    const topic = TOPICS.includes(a.topic as ArticleTopic)
+      ? (a.topic as ArticleTopic)
+      : TOPICS[0]
+    const source: ArticleSource = a.source === '申论精读' ? '申论精读' : '人民日报'
+    out.push({
+      id: a.id,
+      title: a.title,
+      summary: typeof a.summary === 'string' ? a.summary : '',
+      content,
+      source,
+      topic,
+      date: typeof a.date === 'string' ? a.date : new Date().toISOString().slice(0, 10),
+      readTime: computeReadTime(content),
+      pullquote: typeof a.pullquote === 'string' ? a.pullquote : undefined,
+      finishNote: typeof a.finishNote === 'string' ? a.finishNote : undefined,
+      featured: a.featured === true ? true : undefined,
+    })
+  }
+  return out.length > 0 ? out : undefined
 }
 
 /**
@@ -87,7 +135,7 @@ export function parseImportData(raw: string): ParsedImport | ImportFailure {
     }
   }
 
-  // 文章进度（整包导出时每个 article 带 progress 字段）
+  // 文章进度与正文（整包导出时每个 article 带 progress / content 字段）
   if (Array.isArray(obj.articles)) {
     const progress: Record<string, ReadingProgress> = {}
     for (const item of obj.articles) {
@@ -98,6 +146,11 @@ export function parseImportData(raw: string): ParsedImport | ImportFailure {
     }
     if (Object.keys(progress).length > 0) {
       result.progress = progress
+      recognized = true
+    }
+    const articles = parseArticles(obj.articles)
+    if (articles) {
+      result.articles = articles
       recognized = true
     }
   }

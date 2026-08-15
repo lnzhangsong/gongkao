@@ -1,0 +1,170 @@
+/* ============================================================
+   文章管理
+   ============================================================ */
+
+.admin-page {
+  border-top: 1px solid var(--ink);
+}
+
+.admin-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 40px;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 32px 38px 80px;
+}
+
+.admin-list {
+  min-width: 0;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-row-main {
+  min-width: 0;
+}
+
+.admin-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font: 12px var(--mono);
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.badge-mock,
+.badge-local {
+  font-style: normal;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.badge-local {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 12px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.admin-row-actions .text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-row-actions .danger {
+  color: #b84b37;
+}
+
+/* 表单 */
+.admin-form {
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
+  align-self: start;
+  position: sticky;
+  top: 100px;
+}
+
+.admin-form-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+
+.admin-field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.admin-field > span {
+  display: block;
+  font: 12px var(--mono);
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.admin-field input,
+.admin-field textarea,
+.admin-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  padding: 9px 11px;
+  font: 13px/1.7 var(--serif);
+  outline: none;
+  border-radius: 0;
+}
+
+.admin-field input:focus,
+.admin-field textarea:focus,
+.admin-field select:focus {
+  border-color: var(--accent);
+}
+
+.admin-field textarea {
+  resize: vertical;
+}
+
+.admin-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.admin-hint {
+  display: block;
+  margin-top: 6px;
+  font: 11px var(--mono);
+  color: var(--muted);
+}
+
+.admin-error {
+  border-left: 2px solid #b84b37;
+  padding: 8px 12px;
+  font: 12px var(--sans);
+  color: #b84b37;
+  background: color-mix(in srgb, #b84b37 6%, transparent);
+  margin-bottom: 14px;
+}
+
+.admin-form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .admin-content {
+    grid-template-columns: 1fr;
+    padding: 26px 20px 60px;
+  }
+  .admin-form {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-left: 0;
+    padding-top: 24px;
+    position: static;
+  }
+}

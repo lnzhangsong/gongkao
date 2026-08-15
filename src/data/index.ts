@@ -23,6 +23,12 @@ export function getArticle(id: string): Article | undefined {
   return MOCK_ARTICLES_ALL.find((a) => a.id === id)
 }
 
+/** 按字数估算阅读分钟数（录入文章时使用） */
+export function computeReadTime(content: string[]): number {
+  const chars = content.join('').length + 200
+  return Math.max(3, Math.round(chars / 380))
+}
+
 /** 根据序号生成 NO. 编号，如 a01 -> 024 风格展示位 */
 export function articleNo(id: string): string {
   const n = Number(id.replace(/\D/g, ''))

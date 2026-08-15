@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { PenLine, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
@@ -147,6 +147,9 @@ export function LibraryPage() {
               ))}
             </select>
           </div>
+          <button className="ghost" onClick={() => navigate('/admin')}>
+            <PenLine size={12} /> 录入文章
+          </button>
         </div>
       </div>
 

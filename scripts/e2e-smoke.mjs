@@ -15,6 +15,8 @@ page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 page.on('console', (m) => {
   if (m.type() === 'error' && !m.text().includes('404')) errors.push(`console: ${m.text()}`)
 })
+// 接受所有 confirm / alert（删除确认、导入确认等）
+page.on('dialog', (d) => d.accept())
 
 function check(name, ok, detail = '') {
   results.push({ name, ok, detail })
@@ -290,6 +292,39 @@ check('主题跨页保持', (await page.evaluate(() => document.documentElement.
 await open('/notes')
 check('刷新后摘录仍在', (await page.locator('.note-row').count()) >= 1)
 
+// ---------- 文章管理：录入 / 编辑 / 删除 ----------
+await open('/admin')
+const rowsBefore = await page.locator('.admin-row').count()
+await page.locator('.admin-form input[placeholder="文章标题"]').fill('测试录入：基层减负要久久为功')
+await page.locator('.admin-form textarea[placeholder^="第一段"]').fill('基层是服务群众的最后一公里。\n减负不是减责任，而是把干部从形式主义中解放出来。')
+await page.locator('.admin-form-actions .ghost').first().click()
+await page.waitForTimeout(300)
+check('录入文章加入列表', (await page.locator('.admin-row').count()) === rowsBefore + 1, `${rowsBefore} → ${rowsBefore + 1}`)
+await open('/library')
+check('录入文章进入文章库', (await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功'))))
+await page.evaluate(() => {
+  const row = [...document.querySelectorAll('.article-row')].find((r) => r.innerText.includes('测试录入'))
+  if (row) row.click()
+})
+await page.waitForTimeout(500)
+check('录入文章可阅读', (await page.locator('.reading-page').count()) === 1)
+await open('/admin')
+await page.evaluate(() => {
+  const row = [...document.querySelectorAll('.admin-row')].find((r) => r.innerText.includes('测试录入'))
+  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('编辑')) b.click()
+})
+await page.waitForTimeout(300)
+await page.locator('.admin-form input[placeholder="文章标题"]').fill('测试录入：基层减负要久久为功（改）')
+await page.locator('.admin-form-actions .ghost').first().click()
+await page.waitForTimeout(300)
+check('编辑文章生效', (await page.evaluate(() => document.body.innerText.includes('（改）'))))
+await page.evaluate(() => {
+  const row = [...document.querySelectorAll('.admin-row')].find((r) => r.innerText.includes('测试录入'))
+  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('删除')) b.click()
+})
+await page.waitForTimeout(300)
+check('删除文章', (await page.evaluate(() => !document.body.innerText.includes('测试录入'))))
+
 // ---------- 数据导入 ----------
 await open('/settings')
 const importPayload = {
@@ -299,8 +334,6 @@ const importPayload = {
   articles: [{ id: 'a05', title: 'x', topic: '时政评论', source: '申论精读', date: '2024-05-06', progress: { articleId: 'a05', percent: 42, lastPosition: 0, lastReadAt: '2024-06-01T00:00:00.000Z', completed: false, readCount: 1, favorite: false, timeSpentSec: 120 } }],
   annotations: [{ id: 'imp-1', articleId: 'a05', kind: 'highlight', text: '导入测试高亮文字', start: 1, end: 5, createdAt: '2024-06-01T00:00:00.000Z', color: 'green' }],
 }
-// confirm（导入确认）与 alert（结果提示）都接受
-page.on('dialog', (d) => d.accept())
 await page.setInputFiles('input[type="file"]', {
   name: 'readbook-import.json',
   mimeType: 'application/json',

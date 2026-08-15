@@ -6,6 +6,7 @@ import { LibraryPage } from './pages/LibraryPage'
 import { ReadingPage } from './pages/ReadingPage'
 import { NotesPage } from './pages/NotesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { AdminPage } from './pages/AdminPage'
 import { useThemeStore } from './stores/themeStore'
 import { useReaderStore } from './stores/readerStore'
 
@@ -32,6 +33,7 @@ function App() {
           <Route path="/reading/:articleId" element={<ReadingPage />} />
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

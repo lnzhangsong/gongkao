@@ -93,6 +93,24 @@
   margin-bottom: 22px;
 }
 
+.admin-form-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 12px var(--mono);
+}
+
+.admin-form-head-actions .text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.admin-form-head-actions .text-btn:hover {
+  color: var(--accent);
+}
+
 .admin-field {
   display: block;
   margin-bottom: 20px;

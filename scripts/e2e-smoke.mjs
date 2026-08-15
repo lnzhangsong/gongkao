@@ -1,4 +1,5 @@
 /* 端到端冒烟测试：用本机 Edge 无头浏览器验证路由、渲染、标注、删除与持久化 */
+import { readFileSync } from 'fs'
 import { chromium } from 'playwright-core'
 
 const BASE = 'http://localhost:5173'
@@ -347,6 +348,26 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(300)
 check('删除文章', (await page.evaluate(() => !document.body.innerText.includes('测试录入'))))
+
+// ---------- Word (.docx) 导入 ----------
+await open('/admin')
+await page.setInputFiles('input[type="file"]', {
+  name: 'sample.docx',
+  mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  buffer: readFileSync('scripts/fixtures/sample.docx'),
+})
+await page.waitForTimeout(1000)
+check('Word 标题自动填入', (await page.locator('.admin-form input[placeholder="文章标题"]').inputValue()) === 'Word导入测试：以科技自立自强支撑现代化')
+const wordLines = (await page.locator('.admin-form textarea[placeholder^="第一段"]').inputValue()).split('\n')
+check('Word 正文按段填入', wordLines.length === 3, `${wordLines.length} 段`)
+await page.locator('.admin-form-actions .ghost').first().click()
+await page.waitForTimeout(300)
+check('Word 导入文章可保存', (await page.evaluate(() => document.body.innerText.includes('Word导入测试：以科技自立自强支撑现代化'))))
+await page.evaluate(() => {
+  const row = [...document.querySelectorAll('.admin-row')].find((r) => r.innerText.includes('Word导入测试'))
+  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('删除')) b.click()
+})
+await page.waitForTimeout(300)
 
 // ---------- 数据导入 ----------
 await open('/settings')

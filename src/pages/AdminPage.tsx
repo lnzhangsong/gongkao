@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Save, Search, Trash2, X } from 'lucide-react'
+import { FileText, Plus, Save, Search, Trash2, X } from 'lucide-react'
+import * as mammoth from 'mammoth'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate, computeReadTime } from '../data'
 import { Pagination } from '../components/ui/Pagination'
@@ -33,6 +34,41 @@ export function AdminPage() {
   const [error, setError] = useState('')
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
+  const wordInputRef = useRef<HTMLInputElement>(null)
+
+  /** Word (.docx) 导入：解析后填入表单（标题 + 每段一行正文），确认后保存 */
+  const onWordFile = async (file?: File) => {
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      setError('仅支持 .docx（Word 2007+）。旧版 .doc 请先在 Word 中另存为 .docx 再导入。')
+      return
+    }
+    try {
+      const buffer = await file.arrayBuffer()
+      const result = await mammoth.extractRawText({ arrayBuffer: buffer })
+      const lines = result.value
+        .split(/\n+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+      if (lines.length === 0) {
+        setError('Word 文档中没有可导入的文本内容。')
+        return
+      }
+      // 标题启发式：表单标题为空且首行较短、不以句末标点结尾 → 视为标题
+      let title = form.title.trim()
+      let contentLines = lines
+      if (!title && lines[0].length <= 30 && !/[。！？；：,，、]$/.test(lines[0])) {
+        title = lines[0]
+        contentLines = lines.slice(1)
+      }
+      if (contentLines.length === 0) contentLines = lines
+      setForm({ ...form, title, contentText: contentLines.join('\n') })
+      setError('')
+    } catch {
+      setError('Word 解析失败：文件可能已损坏或不是有效的 .docx。')
+    }
+    if (wordInputRef.current) wordInputRef.current.value = ''
+  }
 
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase()
@@ -184,11 +220,23 @@ export function AdminPage() {
         <aside className="admin-form">
           <div className="admin-form-head">
             <span className="detail-label">{editingId ? '编辑文章' : '新建文章'}</span>
-            {editingId && (
-              <button className="text-btn" onClick={startNew}>
-                <X size={12} /> 取消编辑
+            <span className="admin-form-head-actions">
+              <button className="text-btn" onClick={() => wordInputRef.current?.click()}>
+                <FileText size={12} /> 导入 Word
               </button>
-            )}
+              {editingId && (
+                <button className="text-btn" onClick={startNew}>
+                  <X size={12} /> 取消编辑
+                </button>
+              )}
+            </span>
+            <input
+              ref={wordInputRef}
+              type="file"
+              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              style={{ display: 'none' }}
+              onChange={(e) => onWordFile(e.target.files?.[0])}
+            />
           </div>
 
           <label className="admin-field">

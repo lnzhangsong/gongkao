@@ -52,6 +52,7 @@ export function ReadingPage() {
   const saveProgress = useArticleStore((s) => s.saveProgress)
   const addReadingTime = useArticleStore((s) => s.addReadingTime)
   const toggleFavorite = useArticleStore((s) => s.toggleFavorite)
+  const storeHydrated = useArticleStore((s) => s._hasHydrated)
 
   const settings = useReaderStore((s) => s.settings)
   const setFontSize = useReaderStore((s) => s.setFontSize)
@@ -132,7 +133,7 @@ export function ReadingPage() {
   }, [articleId, saveProgress])
 
   useEffect(() => {
-    if (!article) return
+    if (!article || !storeHydrated) return
     startReading(article.id)
     // 恢复上次阅读位置（即时滚动，不做平滑动画）
     const p = getProgress(article.id)
@@ -154,21 +155,31 @@ export function ReadingPage() {
       flush()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articleId])
+  }, [articleId, storeHydrated])
 
   const percentRef = useRef(percent)
   useEffect(() => {
     percentRef.current = percent
   }, [percent])
 
-  /* ---------- 实测阅读时长（秒）：页面可见时每秒累计，离开/切后台时落盘 ---------- */
+  /* ---------- 实测阅读时长（秒）：页面可见时每秒累计；每 3 秒落盘一次，
+     离开/切后台时再补一次（IDB 异步写入在页面卸载时可能被中断，周期性落盘兜底） ---------- */
   const pendingTimeRef = useRef(0)
   useEffect(() => {
     if (!article) return
+    let ticks = 0
     const tick = () => {
       if (document.visibilityState !== 'visible') return
       pendingTimeRef.current += 1
+      ticks += 1
       setSessionSec((s) => s + 1)
+      if (ticks >= 3) {
+        ticks = 0
+        if (pendingTimeRef.current > 0) {
+          addReadingTime(article.id, pendingTimeRef.current)
+          pendingTimeRef.current = 0
+        }
+      }
     }
     const timer = window.setInterval(tick, 1000)
     const flushTime = () => {

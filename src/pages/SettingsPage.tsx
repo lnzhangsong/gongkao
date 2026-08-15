@@ -8,6 +8,7 @@ import { useArticleStore } from '../stores/articleStore'
 import { Toggle } from '../components/ui/Toggle'
 import { downloadJSON } from '../lib/export'
 import { parseImportData } from '../lib/import'
+import { idbStorage } from '../lib/idbStorage'
 
 const SECTIONS = [
   { id: 'reading', label: '阅读偏好' },
@@ -117,16 +118,16 @@ export function SettingsPage() {
     if (importFileRef.current) importFileRef.current.value = ''
   }
 
-  const clearAllData = () => {
+  const clearAllData = async () => {
     const ok = window.confirm(
-      '确定要清空本地数据吗？将删除所有阅读进度、收藏、高亮、划线与笔记，且无法恢复。',
+      '确定要清空本地数据吗？将删除所有文章、阅读进度、收藏、高亮、划线与笔记，且无法恢复。',
     )
     if (!ok) return
     clearArticleData()
     clearAnnotations()
     resetSettings()
-    localStorage.removeItem('readbook:articles')
-    localStorage.removeItem('readbook:annotations')
+    await idbStorage.removeItem('readbook:articles')
+    await idbStorage.removeItem('readbook:annotations')
     localStorage.removeItem('readbook:reader')
     localStorage.removeItem('readbook:theme')
     window.location.reload()

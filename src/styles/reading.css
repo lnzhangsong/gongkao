@@ -55,9 +55,9 @@
 
 .reading-layout {
   display: grid;
-  grid-template-columns: minmax(0, 900px) 230px;
+  grid-template-columns: minmax(0, 900px) 280px;
   gap: 64px;
-  max-width: 1240px;
+  max-width: 1244px; /* 900 + 64 + 280 */
   margin: 0 auto;
   padding: 56px 24px 90px;
 }
@@ -65,16 +65,16 @@
 /* 宽屏（1600px+，如 1920）：正文列与版心加宽（版心收拢贴合两列内容） */
 @media (min-width: 1600px) {
   .reading-layout {
-    max-width: 1502px; /* 1160 + 64 + 230 + 左右 padding 48 */
-    grid-template-columns: minmax(0, 1160px) 230px;
+    max-width: 1552px; /* 1160 + 64 + 280 + 左右 padding 48 */
+    grid-template-columns: minmax(0, 1160px) 280px;
   }
 }
 
 /* 超宽屏 / 4K（2400px+）：继续加宽 */
 @media (min-width: 2400px) {
   .reading-layout {
-    max-width: 1762px; /* 1420 + 64 + 230 + 左右 padding 48 */
-    grid-template-columns: minmax(0, 1420px) 230px;
+    max-width: 1812px; /* 1420 + 64 + 280 + 左右 padding 48 */
+    grid-template-columns: minmax(0, 1420px) 280px;
   }
 }
 

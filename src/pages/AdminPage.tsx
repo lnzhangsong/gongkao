@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Save, Trash2, X } from 'lucide-react'
+import { Plus, Save, Search, Trash2, X } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate, computeReadTime } from '../data'
+import { Pagination } from '../components/ui/Pagination'
 import type { ArticleInput, ArticleSource, ArticleTopic } from '../types'
+
+const PAGE_SIZE = 20
 
 const EMPTY: ArticleInput = {
   title: '',
@@ -28,11 +31,20 @@ export function AdminPage() {
     contentText: '',
   })
   const [error, setError] = useState('')
+  const [q, setQ] = useState('')
+  const [page, setPage] = useState(1)
 
-  const sorted = useMemo(
-    () => [...articles].sort((a, b) => (b.date < a.date ? -1 : 1)),
-    [articles],
-  )
+  const filtered = useMemo(() => {
+    const kw = q.trim().toLowerCase()
+    const list = [...articles].sort((a, b) => (b.date < a.date ? -1 : 1))
+    if (!kw) return list
+    return list.filter((a) =>
+      `${a.title} ${a.summary} ${a.topic} ${a.source} ${a.date}`.toLowerCase().includes(kw),
+    )
+  }, [articles, q])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const startNew = () => {
     setEditingId(null)
@@ -107,10 +119,23 @@ export function AdminPage() {
 
       <div className="toolbar">
         <div className="filters">
-          <button className="filter-pill active">{sorted.length} 篇文章</button>
-          <button className="filter-pill">{sorted.filter((a) => a.id.startsWith('u')).length} 本地录入</button>
+          <button className="filter-pill active">{filtered.length} 篇文章</button>
+          <button className="filter-pill">
+            {filtered.filter((a) => a.id.startsWith('u')).length} 本地录入
+          </button>
         </div>
         <div className="toolbar-tools">
+          <label className="search-box">
+            <Search size={14} className="search-icon" />
+            <input
+              placeholder="搜索标题、主题或来源"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+                setPage(1)
+              }}
+            />
+          </label>
           <button className="ghost" onClick={startNew}>
             <Plus size={12} /> 新建文章
           </button>
@@ -118,9 +143,9 @@ export function AdminPage() {
       </div>
 
       <main className="admin-content">
-        {/* 文章列表 */}
+        {/* 文章列表（分页，万篇不卡） */}
         <div className="admin-list">
-          {sorted.map((a) => (
+          {pageItems.map((a) => (
             <div className="admin-row" key={a.id}>
               <span className="article-no">{a.id.slice(1).padStart(3, '0')}</span>
               <div className="admin-row-main">
@@ -145,12 +170,14 @@ export function AdminPage() {
               </div>
             </div>
           ))}
-          {sorted.length === 0 && (
+          {filtered.length === 0 && (
             <div className="empty-state">
-              <strong>文章库为空</strong>
-              点击「新建文章」开始录入
+              <strong>没有匹配的文章</strong>
+              换个关键词，或点击「新建文章」开始录入
             </div>
           )}
+
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
 
         {/* 编辑表单 */}

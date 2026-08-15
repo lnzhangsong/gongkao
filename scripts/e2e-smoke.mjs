@@ -29,6 +29,32 @@ async function open(path) {
   await page.waitForTimeout(700)
 }
 
+/** 从 IndexedDB 读取持久化数据（文章/进度/摘录已迁移到 IDB） */
+function idbGet(key) {
+  return page.evaluate(
+    (k) =>
+      new Promise((resolve) => {
+        const req = indexedDB.open('readbook-db', 1)
+        req.onupgradeneeded = () => {
+          req.result.createObjectStore('kv')
+        }
+        req.onsuccess = () => {
+          try {
+            const db = req.result
+            const tx = db.transaction('kv', 'readonly')
+            const get = tx.objectStore('kv').get(k)
+            get.onsuccess = () => resolve(get.result ?? null)
+            get.onerror = () => resolve(null)
+          } catch {
+            resolve(null)
+          }
+        }
+        req.onerror = () => resolve(null)
+      }),
+    key,
+  )
+}
+
 /** 选中某段中的文字并弹出工具栏 */
 async function selectRange(paraIndex, from, to) {
   // 段落可能已被标注拆成多个文本节点，按字符偏移遍历全部文本节点定位选区
@@ -125,11 +151,9 @@ check('主题筛选写入 URL', new URL(page.url()).searchParams.get('topic') ==
 await open('/reading/a01')
 check('正文段落渲染', (await page.locator('[data-para]').count()) >= 5)
 check('阅读工具侧栏', (await page.locator('.article-tools').count()) === 1)
-await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }))
 await page.waitForTimeout(2300)
-const progressData = await page.evaluate(() =>
-  JSON.parse(localStorage.getItem('readbook:articles') || '{}'),
-)
+const progressData = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
 const p01 = progressData.state?.progress?.['a01']
 check('滚动后进度持久化', p01 && p01.percent > 0, `percent=${p01?.percent ?? 'none'}`)
 // 真实阅读时长：导航栏实时显示 MM:SS
@@ -149,7 +173,7 @@ check('阅读页切主题持久化', themeStoreData.state?.theme === themeAfter,
 
 // ---------- 阅读页：高亮 ----------
 await open('/reading/a01')
-await page.evaluate(() => window.scrollTo(0, 0))
+await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 await selectRange(0, 4, 16)
 check('选择后弹出工具栏', (await page.evaluate(() => document.querySelector('.selection-popover')?.classList.contains('show'))) === true)
@@ -180,7 +204,7 @@ await page.waitForTimeout(250)
 const hlCount = await page.locator('.article-body .highlighted').count()
 check('高亮标记渲染', hlCount >= 1, `${hlCount} 处`)
 check('蓝色高亮渲染', (await page.locator('.article-body .highlighted.hl-blue').count()) >= 1)
-const anns = (await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))).state?.annotations ?? []
+const anns = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 const hlAnn = anns.find((a) => a.kind === 'highlight')
 check('高亮持久化', Boolean(hlAnn), `${anns.length} 条标注`)
 check('高亮颜色持久化', hlAnn?.color === 'blue', `color=${hlAnn?.color ?? 'none'}`)
@@ -192,7 +216,7 @@ await page.evaluate(() => {
   if (dot) dot.click()
 })
 await page.waitForTimeout(250)
-const mergedAnns = (await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))).state?.annotations ?? []
+const mergedAnns = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 const hlMerged = mergedAnns.filter((a) => a.kind === 'highlight' && a.articleId === 'a01')
 check('重叠高亮合并为一条', hlMerged.length === 1, `${hlMerged.length} 条`)
 check('合并区间取并集', hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24, `[${hlMerged[0]?.start},${hlMerged[0]?.end})`)
@@ -202,7 +226,7 @@ check('合并后正文单段高亮', (await page.locator('.article-body .highlig
 await open('/reading/a02')
 check('其他文章无串标', (await page.locator('.article-body .highlighted').count()) === 0)
 await open('/reading/a01')
-await page.evaluate(() => window.scrollTo(0, 0))
+await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 
 // ---------- 阅读页：下划线 ----------
@@ -226,7 +250,7 @@ check('inline note 展开', (await page.locator('.inline-note.show').count()) ==
 // ---------- 我的摘录 ----------
 await open('/notes')
 // 离开阅读页后，实测时长已落盘
-const afterLeave = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:articles') || '{}'))
+const afterLeave = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
 const spent = afterLeave.state?.progress?.['a01']?.timeSpentSec
 check('阅读时长持久化', spent >= 1, `timeSpentSec=${spent}`)
 const noteRows = await page.locator('.note-row').count()
@@ -256,7 +280,7 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(250)
 check('删除后高亮消失', (await page.locator('.article-body .highlighted').count()) === 0)
-const annAfterDel = (await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))).state?.annotations ?? []
+const annAfterDel = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 check('删除后持久化同步', !annAfterDel.some((a) => a.kind === 'highlight'))
 
 // ---------- 原文内删除：笔记 ----------
@@ -273,7 +297,7 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(250)
 check('删除笔记后锚点消失', (await page.locator('.article-body .note-mark').count()) === 0)
-const annAfterNoteDel = (await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))).state?.annotations ?? []
+const annAfterNoteDel = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 check('笔记删除持久化同步', !annAfterNoteDel.some((a) => a.kind === 'note'))
 
 // ---------- 设置页 ----------
@@ -294,12 +318,11 @@ check('刷新后摘录仍在', (await page.locator('.note-row').count()) >= 1)
 
 // ---------- 文章管理：录入 / 编辑 / 删除 ----------
 await open('/admin')
-const rowsBefore = await page.locator('.admin-row').count()
 await page.locator('.admin-form input[placeholder="文章标题"]').fill('测试录入：基层减负要久久为功')
 await page.locator('.admin-form textarea[placeholder^="第一段"]').fill('基层是服务群众的最后一公里。\n减负不是减责任，而是把干部从形式主义中解放出来。')
 await page.locator('.admin-form-actions .ghost').first().click()
 await page.waitForTimeout(300)
-check('录入文章加入列表', (await page.locator('.admin-row').count()) === rowsBefore + 1, `${rowsBefore} → ${rowsBefore + 1}`)
+check('录入文章加入列表', (await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功'))))
 await open('/library')
 check('录入文章进入文章库', (await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功'))))
 await page.evaluate(() => {
@@ -339,12 +362,12 @@ await page.setInputFiles('input[type="file"]', {
   mimeType: 'application/json',
   buffer: Buffer.from(JSON.stringify(importPayload)),
 })
-await page.waitForTimeout(500)
+await page.waitForTimeout(900)
 const impTheme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('导入主题生效', impTheme === 'night', impTheme)
-const impArt = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:articles') || '{}'))
+const impArt = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
 check('导入进度合并', impArt.state?.progress?.['a05']?.percent === 42, `percent=${impArt.state?.progress?.['a05']?.percent}`)
-const impAnn = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))
+const impAnn = JSON.parse((await idbGet('readbook:annotations')) ?? '{}')
 check('导入摘录合并', (impAnn.state?.annotations ?? []).some((a) => a.id === 'imp-1'))
 
 // ---------- 摘要 ----------

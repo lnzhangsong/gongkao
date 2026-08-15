@@ -1,11 +1,14 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Annotation } from '../types'
+import { idbStorage } from '../lib/idbStorage'
 
 interface AnnotationState {
   annotations: Annotation[]
   /** 是否显示正文中的标注（设置页开关） */
   visible: boolean
+  /** IndexedDB 异步水合是否完成 */
+  _hasHydrated: boolean
 
   add: (a: Omit<Annotation, 'id' | 'createdAt'>) => Annotation
   update: (id: string, patch: Partial<Pick<Annotation, 'noteText' | 'tags'>>) => void
@@ -29,6 +32,7 @@ export const useAnnotationStore = create<AnnotationState>()(
     (set) => ({
       annotations: [],
       visible: true,
+      _hasHydrated: false,
 
       add: (a) => {
         const annotation: Annotation = { ...a, id: genId(), createdAt: new Date().toISOString() }
@@ -66,7 +70,12 @@ export const useAnnotationStore = create<AnnotationState>()(
     }),
     {
       name: 'readbook:annotations',
+      storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({ annotations: s.annotations, visible: s.visible }),
+      onRehydrateStorage: () => () => {
+        // 必须用 setState 通知订阅者（直接赋值不会触发重渲染）
+        useAnnotationStore.setState({ _hasHydrated: true })
+      },
     },
   ),
 )

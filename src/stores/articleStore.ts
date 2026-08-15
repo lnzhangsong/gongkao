@@ -1,14 +1,17 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Article, ArticleInput, ReadingProgress } from '../types'
 import { MOCK_ARTICLES_ALL, computeReadTime } from '../data'
+import { idbStorage } from '../lib/idbStorage'
 import { useAnnotationStore } from './annotationStore'
 
 interface ArticleState {
-  /** 文章列表：mock 种子 + 用户录入/编辑（持久化） */
+  /** 文章列表：mock 种子 + 用户录入/编辑（持久化，IndexedDB） */
   articles: Article[]
   /** 阅读进度 / 收藏（持久化） */
   progress: Record<string, ReadingProgress>
+  /** IndexedDB 异步水合是否完成（读取前等待，避免丢失首屏状态） */
+  _hasHydrated: boolean
 
   getArticle: (id: string) => Article | undefined
   getProgress: (id: string) => ReadingProgress | undefined
@@ -48,6 +51,7 @@ export const useArticleStore = create<ArticleState>()(
     (set, get) => ({
       articles: MOCK_ARTICLES_ALL,
       progress: {},
+      _hasHydrated: false,
 
       getArticle: (id) => get().articles.find((a) => a.id === id),
 
@@ -146,7 +150,12 @@ export const useArticleStore = create<ArticleState>()(
     }),
     {
       name: 'readbook:articles',
+      storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({ articles: s.articles, progress: s.progress }),
+      onRehydrateStorage: () => () => {
+        // 必须用 setState 通知订阅者（直接赋值不会触发重渲染）
+        useArticleStore.setState({ _hasHydrated: true })
+      },
     },
   ),
 )

@@ -16,7 +16,34 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  text-size-adjust: 100%;
+}
+
+/* 细滚动条：Windows/Edge 默认滚动条厚重，与版式不搭 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+  border: 2px solid var(--paper);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 ::selection {

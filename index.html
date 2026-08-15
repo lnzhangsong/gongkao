@@ -6,10 +6,19 @@
     <title>读本 READBOOK · 每日精读</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 字体样式表异步加载：网络慢/被墙时正文先用系统字体渲染，不阻塞首屏 -->
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700;800&family=Noto+Serif+SC:wght@400;500;600;700&family=LXGW+WenKai&display=swap"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700;800&family=Noto+Serif+SC:wght@400;500;600;700&family=LXGW+WenKai&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700;800&family=Noto+Serif+SC:wght@400;500;600;700&family=LXGW+WenKai&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

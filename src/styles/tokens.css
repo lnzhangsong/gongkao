@@ -23,10 +23,11 @@
   --hl-pink: #f5cfd8;
   --hl-violet: #d9c9ff;
 
-  --serif: 'Noto Serif SC', 'Songti SC', serif;
-  --sans: 'DM Sans', 'Noto Sans SC', sans-serif;
-  --mono: 'DM Mono', 'SFMono-Regular', monospace;
-  --display: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  /* 字体栈：Google Fonts 优先，随后按平台回退（Windows: 微软雅黑/宋体/楷体；macOS: 苹方/华文） */
+  --serif: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif;
+  --sans: 'DM Sans', 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  --mono: 'DM Mono', 'SFMono-Regular', 'Consolas', 'Menlo', monospace;
+  --display: 'Ma Shan Zheng', 'Kaiti SC', 'KaiTi', 'STKaiti', serif;
 }
 
 :root[data-theme='blue'] {

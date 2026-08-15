@@ -7,9 +7,9 @@ export const FONT_FAMILIES: {
   label: string
   css: string
 }[] = [
-  { key: 'songti', label: '思源宋体', css: "'Noto Serif SC', 'Songti SC', serif" },
-  { key: 'system', label: '系统衬线', css: "Georgia, 'Songti SC', 'SimSun', serif" },
-  { key: 'kaiti', label: '霞鹜文楷', css: "'LXGW WenKai', 'Kaiti SC', serif" },
+  { key: 'songti', label: '思源宋体', css: "'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif" },
+  { key: 'system', label: '系统衬线', css: "Georgia, 'Songti SC', 'SimSun', 'STSong', serif" },
+  { key: 'kaiti', label: '霞鹜文楷', css: "'LXGW WenKai', 'Kaiti SC', 'KaiTi', 'STKaiti', serif" },
 ]
 
 interface ReaderState {

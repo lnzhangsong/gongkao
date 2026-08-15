@@ -206,7 +206,7 @@ export function AdminPage() {
               value={form.summary}
               onChange={(e) => setForm({ ...form, summary: e.target.value })}
               placeholder="一句话概括文章内容，展示在列表与阅读页"
-              rows={2}
+              rows={3}
             />
           </label>
 
@@ -250,7 +250,7 @@ export function AdminPage() {
               value={form.contentText}
               onChange={(e) => setForm({ ...form, contentText: e.target.value })}
               placeholder={'第一段……\n第二段……'}
-              rows={10}
+              rows={16}
             />
             <small className="admin-hint">预计阅读约 {computeReadTime(form.contentText.split('\n').filter((s) => s.trim()))} 分钟</small>
           </label>

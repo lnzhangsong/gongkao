@@ -8,8 +8,8 @@
 
 .admin-content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 40px;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 560px);
+  gap: 48px;
   max-width: 1920px;
   margin: 0 auto;
   padding: 32px 38px 80px;
@@ -78,7 +78,7 @@
 /* 表单 */
 .admin-form {
   border-left: 1px solid var(--line);
-  padding-left: 28px;
+  padding-left: 32px;
   align-self: start;
   position: sticky;
   top: 100px;
@@ -90,19 +90,19 @@
   align-items: center;
   border-bottom: 1px solid var(--ink);
   padding-bottom: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .admin-field {
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .admin-field > span {
   display: block;
   font: 12px var(--mono);
   color: var(--muted);
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 
 .admin-field input,
@@ -112,8 +112,8 @@
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
-  padding: 9px 11px;
-  font: 13px/1.7 var(--serif);
+  padding: 12px 14px;
+  font: 14px/1.8 var(--serif);
   outline: none;
   border-radius: 0;
 }

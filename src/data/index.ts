@@ -1,8 +1,14 @@
 import { MOCK_ARTICLES } from './articlesPart1'
 import { MOCK_ARTICLES_PART2 } from './articlesPart2'
+import { PARSED_ARTICLES } from './articlesParsed'
 import type { Article, ArticleTopic } from '../types'
 
-export const MOCK_ARTICLES_ALL: Article[] = [...MOCK_ARTICLES, ...MOCK_ARTICLES_PART2]
+/** 全部文章：预置精选 + 年编解析（后者由 data/articles.db 生成） */
+export const MOCK_ARTICLES_ALL: Article[] = [
+  ...MOCK_ARTICLES,
+  ...MOCK_ARTICLES_PART2,
+  ...PARSED_ARTICLES,
+]
 
 export const TOPICS: ArticleTopic[] = [
   '基层治理',

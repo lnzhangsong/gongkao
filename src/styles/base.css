@@ -1,0 +1,391 @@
+/* ============================================================
+   读本 READBOOK · 基础样式
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--body-bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- 页面外壳 ---------- */
+.page {
+  max-width: 1480px;
+  margin: auto;
+  background: var(--paper);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ---------- 顶部导航 ---------- */
+.nav {
+  height: 76px;
+  border-bottom: 1px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 38px;
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--paper) 93%, transparent);
+  backdrop-filter: blur(12px);
+  z-index: 40;
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.brand::before {
+  content: '读';
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 14px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 25px;
+  font: 10px var(--mono);
+  color: var(--muted);
+}
+
+.nav-links a {
+  color: inherit;
+  text-decoration: none;
+  padding-bottom: 5px;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: var(--ink);
+}
+
+.nav-links a.active {
+  color: var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.nav-right {
+  font: 10px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ---------- 页脚 ---------- */
+.footer {
+  border-top: 1px solid var(--ink);
+  padding: 14px 38px;
+  display: flex;
+  justify-content: space-between;
+  font: 10px var(--mono);
+  color: var(--muted);
+}
+
+/* ---------- 自定义光标（仅精细指针设备） ---------- */
+@media (pointer: fine) {
+  body.cursor-on {
+    cursor: none;
+  }
+  body.cursor-on a,
+  body.cursor-on button,
+  body.cursor-on input,
+  body.cursor-on select,
+  body.cursor-on textarea,
+  body.cursor-on [data-cursor] {
+    cursor: none;
+  }
+}
+
+.cursor {
+  position: fixed;
+  z-index: 200;
+  left: 0;
+  top: 0;
+  width: 15px;
+  height: 15px;
+  background: #fff;
+  border: 1px solid #111;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: difference;
+  opacity: 0;
+  transition: width 0.22s, height 0.22s, background 0.22s, opacity 0.25s;
+}
+
+.cursor.hover {
+  width: 19px;
+  height: 19px;
+}
+
+@media (pointer: coarse) {
+  .cursor {
+    display: none;
+  }
+}
+
+/* ---------- 通用小组件 ---------- */
+.eyebrow {
+  font: 10px var(--mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.filter-pill {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 99px;
+  padding: 8px 13px;
+  font: 10px var(--mono);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-pill:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.filter-pill.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 220px;
+  border-bottom: 1px solid var(--ink);
+  padding: 8px 0;
+}
+
+.search-box .search-icon {
+  font-size: 15px;
+  color: var(--muted);
+  display: inline-flex;
+}
+
+.search-box input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 12px var(--sans);
+}
+
+.search-box input::placeholder {
+  color: var(--muted);
+}
+
+.sort {
+  font: 10px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sort select {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 10px var(--mono);
+  outline: none;
+  cursor: pointer;
+}
+
+/* 分页 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 30px 0 8px;
+  font: 10px var(--mono);
+  color: var(--muted);
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: 10px var(--mono);
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.page-btn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.page-btn.current {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.page-ellipsis {
+  padding: 0 2px;
+}
+
+/* 开关 */
+.toggle {
+  width: 38px;
+  height: 22px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--line);
+  padding: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle i {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+  transition: transform 0.2s;
+}
+
+.toggle.on {
+  background: var(--accent);
+}
+
+.toggle.on i {
+  transform: translateX(16px);
+}
+
+/* 下拉选择 */
+.select {
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 8px 10px;
+  color: var(--ink);
+  font: 11px var(--sans);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+/* 文本链接式按钮 */
+.text-btn {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.text-btn:hover {
+  color: var(--accent);
+}
+
+/* 顶部滚动进度条 */
+.scroll-progress {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 3px;
+  background: var(--accent);
+  width: 0;
+  z-index: 60;
+  transition: width 0.1s linear;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  font: 12px/2 var(--serif);
+  color: var(--muted);
+}
+
+.empty-state strong {
+  display: block;
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 800px) {
+  .nav {
+    padding: 0 20px;
+  }
+  .nav-links {
+    display: none;
+  }
+  .nav-right {
+    display: none;
+  }
+  .footer {
+    padding: 14px 20px;
+    display: block;
+  }
+  .footer span {
+    display: block;
+    margin: 5px 0;
+  }
+}

@@ -1,0 +1,106 @@
+/* ============================================================
+   读本 READBOOK · 设计令牌与主题
+   ============================================================ */
+
+:root,
+:root[data-theme='paper'] {
+  --paper: #f4f0e9;
+  --ink: #181817;
+  --muted: #78736b;
+  --line: #cac6bd;
+  --accent: #e96448;
+  --yellow: #d9eb73;
+  --blue: #c9d8f1;
+  --dark: #242321;
+  --soft: #fffaf2;
+  --body-bg: #111;
+  --highlight-bg: #d9eb73;
+  --underline-color: #e96448;
+  /* 高亮色板 */
+  --hl-yellow: #d9eb73;
+  --hl-blue: #c9d8f1;
+  --hl-green: #bfe6c8;
+  --hl-pink: #f5cfd8;
+  --hl-violet: #d9c9ff;
+
+  --serif: 'Noto Serif SC', 'Songti SC', serif;
+  --sans: 'DM Sans', 'Noto Sans SC', sans-serif;
+  --mono: 'DM Mono', 'SFMono-Regular', monospace;
+  --display: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+}
+
+:root[data-theme='blue'] {
+  --paper: #e9edf4;
+  --ink: #1a2638;
+  --muted: #65738b;
+  --line: #c6cfdf;
+  --accent: #667ff0;
+  --yellow: #c8d5ff;
+  --blue: #c8d5ff;
+  --dark: #1e2a40;
+  --soft: #eef2fa;
+  --body-bg: #10141d;
+  --highlight-bg: #c8d5ff;
+  --underline-color: #667ff0;
+  --hl-yellow: #d9e28a;
+  --hl-blue: #c8d5ff;
+  --hl-green: #b7e0c4;
+  --hl-pink: #f3c9d6;
+  --hl-violet: #d2c2fb;
+}
+
+:root[data-theme='night'] {
+  --paper: #20221f;
+  --ink: #f2f0e8;
+  --muted: #a2a89e;
+  --line: #4a4f46;
+  --accent: #d7f267;
+  --yellow: #d7f267;
+  --blue: #3a4a3f;
+  --dark: #171915;
+  --soft: #262923;
+  --body-bg: #0d0e0c;
+  --highlight-bg: #4a4f3a;
+  --underline-color: #d7f267;
+  --hl-yellow: rgba(217, 235, 115, 0.3);
+  --hl-blue: rgba(160, 196, 242, 0.3);
+  --hl-green: rgba(140, 210, 160, 0.3);
+  --hl-pink: rgba(240, 170, 190, 0.3);
+  --hl-violet: rgba(200, 170, 255, 0.3);
+}
+
+:root[data-theme='violet'] {
+  --paper: #ebe8f6;
+  --ink: #282039;
+  --muted: #7c7591;
+  --line: #cfc9e4;
+  --accent: #aa7bff;
+  --yellow: #d9c9ff;
+  --blue: #c9b8fa;
+  --dark: #2b2340;
+  --soft: #f3f0fb;
+  --body-bg: #13101c;
+  --highlight-bg: #d9c9ff;
+  --underline-color: #aa7bff;
+  --hl-yellow: #e3df9a;
+  --hl-blue: #c9c6f8;
+  --hl-green: #c2e0cc;
+  --hl-pink: #f0ccdd;
+  --hl-violet: #d9c9ff;
+}
+
+/* 阅读器变量（由 readerStore 写入内联 style） */
+:root {
+  --reader-font-size: 17px;
+  --reader-line-height: 2.15;
+  --reader-font-family: var(--serif);
+}
+
+/* 减少动效 */
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}

@@ -1,0 +1,312 @@
+/* ============================================================
+   设置页
+   ============================================================ */
+
+.settings-page {
+  border-top: 1px solid var(--ink);
+}
+
+.settings-header {
+  padding: 55px 38px 42px;
+  border-bottom: 1px solid var(--ink);
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 35px;
+}
+
+.settings-header > div {
+  min-width: 0;
+}
+
+.settings-header h1 {
+  font: 400 clamp(46px, 6.2vw, 82px) / 1.25 var(--display);
+  letter-spacing: 0.01em;
+  margin: 0;
+  max-width: 760px;
+  position: relative;
+  z-index: 1;
+}
+
+.settings-header h1 span {
+  color: var(--accent);
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
+.settings-header p {
+  max-width: 300px;
+  font: 14px/1.9 var(--serif);
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  margin: 0;
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 60px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 38px 38px 80px;
+}
+
+.settings-nav {
+  font: 12px var(--sans);
+  color: var(--muted);
+}
+
+.settings-nav button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 13px;
+  border: 0;
+  border-left: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--sans);
+  cursor: pointer;
+}
+
+.settings-nav button:hover {
+  color: var(--ink);
+}
+
+.settings-nav button.active {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--paper) 82%, #fff 18%);
+}
+
+.settings-section {
+  border-top: 1px solid var(--ink);
+  padding-top: 18px;
+  margin-bottom: 38px;
+  scroll-margin-top: 100px;
+}
+
+.settings-section h2 {
+  font: 500 21px var(--serif);
+  margin: 0 0 24px;
+}
+
+.setting-row {
+  min-height: 62px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.setting-title {
+  font: 13px var(--sans);
+}
+
+.setting-desc {
+  font: 11px/1.6 var(--sans);
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* 字号调节 */
+.font-size-ctl {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  padding: 4px 6px;
+}
+
+.font-size-ctl button {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 10px var(--mono);
+  cursor: pointer;
+  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.font-size-ctl button:hover {
+  color: var(--accent);
+}
+
+.font-size-ctl .value {
+  font: 10px var(--mono);
+  color: var(--muted);
+  padding: 0 6px;
+  min-width: 46px;
+  text-align: center;
+}
+
+/* 行高调节 */
+.line-height-ctl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 10px var(--mono);
+  color: var(--muted);
+}
+
+.line-height-ctl button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 10px var(--mono);
+}
+
+.line-height-ctl button:hover {
+  border-color: var(--ink);
+}
+
+/* 主题色圆点 */
+.theme-options {
+  display: flex;
+  gap: 10px;
+}
+
+.theme-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.theme-dot:hover {
+  transform: scale(1.12);
+}
+
+.theme-dot.active {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--paper) inset;
+}
+
+.theme-dot.paper {
+  background: #f3eee5;
+  border-color: #27211b;
+}
+
+.theme-dot.blue {
+  background: #e9edf4;
+  border-color: #1a2638;
+}
+
+.theme-dot.night {
+  background: #20221f;
+  border-color: #d7f267;
+}
+
+.theme-dot.violet {
+  background: #ebe8f6;
+  border-color: #282039;
+}
+
+/* 危险操作 */
+.danger {
+  color: #b84b37;
+}
+
+.danger h2 {
+  color: #b84b37;
+}
+
+.danger .setting-desc {
+  color: color-mix(in srgb, #b84b37 65%, var(--paper));
+}
+
+.danger button.ghost {
+  color: #b84b37;
+  border-color: #b84b37;
+}
+
+.danger button.ghost:hover {
+  background: #b84b37;
+  color: var(--paper);
+}
+
+.ghost {
+  border: 1px solid var(--ink);
+  background: transparent;
+  padding: 9px 12px;
+  font: 10px var(--mono);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.ghost:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.about-line {
+  font: 11px/1.9 var(--sans);
+  color: var(--muted);
+}
+
+.about-line strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+@media (max-width: 800px) {
+  .settings-header {
+    display: block;
+    padding: 42px 20px 32px;
+  }
+  .settings-header p {
+    margin-top: 20px;
+  }
+  .settings {
+    display: block;
+    padding: 25px 20px 55px;
+  }
+  .settings-nav {
+    display: flex;
+    overflow: auto;
+    gap: 5px;
+    margin-bottom: 35px;
+  }
+  .settings-nav button {
+    white-space: nowrap;
+    border-left: 0;
+    border-bottom: 1px solid transparent;
+    padding: 8px 10px;
+  }
+  .settings-nav button.active {
+    border-color: var(--accent);
+    border-left: 0;
+    border-bottom: 1px solid var(--accent);
+    background: transparent;
+  }
+  .setting-row {
+    align-items: start;
+    padding: 15px 0;
+    flex-wrap: wrap;
+  }
+  .setting-control {
+    margin-top: 6px;
+  }
+}

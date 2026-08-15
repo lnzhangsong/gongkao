@@ -1,0 +1,62 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import type { Annotation } from '../types'
+
+interface AnnotationState {
+  annotations: Annotation[]
+  /** 是否显示正文中的标注（设置页开关） */
+  visible: boolean
+
+  add: (a: Omit<Annotation, 'id' | 'createdAt'>) => Annotation
+  update: (id: string, patch: Partial<Pick<Annotation, 'noteText' | 'tags'>>) => void
+  remove: (id: string) => void
+  removeMany: (ids: string[]) => void
+  removeForArticle: (articleId: string) => void
+  setVisible: (v: boolean) => void
+  clearAll: () => void
+}
+
+let uid = 0
+function genId(): string {
+  uid += 1
+  return `ann-${Date.now().toString(36)}-${uid}`
+}
+
+export const useAnnotationStore = create<AnnotationState>()(
+  persist(
+    (set) => ({
+      annotations: [],
+      visible: true,
+
+      add: (a) => {
+        const annotation: Annotation = { ...a, id: genId(), createdAt: new Date().toISOString() }
+        set((s) => ({ annotations: [annotation, ...s.annotations] }))
+        return annotation
+      },
+
+      update: (id, patch) =>
+        set((s) => ({
+          annotations: s.annotations.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+        })),
+
+      remove: (id) =>
+        set((s) => ({ annotations: s.annotations.filter((a) => a.id !== id) })),
+
+      removeMany: (ids) => {
+        const setIds = new Set(ids)
+        set((s) => ({ annotations: s.annotations.filter((a) => !setIds.has(a.id)) }))
+      },
+
+      removeForArticle: (articleId) =>
+        set((s) => ({ annotations: s.annotations.filter((a) => a.articleId !== articleId) })),
+
+      setVisible: (v) => set({ visible: v }),
+
+      clearAll: () => set({ annotations: [], visible: true }),
+    }),
+    {
+      name: 'readbook:annotations',
+      partialize: (s) => ({ annotations: s.annotations, visible: s.visible }),
+    },
+  ),
+)

@@ -1,5 +1,5 @@
 /**
- * 诊断端点：GET /api/_diag —— 返回函数运行环境信息（部署后访问即可定位 500 原因）
+ * 诊断端点：GET /api/diag —— 返回函数运行环境信息（部署后访问即可定位 500 原因）
  */
 import { DatabaseSync } from 'node:sqlite'
 import { existsSync } from 'node:fs'
@@ -22,9 +22,10 @@ export function GET(request: Request) {
   // 2) db 文件候选路径（includeFiles 打包后位置未知，全部探测）
   const here = path.dirname(fileURLToPath(import.meta.url))
   out.here = here
+  const root = path.resolve(here, '..')
   const candidates = [
     path.join(here, 'data', 'articles.db'),
-    path.join(here, '..', 'data', 'articles.db'),
+    path.join(root, 'data', 'articles.db'),
     path.join(process.cwd(), 'data', 'articles.db'),
     path.join(process.cwd(), 'articles.db'),
   ]

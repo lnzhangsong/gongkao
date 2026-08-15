@@ -196,7 +196,7 @@ a {
 
 .nav-mobile-panel {
   position: fixed;
-  top: 76px;
+  top: 68px;
   left: 0;
   right: 0;
   z-index: 46;
@@ -580,6 +580,9 @@ a {
   .nav-mobile-toggle {
     display: inline-flex;
   }
+  .nav:has(.reading-page-menu) .nav-mobile-toggle,
+  .nav:has(.reading-page-menu) .nav-right { display: none; }
+  .nav:has(.reading-page-menu) { justify-content: flex-start; }
   .footer {
     padding: 14px 20px;
     display: block;

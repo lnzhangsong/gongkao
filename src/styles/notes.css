@@ -454,19 +454,9 @@
   .notes-workspace {
     display: block;
   }
+  /* 移动端：隐藏主题过滤侧栏（QUICK ACCESS + TOPICS），保留搜索 */
   .notes-sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 18px 20px;
-  }
-  .side-nav {
-    display: flex;
-    gap: 7px;
-    overflow: auto;
-    margin: 0;
-  }
-  .side-nav button {
-    white-space: nowrap;
+    display: none;
   }
   .notes-main {
     padding: 22px 20px;
@@ -475,14 +465,15 @@
     width: 100%;
   }
   .note-row {
-    grid-template-columns: 30px 30px minmax(0, 1fr) 46px;
+    grid-template-columns: 30px 30px minmax(0, 1fr);
     gap: 8px;
   }
   .note-topic {
     display: none;
   }
+  /* 移动端：隐藏行日期，避免日期过长撑出屏幕 */
   .note-date {
-    font-size: 12px;
+    display: none;
   }
   .note-detail {
     display: none;

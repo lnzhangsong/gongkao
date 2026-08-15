@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useArticleStore } from '../stores/articleStore'
-import { formatDate } from '../data'
 import { loadDisplayFont } from '../lib/fonts'
 import { useEffect } from 'react'
 import type { Article } from '../types'
@@ -57,13 +56,7 @@ export function HomePage() {
             <p>
               每日精选人民日报深度内容与申论素材。不追热点，只留下值得反复阅读的文字。
             </p>
-            <div className="hero-date">
-              READ SLOWLY
-              <br />
-              THINK DEEPLY
-              <br />
-              WRITE CLEARLY
-            </div>
+
           </div>
         </div>
         <div className="stage">
@@ -140,13 +133,10 @@ export function HomePage() {
               <div className="c-label">CONTINUE READING　/　最近阅读</div>
               <h3>{recentList[0].article.title}</h3>
               <div className="continue-meta">
-                <span>
-                  上次读到 {recentList[0].p?.percent ?? 0}%
-                </span>
+                <span>上次读到 {recentList[0].p?.percent ?? 0}%</span>
                 <div className="progress">
                   <i style={{ width: `${recentList[0].p?.percent ?? 0}%` }} />
                 </div>
-                <span>{formatDate(recentList[0].article.date)}</span>
               </div>
             </div>
             <button className="ghost" onClick={() => open(recentList[0].article)}>

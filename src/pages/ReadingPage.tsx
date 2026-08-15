@@ -122,9 +122,9 @@ export function ReadingPage() {
   const [percent, setPercent] = useState(0)
   const [sessionSec, setSessionSec] = useState(0)
   /** 窄屏（≤500px）：弹层固定在屏幕底部 */
-  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 500)
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900)
   useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth <= 500)
+    const onResize = () => setIsNarrow(window.innerWidth <= 900)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -281,19 +281,34 @@ export function ReadingPage() {
       const selRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect()
       if (!selRect || selRect.width === 0 && selRect.height === 0) return
       const exactText = flatText(article?.content ?? []).slice(range.start, range.end)
+      const bodyRect = el.getBoundingClientRect()
+      // PC（宽屏）：absolute 定位相对正文容器，滚动时工具栏跟随选区
+      const isNarrow = window.innerWidth <= 500
       // 上方放不下（选区贴近视口顶部）时翻到选区下方
-      const below = selRect.top < 140
-      // 水平夹紧：工具栏半宽约 150px（fixed + translate(-50%)）
-      const HALF = 150
-      const rawX = selRect.left + selRect.width / 2
-      const clampedX = Math.min(Math.max(rawX, HALF), Math.max(window.innerWidth - HALF, HALF))
-      // 工具栏 translate(-100%) 使底部贴在 y；上方模式 y=选区顶-6 间距；下方模式 y=选区底+6
+      const below = selRect.top - bodyRect.top < 140
       const GAP = 6
-      // 选中新文字时，若「标注管理菜单」还开着，先关掉，避免两个 fixed 弹层重叠
+      if (isNarrow) {
+        // 窄屏：底部面板，坐标由 CSS 接管，仅记录选区状态
+        setAnnPopover(null)
+        setPopover({
+          x: 0,
+          y: 0,
+          start: range.start,
+          end: range.end,
+          text: exactText,
+          below,
+        })
+        return
+      }
+      // PC：相对正文容器定位，工具栏 translate(-50%,-100%) 使底部贴在选区上方
+      const rawX = selRect.left + selRect.width / 2 - bodyRect.left
+      const bodyW = bodyRect.width
+      const HALF = 170
+      const clampedX = Math.min(Math.max(rawX, HALF), Math.max(bodyW - HALF, HALF))
       setAnnPopover(null)
       setPopover({
         x: clampedX,
-        y: below ? selRect.bottom + GAP : selRect.top - GAP,
+        y: below ? selRect.bottom - bodyRect.top + GAP : selRect.top - bodyRect.top - GAP,
         start: range.start,
         end: range.end,
         text: exactText,
@@ -700,18 +715,18 @@ export function ReadingPage() {
                             {seg.text}
                           </span>
                           {note && (
-                            <span
+                            <button
+                              type="button"
                               className="note-star"
-                              onClick={() =>
-                                toggleSegmentNotes(
-                                  seg.annotations.filter((a) => a.kind === 'note').map((a) => a.id),
-                                )
-                              }
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                toggleSegmentNotes(seg.annotations.filter((a) => a.kind === 'note').map((a) => a.id))
+                              }}
                               title="展开/收起笔记"
                               aria-label="展开/收起笔记"
                             >
                               ✦
-                            </span>
+                            </button>
                           )}
                         </span>
                       )

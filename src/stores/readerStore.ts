@@ -48,7 +48,7 @@ export const useReaderStore = create<ReaderState>()(
     (set) => ({
       settings: DEFAULT_SETTINGS,
       setFontSize: (px) =>
-        set((s) => ({ settings: { ...s.settings, fontSize: Math.min(22, Math.max(14, px)) } })),
+        set((s) => ({ settings: { ...s.settings, fontSize: Math.min(28, Math.max(14, px)) } })),
       setLineHeight: (lh) =>
         set((s) => ({
           settings: { ...s.settings, lineHeight: Math.min(2.4, Math.max(1.6, Math.round(lh * 100) / 100)) },

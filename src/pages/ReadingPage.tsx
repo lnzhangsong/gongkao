@@ -15,6 +15,7 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { useThemeStore, THEMES } from '../stores/themeStore'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { paragraphStarts, computeSelectionRange, splitParagraph, flatText } from '../lib/offsets'
+import { loadFontFamily } from '../lib/fonts'
 import { formatDate } from '../data'
 import { formatTimeOnly } from '../lib/export'
 import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS, type Annotation, type AnnotationKind, type HighlightColor, type ReaderSettings, type UnderlineStyle } from '../types'
@@ -58,6 +59,11 @@ export function ReadingPage() {
   const setFontSize = useReaderStore((s) => s.setFontSize)
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
+
+  /* 进入阅读页或切换字体时，按需加载正文字体（其余字体不下载） */
+  useEffect(() => {
+    void loadFontFamily(settings.fontFamily)
+  }, [settings.fontFamily])
 
   const annotations = useAnnotationStore((s) => s.annotations)
   const annotationsVisible = useAnnotationStore((s) => s.visible)

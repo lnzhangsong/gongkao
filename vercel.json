@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/articles.ts": {
+      "includeFiles": "data/articles.db"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }

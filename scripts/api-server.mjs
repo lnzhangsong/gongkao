@@ -6,7 +6,41 @@
  *   GET /api/articles/:id
  */
 import { createServer } from 'node:http'
-import { queryMetaList, queryArticle } from '../api/db.ts'
+import { DatabaseSync } from 'node:sqlite'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// 与 api/articles.ts 相同的查询逻辑（Vercel 打包只编译入口文件，这里本地自包含）
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+let _db = null
+function openDb() {
+  if (_db) return _db
+  _db = new DatabaseSync(path.join(PROJECT_ROOT, 'data', 'articles.db'), { readOnly: true })
+  return _db
+}
+function queryMetaList() {
+  const d = openDb()
+  return d
+    .prepare('SELECT id, title, summary, source, topic, date, read_time, featured, pullquote, finish_note FROM articles ORDER BY date DESC, id')
+    .all()
+    .map((r) => ({
+      id: r.id, title: r.title, summary: r.summary, source: r.source, topic: r.topic,
+      date: r.date, readTime: r.read_time, featured: Boolean(r.featured),
+      ...(r.pullquote ? { pullquote: r.pullquote } : {}),
+      ...(r.finish_note ? { finishNote: r.finish_note } : {}),
+    }))
+}
+function queryArticle(id) {
+  const d = openDb()
+  const r = d.prepare('SELECT id, title, summary, source, topic, date, read_time, content_json, pullquote, finish_note FROM articles WHERE id = ?').get(id)
+  if (!r) return null
+  return {
+    id: r.id, title: r.title, summary: r.summary, content: JSON.parse(r.content_json),
+    source: r.source, topic: r.topic, date: r.date, readTime: r.read_time,
+    ...(r.pullquote ? { pullquote: r.pullquote } : {}),
+    ...(r.finish_note ? { finishNote: r.finish_note } : {}),
+  }
+}
 
 const PORT = Number(process.argv[2] ?? 8787)
 

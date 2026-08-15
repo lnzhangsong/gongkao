@@ -7,16 +7,17 @@ import {
   useState,
   type CSSProperties,
 } from 'react'
-import { useNavigate, useParams, Navigate, Link } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
 import { Bookmark, Highlighter, Minus, Plus, StickyNote, Underline as UnderlineIcon } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
-import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
+import { useReaderStore, fontFamilyCss, FONT_FAMILIES } from '../stores/readerStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useThemeStore, THEMES } from '../stores/themeStore'
+import { MenuSelect } from '../components/ui/MenuSelect'
 import { paragraphStarts, computeSelectionRange, splitParagraph, flatText } from '../lib/offsets'
 import { formatDate } from '../data'
 import { formatTimeOnly } from '../lib/export'
-import { HL_COLORS, HL_COLOR_LABELS, type HighlightColor } from '../types'
+import { HL_COLORS, HL_COLOR_LABELS, type HighlightColor, type ReaderSettings } from '../types'
 
 interface PopoverState {
   x: number
@@ -44,7 +45,6 @@ function fmtDuration(totalSec: number): string {
 
 export function ReadingPage() {
   const { articleId = '' } = useParams()
-  const navigate = useNavigate()
 
   const article = useArticleStore((s) => s.articles.find((a) => a.id === articleId))
   const getProgress = useArticleStore((s) => s.getProgress)
@@ -56,6 +56,7 @@ export function ReadingPage() {
 
   const settings = useReaderStore((s) => s.settings)
   const setFontSize = useReaderStore((s) => s.setFontSize)
+  const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
 
   const annotations = useAnnotationStore((s) => s.annotations)
@@ -354,23 +355,6 @@ export function ReadingPage() {
     setNoteDraft('')
   }
 
-  /* 结尾金句保存为摘录 */
-  const saveFinishNote = () => {
-    if (!article || !article.finishNote) return
-    const exists = annotations.some(
-      (a) => a.articleId === article.id && a.kind === 'note' && a.start === 0 && a.end === 0,
-    )
-    if (exists) return
-    addAnnotation({
-      articleId: article.id,
-      kind: 'note',
-      text: article.finishNote,
-      start: 0,
-      end: 0,
-      noteText: '',
-    })
-  }
-
   /** 每个 note 标注所在的段落 index（仅当前文章） */
   const noteParaIndex = useMemo(() => {
     const map: Record<string, number> = {}
@@ -391,19 +375,6 @@ export function ReadingPage() {
   return (
     <section className="reading-page">
       <div className="scroll-progress" style={{ width: `${percent}%` }} />
-      <div className="reading-nav">
-        <button className="back" onClick={() => navigate(-1)}>
-          ← BACK TO INDEX
-        </button>
-        <div className="article-status">
-          <span>READING　{Math.round(percent)}%</span>
-          <div className="progress">
-            <i style={{ width: `${percent}%` }} />
-          </div>
-          <span>{fmtDuration((progress?.timeSpentSec ?? 0) + sessionSec)}</span>
-        </div>
-      </div>
-
       <main className="reading-layout">
         <article>
           <header className="article-head">
@@ -522,19 +493,6 @@ export function ReadingPage() {
               <blockquote className="pullquote">“{article.pullquote}”</blockquote>
             )}
 
-            <div className="finish">
-              <small>READING NOTE / 01</small>
-              <h3>{article.finishNote ?? article.pullquote ?? article.summary}</h3>
-              <div className="finish-foot">
-                <button className="save" onClick={saveFinishNote}>
-                  + 保存为摘录　↗
-                </button>
-                <Link to="/notes" className="save" style={{ textDecoration: 'none' }}>
-                  查看我的摘录　↗
-                </Link>
-              </div>
-            </div>
-
             {/* 选择弹出工具栏（位于 article-body 内，坐标相对正文） */}
             <div
               className={`selection-popover${popover ? ' show' : ''}`}
@@ -590,6 +548,15 @@ export function ReadingPage() {
             </span>
           </div>
           <div className="tool">
+            <span>正文字体</span>
+            <MenuSelect
+              value={settings.fontFamily}
+              options={FONT_FAMILIES.map((f) => ({ key: f.key, label: f.label }))}
+              onChange={(key) => setFontFamily(key as ReaderSettings['fontFamily'])}
+              ariaLabel="正文字体"
+            />
+          </div>
+          <div className="tool">
             <span>阅读主题</span>
             <button
               onClick={() => {
@@ -619,10 +586,6 @@ export function ReadingPage() {
             >
               {annotationsVisible ? 'ON' : 'OFF'}
             </button>
-          </div>
-          <div className="side-note">
-            <strong>今日金句</strong>
-            <p>{article.pullquote ?? article.summary}</p>
           </div>
         </aside>
       </main>

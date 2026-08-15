@@ -102,26 +102,41 @@ a {
   z-index: 40;
 }
 
-.brand {
-  font-weight: 800;
-  letter-spacing: -0.08em;
+.nav-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 22px;
+  min-width: 0;
+}
+
+.nav-back {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--mono);
+  cursor: pointer;
+  padding: 4px 0;
   white-space: nowrap;
 }
 
-.brand::before {
-  content: '读';
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
+.nav-back:hover {
+  color: var(--accent);
+}
+
+.brand {
+  font: 600 19px/1 var(--serif);
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  white-space: nowrap;
   color: var(--ink);
-  font-family: var(--serif);
-  font-size: 14px;
+}
+
+.brand-en {
+  font: 10px var(--mono);
+  letter-spacing: 0.16em;
+  color: var(--muted);
 }
 
 .nav-links {
@@ -365,6 +380,77 @@ a {
   font: 12px var(--sans);
   border-radius: 0;
   cursor: pointer;
+}
+
+/* 下拉选择（自定义，替代原生 select） */
+.menu-select {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu-select .menu-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 12px var(--mono);
+  cursor: pointer;
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.menu-select .menu-select-trigger:hover {
+  color: var(--accent);
+}
+
+.menu-select .menu-select-chevron {
+  transition: transform 0.15s;
+}
+
+.menu-select .menu-select-chevron.up {
+  transform: rotate(180deg);
+}
+
+/* 弹出列表：固定深色（与正文选择工具栏一致，各主题通用） */
+.menu-select .menu-select-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 138px;
+  padding: 4px;
+  background: #242321;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  display: grid;
+  gap: 1px;
+}
+
+/* 高特异性：防止被 .tool button 等规则覆盖文字颜色 */
+.menu-select .menu-select-item {
+  border: 0;
+  background: transparent;
+  color: #f4f0e9;
+  font: 12px var(--mono);
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.menu-select .menu-select-item:hover {
+  background: var(--accent);
+  color: #1c1b1a;
+}
+
+.menu-select .menu-select-check {
+  font-size: 11px;
 }
 
 /* 文本链接式按钮 */

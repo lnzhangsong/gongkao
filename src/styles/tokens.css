@@ -2,6 +2,24 @@
    读本 READBOOK · 设计令牌与主题
    ============================================================ */
 
+/* 霞鹜文楷（自托管子集：仅含应用用字，852KB）——fontsource 仅拉丁，不可用 */
+@font-face {
+  font-family: 'LXGW WenKai';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/lxgw-wenkai.woff2') format('woff2');
+}
+
+/* 仓耳今楷05（自托管子集 960KB；已改家族名为「仓耳今楷」，免安装） */
+@font-face {
+  font-family: '仓耳今楷';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/canger-jinkai.woff2') format('woff2');
+}
+
 :root,
 :root[data-theme='paper'] {
   --paper: #f4f0e9;

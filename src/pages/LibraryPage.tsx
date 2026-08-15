@@ -220,28 +220,15 @@ export function LibraryPage() {
 
         {pageItems.map((a) => {
           const p = progress[a.id]
-          const statusLabel = p?.completed
-            ? '已读'
-            : p && p.percent > 0
-              ? `在读 ${p.percent}%`
-              : ''
+          const isRead = p?.completed === true
           return (
             <button className="article-row" key={a.id} onClick={() => open(a)}>
               <span className="article-no">{a.id.slice(1).padStart(3, '0')}</span>
-              <h3 className="article-title">{a.title}</h3>
+              <h3 className={`article-title${isRead ? ' is-read' : ''}`}>{a.title}</h3>
               <span className="article-topic">
                 {a.topic} · {a.source}
               </span>
-              <span className="article-time">
-                {formatDate(a.date)}
-                {statusLabel && (
-                  <>
-                    {'　'}
-                    <span className="done">{statusLabel}</span>
-                  </>
-                )}{' '}
-                ↗
-              </span>
+              <span className="article-time">{formatDate(a.date)}　↗</span>
             </button>
           )
         })}

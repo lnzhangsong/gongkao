@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 const LINKS = [
   { to: '/', label: 'READ', end: true },
@@ -14,11 +14,22 @@ function today(): string {
 }
 
 export function Nav() {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const isReading = pathname.startsWith('/reading')
+
   return (
     <nav className="nav">
-      <NavLink to="/" className="brand">
-        读本 / READBOOK
-      </NavLink>
+      <span className="nav-left">
+        {isReading && (
+          <button className="nav-back" onClick={() => navigate(-1)}>
+            ← 返回
+          </button>
+        )}
+        <NavLink to="/" className="brand">
+          读本<span className="brand-en">READBOOK</span>
+        </NavLink>
+      </span>
       <div className="nav-links">
         {LINKS.map((l) => (
           <NavLink

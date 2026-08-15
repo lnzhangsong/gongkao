@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FileText, Plus, Save, Search, Trash2, X } from 'lucide-react'
-import * as mammoth from 'mammoth'
 import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate, computeReadTime } from '../data'
 import { Pagination } from '../components/ui/Pagination'
@@ -45,6 +44,8 @@ export function AdminPage() {
     }
     try {
       const buffer = await file.arrayBuffer()
+      // 按需加载解析库（仅导入 Word 时下载，减小首屏包体）
+      const mammoth = await import('mammoth')
       const result = await mammoth.extractRawText({ arrayBuffer: buffer })
       const lines = result.value
         .split(/\n+/)

@@ -62,6 +62,22 @@
   padding: 56px 24px 90px;
 }
 
+/* 宽屏（1600px+，如 1920）：正文列与版心加宽（版心收拢贴合两列内容） */
+@media (min-width: 1600px) {
+  .reading-layout {
+    max-width: 1502px; /* 1160 + 64 + 230 + 左右 padding 48 */
+    grid-template-columns: minmax(0, 1160px) 230px;
+  }
+}
+
+/* 超宽屏 / 4K（2400px+）：继续加宽 */
+@media (min-width: 2400px) {
+  .reading-layout {
+    max-width: 1762px; /* 1420 + 64 + 230 + 左右 padding 48 */
+    grid-template-columns: minmax(0, 1420px) 230px;
+  }
+}
+
 /* 文章索引 */
 .article-index {
   display: none;

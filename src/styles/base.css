@@ -127,7 +127,7 @@ a {
 .nav-links {
   display: flex;
   gap: 25px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -148,7 +148,7 @@ a {
 }
 
 .nav-right {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -159,7 +159,7 @@ a {
   padding: 14px 38px;
   display: flex;
   justify-content: space-between;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -208,7 +208,7 @@ a {
 
 /* ---------- 通用小组件 ---------- */
 .eyebrow {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   letter-spacing: 0.14em;
   color: var(--muted);
   text-transform: uppercase;
@@ -219,7 +219,7 @@ a {
   background: transparent;
   border-radius: 99px;
   padding: 8px 13px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   cursor: pointer;
   transition: all 0.2s;
@@ -265,7 +265,7 @@ a {
 }
 
 .sort {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -274,7 +274,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--ink);
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   outline: none;
   cursor: pointer;
 }
@@ -286,7 +286,7 @@ a {
   justify-content: center;
   gap: 7px;
   padding: 30px 0 8px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -296,7 +296,7 @@ a {
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   border-radius: 50%;
   cursor: pointer;
   display: inline-flex;
@@ -362,7 +362,7 @@ a {
   background: transparent;
   padding: 8px 10px;
   color: var(--ink);
-  font: 11px var(--sans);
+  font: 12px var(--sans);
   border-radius: 0;
   cursor: pointer;
 }

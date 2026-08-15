@@ -80,7 +80,7 @@
 }
 
 .featured-main .tag {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--accent);
 }
 
@@ -97,7 +97,7 @@
   display: flex;
   justify-content: space-between;
   color: var(--muted);
-  font: 10px var(--mono);
+  font: 12px var(--mono);
 }
 
 .collection {
@@ -112,7 +112,7 @@
 }
 
 .collection label {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -144,11 +144,11 @@
 }
 
 .collection-foot label {
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .collection-foot a {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--ink);
   cursor: pointer;
   text-decoration: none;
@@ -188,7 +188,7 @@
 }
 
 .article-no {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--accent);
 }
 
@@ -199,13 +199,13 @@
 }
 
 .article-topic {
-  font: 11px var(--sans);
+  font: 12px var(--sans);
   color: var(--muted);
 }
 
 .article-time {
   text-align: right;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -250,6 +250,6 @@
     font-size: 17px;
   }
   .article-time {
-    font-size: 9px;
+    font-size: 12px;
   }
 }

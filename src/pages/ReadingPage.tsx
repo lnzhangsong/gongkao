@@ -241,32 +241,46 @@ export function ReadingPage() {
     }
   }, [starts, hidePopover, hideAnnPopover])
 
-  const applyHighlight = (color: HighlightColor) => {
+  /** 添加标注；与现有同类型标注重叠时合并为并集区间，避免一段文字叠多条 */
+  const applyMark = (kind: 'highlight' | 'underline', color?: HighlightColor) => {
     if (!article || !popover) return
-    addAnnotation({
-      articleId: article.id,
-      kind: 'highlight',
-      color,
-      text: popover.text,
-      start: popover.start,
-      end: popover.end,
-    })
-    setHlColor(color)
+    const { start, end } = popover
+    const overlapped = articleAnnotations.filter(
+      (a) => a.kind === kind && a.start < end && a.end > start,
+    )
+    if (overlapped.length > 0) {
+      const s = Math.min(start, ...overlapped.map((a) => a.start))
+      const e = Math.max(end, ...overlapped.map((a) => a.end))
+      removeMany(overlapped.map((a) => a.id))
+      addAnnotation({
+        articleId: article.id,
+        kind,
+        ...(color ? { color } : {}),
+        text: flatText(article.content).slice(s, e),
+        start: s,
+        end: e,
+      })
+    } else {
+      addAnnotation({
+        articleId: article.id,
+        kind,
+        ...(color ? { color } : {}),
+        text: popover.text,
+        start,
+        end,
+      })
+    }
     window.getSelection()?.removeAllRanges()
     hidePopover()
   }
 
+  const applyHighlight = (color: HighlightColor) => {
+    setHlColor(color)
+    applyMark('highlight', color)
+  }
+
   const applyUnderline = () => {
-    if (!article || !popover) return
-    addAnnotation({
-      articleId: article.id,
-      kind: 'underline',
-      text: popover.text,
-      start: popover.start,
-      end: popover.end,
-    })
-    window.getSelection()?.removeAllRanges()
-    hidePopover()
+    applyMark('underline')
   }
 
   const startNote = () => {

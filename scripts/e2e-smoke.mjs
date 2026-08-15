@@ -29,13 +29,38 @@ async function open(path) {
 
 /** 选中某段中的文字并弹出工具栏 */
 async function selectRange(paraIndex, from, to) {
+  // 段落可能已被标注拆成多个文本节点，按字符偏移遍历全部文本节点定位选区
   await page.evaluate(
     ([pi, f, t]) => {
       const p = document.querySelector(`[data-para="${pi}"]`)
-      const text = p.firstChild
+      const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT)
+      const nodes = []
+      let cur = walker.nextNode()
+      while (cur) {
+        nodes.push(cur)
+        cur = walker.nextNode()
+      }
+      let acc = 0
+      let startNode = null
+      let startOff = 0
+      let endNode = null
+      let endOff = 0
+      for (const n of nodes) {
+        const len = n.data.length
+        if (startNode === null && acc + len > f) {
+          startNode = n
+          startOff = f - acc
+        }
+        if (acc + len >= t) {
+          endNode = n
+          endOff = t - acc
+          break
+        }
+        acc += len
+      }
       const range = document.createRange()
-      range.setStart(text, f)
-      range.setEnd(text, t)
+      range.setStart(startNode, startOff)
+      range.setEnd(endNode, endOff)
       const sel = window.getSelection()
       sel.removeAllRanges()
       sel.addRange(range)
@@ -140,6 +165,10 @@ check('段首空两格', (await page.evaluate(() => {
   const p = document.querySelector('.article-body p')
   return getComputedStyle(p).textIndent === '34px'
 })) === true)
+check('小字号提升到 12px', (await page.evaluate(() => {
+  const el = document.querySelector('.article-head .tag')
+  return getComputedStyle(el).fontSize === '12px'
+})) === true)
 // 点击蓝色色点 → 蓝色高亮
 await page.evaluate(() => {
   const dot = document.querySelector('.hl-dot.blue')
@@ -153,6 +182,19 @@ const anns = (await page.evaluate(() => JSON.parse(localStorage.getItem('readboo
 const hlAnn = anns.find((a) => a.kind === 'highlight')
 check('高亮持久化', Boolean(hlAnn), `${anns.length} 条标注`)
 check('高亮颜色持久化', hlAnn?.color === 'blue', `color=${hlAnn?.color ?? 'none'}`)
+
+// 重叠高亮合并：再选 [10,24) 用绿色高亮，应与 [4,16) 合并为一条 [4,24)
+await selectRange(0, 10, 24)
+await page.evaluate(() => {
+  const dot = document.querySelector('.hl-dot.green')
+  if (dot) dot.click()
+})
+await page.waitForTimeout(250)
+const mergedAnns = (await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:annotations') || '{}'))).state?.annotations ?? []
+const hlMerged = mergedAnns.filter((a) => a.kind === 'highlight' && a.articleId === 'a01')
+check('重叠高亮合并为一条', hlMerged.length === 1, `${hlMerged.length} 条`)
+check('合并区间取并集', hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24, `[${hlMerged[0]?.start},${hlMerged[0]?.end})`)
+check('合并后正文单段高亮', (await page.locator('.article-body .highlighted').count()) === 1)
 
 // ---------- 跨文章隔离：a01 的高亮不能出现在 a02 ----------
 await open('/reading/a02')

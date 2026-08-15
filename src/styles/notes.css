@@ -19,7 +19,7 @@
 }
 
 .side-label {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   margin-bottom: 16px;
   letter-spacing: 0.1em;
@@ -46,7 +46,7 @@
 }
 
 .side-nav button small {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   opacity: 0.8;
 }
 
@@ -75,7 +75,7 @@
 }
 
 .result-count {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -105,7 +105,7 @@
   align-items: center;
   gap: 12px;
   margin: 14px 0 0;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -113,7 +113,7 @@
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   padding: 6px 10px;
   cursor: pointer;
   display: inline-flex;
@@ -138,7 +138,7 @@
 .group-title {
   display: flex;
   justify-content: space-between;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   padding-bottom: 8px;
 }
@@ -174,7 +174,7 @@
 }
 
 .note-no {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--accent);
 }
 
@@ -189,7 +189,7 @@
 
 .note-topic,
 .note-date {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
 }
 
@@ -211,7 +211,7 @@
 }
 
 .detail-label {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   display: flex;
   justify-content: space-between;
@@ -224,7 +224,7 @@
 }
 
 .detail-topic {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--accent);
 }
 
@@ -237,7 +237,7 @@
 .detail-source {
   border-top: 1px solid var(--line);
   padding-top: 14px;
-  font: 11px/1.8 var(--sans);
+  font: 12px/1.8 var(--sans);
   color: var(--muted);
 }
 
@@ -256,7 +256,7 @@
 }
 
 .detail-note .label {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--accent);
   display: block;
   margin-bottom: 6px;
@@ -290,7 +290,7 @@
   border: 1px solid var(--line);
   border-radius: 99px;
   padding: 4px 10px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--muted);
   display: inline-flex;
   align-items: center;
@@ -302,7 +302,7 @@
   background: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   padding: 0;
 }
 
@@ -314,7 +314,7 @@
   border: 1px dashed var(--line);
   background: transparent;
   padding: 4px 10px;
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   color: var(--ink);
   width: 90px;
   outline: none;
@@ -339,7 +339,7 @@
   border: 0;
   background: transparent;
   color: var(--ink);
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -403,7 +403,7 @@
     display: none;
   }
   .note-date {
-    font-size: 9px;
+    font-size: 12px;
   }
   .note-detail {
     display: none;

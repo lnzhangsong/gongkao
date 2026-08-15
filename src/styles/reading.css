@@ -6,53 +6,6 @@
   border-top: 1px solid var(--ink);
 }
 
-.reading-nav {
-  height: 70px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 38px;
-}
-
-.back {
-  font: 12px var(--mono);
-  color: var(--muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.back:hover {
-  color: var(--ink);
-}
-
-.article-status {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font: 12px var(--mono);
-  color: var(--muted);
-}
-
-.article-status .progress {
-  width: 140px;
-  height: 3px;
-  background: var(--line);
-}
-
-.article-status .progress i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.2s;
-}
-
 .reading-layout {
   display: grid;
   grid-template-columns: minmax(0, 900px) 280px;
@@ -463,45 +416,6 @@
 }
 
 /* 结尾卡片 */
-.finish {
-  margin-top: 33px;
-  background: var(--dark);
-  color: var(--paper);
-  padding: 22px;
-}
-
-.finish small {
-  font: 12px var(--mono);
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
-}
-
-.finish h3 {
-  font: 500 20px/1.6 var(--serif);
-  margin: 16px 0 0;
-}
-
-.finish .finish-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.finish .save {
-  display: block;
-  color: var(--yellow);
-  font: 12px var(--mono);
-  margin-top: 22px;
-  border: 0;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.finish .save:hover {
-  text-decoration: underline;
-}
-
 /* 右侧工具 */
 .article-tools {
   padding-top: 8px;
@@ -550,35 +464,9 @@
   color: var(--accent);
 }
 
+
 .tool button.active {
   color: var(--accent);
-}
-
-.side-note {
-  border-top: 1px solid var(--ink);
-  padding-top: 14px;
-  font: 12px var(--mono);
-  color: var(--muted);
-  margin-top: 28px;
-}
-
-.side-note strong {
-  display: block;
-  color: var(--ink);
-  font: 500 17px var(--serif);
-  margin: 14px 0 22px;
-}
-
-.side-note p {
-  font: 12px/1.8 var(--serif);
-  margin: 0;
-  color: color-mix(in srgb, var(--ink) 65%, var(--paper));
-}
-
-.side-note p::before {
-  content: '01　';
-  color: var(--accent);
-  font: 12px var(--mono);
 }
 
 @media (max-width: 900px) {
@@ -593,17 +481,7 @@
     border-left: 0;
     padding-left: 0;
   }
-  .side-note {
-    display: none;
-  }
-  .reading-nav,
-  .nav {
-    padding: 0 20px;
-  }
   .article-head h1 {
     font-size: 46px;
-  }
-  .article-status span:first-child {
-    display: none;
   }
 }

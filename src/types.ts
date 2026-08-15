@@ -77,7 +77,7 @@ export interface ReaderSettings {
   /** 行高 */
   lineHeight: number
   /** 正文字体 */
-  fontFamily: 'songti' | 'system' | 'kaiti'
+  fontFamily: 'songti' | 'jinkai' | 'kaiti' | 'fangsong' | 'sans' | 'system'
   /** 阅读页主题（空 = 跟随页面主题） */
   readerTheme: ThemeName | ''
   /** 减少动效 */

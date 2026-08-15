@@ -157,19 +157,28 @@ const progressData = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
 const p01 = progressData.state?.progress?.['p0001']
 check('滚动后进度持久化', p01 && p01.percent > 0, `percent=${p01?.percent ?? 'none'}`)
 // 真实阅读时长：导航栏实时显示 MM:SS
-const navTime = await page.locator('.article-status span').last().innerText()
-check('阅读时长实时显示', /^\d{2}:\d{2}$/.test(navTime), navTime)
+const metaTime = await page.locator('.article-meta span').first().innerText()
+check('阅读时长实时显示', /\d{2}:\d{2}$/.test(metaTime), metaTime)
 // 阅读页切换主题 → 全局生效并持久化
 const themeBefore = await page.evaluate(() => document.documentElement.dataset.theme)
 await page.evaluate(() => {
-  const btns = document.querySelectorAll('.article-tools .tool button')
-  for (const b of btns) if (b.textContent.includes('↻')) b.click()
+  const tools = [...document.querySelectorAll('.article-tools .tool')]
+  const themeTool = tools.find((t) => t.querySelector('span')?.textContent === '阅读主题')
+  themeTool?.querySelector('button')?.click()
 })
 await page.waitForTimeout(300)
 const themeAfter = await page.evaluate(() => document.documentElement.dataset.theme)
 check('阅读页切主题全局生效', themeAfter !== themeBefore, `${themeBefore} → ${themeAfter}`)
 const themeStoreData = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:theme') || '{}'))
 check('阅读页切主题持久化', themeStoreData.state?.theme === themeAfter, `theme=${themeStoreData.state?.theme}`)
+// 阅读辅助：正文字体自定义下拉（6 个选项，选择「仿宋」）
+await page.locator('.article-tools .menu-select-trigger').click()
+await page.waitForTimeout(200)
+check('字体下拉弹出', (await page.locator('.menu-select-item').count()) === 6)
+await page.locator('.menu-select-item', { hasText: '仿宋' }).click()
+await page.waitForTimeout(250)
+const fontData = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:reader') || '{}'))
+check('正文字体下拉切换持久化', fontData.state?.settings?.fontFamily === 'fangsong', `fontFamily=${fontData.state?.settings?.fontFamily}`)
 
 // ---------- 阅读页：高亮 ----------
 await open('/reading/p0001')
@@ -355,6 +364,19 @@ await page.waitForTimeout(500)
 await page.locator('.admin-form-actions .ghost.danger').click()
 await page.waitForTimeout(400)
 check('删除文章（编辑器页）', (await page.evaluate(() => window.location.pathname === '/admin' && !document.body.innerText.includes('测试录入'))))
+
+// ---------- 已读文章标题置灰 ----------
+await open('/library')
+const readState = await page.evaluate(() => {
+  const row = [...document.querySelectorAll('.article-row')].find((r) => r.innerText.includes('以法治护航全民阅读'))
+  if (!row) return null
+  return {
+    isRead: !!row.querySelector('.article-title.is-read'),
+    hasTailText: row.innerText.includes('已读'),
+  }
+})
+check('已读文章标题置灰', readState?.isRead === true)
+check('行尾不再显示已读', readState?.hasTailText === false)
 
 // ---------- 数据导入 ----------
 await open('/settings')

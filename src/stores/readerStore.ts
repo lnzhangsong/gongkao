@@ -2,14 +2,23 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ReaderSettings, ThemeName } from '../types'
 
+/**
+ * 阅读字体（按适合长文阅读排序）：
+ * - 思源宋体 / 霞鹜文楷 / 思源黑体：Google Fonts 在线加载
+ * - 仓耳今楷：需本机安装（仓耳字库下载），未安装时回退楷体
+ * - 仿宋：Windows 自带 FangSong / macOS 华文仿宋
+ */
 export const FONT_FAMILIES: {
   key: ReaderSettings['fontFamily']
   label: string
   css: string
 }[] = [
   { key: 'songti', label: '思源宋体', css: "'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif" },
-  { key: 'system', label: '系统衬线', css: "Georgia, 'Songti SC', 'SimSun', 'STSong', serif" },
+  { key: 'jinkai', label: '仓耳今楷', css: "'仓耳今楷', 'TsangerJinKai', 'Kaiti SC', 'KaiTi', 'STKaiti', serif" },
   { key: 'kaiti', label: '霞鹜文楷', css: "'LXGW WenKai', 'Kaiti SC', 'KaiTi', 'STKaiti', serif" },
+  { key: 'fangsong', label: '仿宋', css: "'FangSong', 'STFangsong', '仿宋', serif" },
+  { key: 'sans', label: '思源黑体', css: "'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif" },
+  { key: 'system', label: '系统衬线', css: "Georgia, 'Songti SC', 'SimSun', 'STSong', serif" },
 ]
 
 interface ReaderState {
@@ -51,7 +60,18 @@ export const useReaderStore = create<ReaderState>()(
       applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
-    { name: 'readbook:reader' },
+    {
+      name: 'readbook:reader',
+      version: 1,
+      // v1：移除「黑体」选项，旧设置映射到思源宋体
+      migrate: (persisted) => {
+        const p = persisted as { settings?: { fontFamily?: string } }
+        if (p.settings?.fontFamily === 'heiti') {
+          p.settings.fontFamily = 'songti'
+        }
+        return p as never
+      },
+    },
   ),
 )
 

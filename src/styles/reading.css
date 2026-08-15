@@ -246,7 +246,8 @@
 
 /* 选择弹出工具栏 */
 .selection-popover {
-  position: fixed;
+  /* PC：absolute 相对正文容器，滚动跟随选区；窄屏由 media 覆盖为底部面板 */
+  position: absolute;
   display: none;
   z-index: 50;
   gap: 3px;
@@ -577,6 +578,10 @@
   .article-tools {
     display: none;
   }
+  /* 汉堡包菜单（阅读辅助）显示 */
+  .article-tools-menu {
+    display: block !important;
+  }
   .article-head h1 {
     font-size: 46px;
   }
@@ -618,7 +623,7 @@
 /* ---------- 移动端阅读辅助菜单（右上角汉堡包） ---------- */
 .article-tools-menu {
   position: fixed;
-  top: 14px;
+  top: 18px;
   right: 14px;
   z-index: 90;
   display: none;
@@ -647,20 +652,70 @@
   top: 48px;
   right: 0;
   z-index: 80;
-  width: 248px;
+  width: 264px;
   background: var(--dark);
-  border-radius: 4px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  padding: 6px 0;
+  border-radius: 10px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  transform-origin: top right;
+  animation: tools-pop-in 0.16s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@keyframes tools-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .tools-menu-title {
-  display: block;
-  font: 500 14px var(--serif);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 500 13px var(--serif);
   color: var(--paper);
-  padding: 10px 16px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  margin-bottom: 4px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 6px;
+}
+
+/* 菜单内页面导航（替代头部跳转菜单）：四等分图标按钮 */
+.tools-menu-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 2px 2px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 6px;
+}
+
+.tools-menu-nav a,
+.tools-menu-nav-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  color: var(--paper);
+  font: 10px var(--mono);
+  padding: 8px 4px;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.tools-menu-nav a:hover,
+.tools-menu-nav-back:hover,
+.tools-menu-nav a.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
 }
 
 .tools-menu-item {
@@ -668,13 +723,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 11px 10px;
   font: 12px var(--mono);
   color: var(--paper);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.tools-menu-item:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tools-menu-item + .tools-menu-item {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 1px;
 }
 
 .tools-menu-item .tool-btns {
@@ -690,11 +751,14 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  padding: 2px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
 }
 
 .tools-menu-item .tool-btns button:hover {
   color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .tools-size-value {
@@ -715,6 +779,9 @@
   color: var(--paper);
   font: 12px var(--mono);
   cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
 }
 
 .tools-menu-action:hover,
@@ -722,20 +789,29 @@
   color: var(--accent);
 }
 
-@media (max-width: 900px) {
-  .article-tools-menu {
-    display: block;
-  }
-  .tools-menu-pop {
-    top: 48px;
-  }
+.tools-menu-action:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ---------- 移动端：选择工具栏紧凑（放不进窄屏时） ---------- */
+@media (max-width: 900px) {
+  /* 移动端：选中文字后只显示笔记工具，不显示高亮管理菜单 */
+  .selection-popover.show {
+    position: fixed;
+    left: 50%; right: auto; top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%); margin: 0;
+    max-width: calc(100vw - 24px); width: max-content;
+    flex-wrap: wrap; justify-content: center; gap: 3px 2px;
+    padding: 8px 10px; white-space: normal; z-index: 100;
+    border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.3);
+  }
+  .ann-popover.show { display: none; }
+}
+
 @media (max-width: 500px) {
-  /* 窄屏：选择工具栏与管理菜单固定在屏幕底部（bottom sheet） */
-  .selection-popover.show,
-  .ann-popover.show {
+  /* 窄屏：选择工具栏固定在屏幕底部 */
+  .selection-popover.show {
     position: fixed;
     left: 50%;
     right: auto;
@@ -763,9 +839,7 @@
   }
 
   .selection-popover .hl-dots,
-  .ann-popover .hl-dots,
-  .selection-popover .ul-dots,
-  .ann-popover .ul-dots {
+  .selection-popover .ul-dots {
     gap: 2px;
     padding: 3px 4px;
   }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bookmark, Minus, Plus, SlidersHorizontal } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Bookmark, Library, Minus, Plus, SlidersHorizontal, StickyNote, Settings } from 'lucide-react'
 import { MenuSelect } from './MenuSelect'
 import { FONT_FAMILIES } from '../../stores/readerStore'
 import type { ReaderSettings } from '../../types'
@@ -35,6 +36,7 @@ export function ArticleToolsMenu({
 }: ArticleToolsMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!open) return
@@ -61,7 +63,7 @@ export function ArticleToolsMenu({
   }, [open])
 
   return (
-    <div className="article-tools-menu" ref={ref}>
+    <div className="article-tools-menu reading-page-menu" ref={ref}>
       <button
         className="tools-hamburger"
         onClick={() => setOpen((o) => !o)}
@@ -74,6 +76,22 @@ export function ArticleToolsMenu({
       {open && (
         <div className="tools-menu-pop">
           <span className="tools-menu-title">阅读辅助</span>
+
+          {/* 页面导航（替代头部跳转菜单） */}
+          <div className="tools-menu-nav">
+            <button className="tools-menu-nav-back" onClick={() => navigate(-1)}>
+              <ArrowLeft size={12} /> 返回
+            </button>
+            <NavLink to="/library" onClick={() => setOpen(false)}>
+              <Library size={12} /> 文库
+            </NavLink>
+            <NavLink to="/notes" onClick={() => setOpen(false)}>
+              <StickyNote size={12} /> 摘录
+            </NavLink>
+            <NavLink to="/settings" onClick={() => setOpen(false)}>
+              <Settings size={12} /> 设置
+            </NavLink>
+          </div>
 
           <div className="tools-menu-item">
             <span>阅读设置</span>
@@ -122,7 +140,10 @@ export function ArticleToolsMenu({
             <span>显示标注</span>
             <button
               className={`tools-menu-action${annotationsVisible ? ' active' : ''}`}
-              onClick={onToggleAnnotations}
+              onClick={() => {
+                onToggleAnnotations()
+                setOpen(false)
+              }}
             >
               {annotationsVisible ? 'ON' : 'OFF'}
             </button>

@@ -310,20 +310,27 @@
     grid-template-columns: 1fr;
   }
   .hero-copy {
-    min-height: 545px;
-    padding: 42px 20px 30px;
+    min-height: 420px;
+    padding: 30px 20px 22px;
     border-right: 0;
   }
   /* 字号随视口宽度缩放，保证「读懂时代，」「写好答案。」each 5 字单行不因逐字换行断成两行 */
   .hero h1,
   .hero h1 span {
-    font-size: clamp(40px, 15vw, 72px);
+    font-size: clamp(36px, 13vw, 62px);
+  }
+  .hero-foot p {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .hero-date {
+    margin-top: 12px;
   }
   .stage {
-    min-height: 350px;
+    min-height: 240px;
   }
   .content {
-    padding: 26px 20px 45px;
+    padding: 24px 20px 45px;
   }
   .list {
     grid-template-columns: 1fr;
@@ -331,7 +338,11 @@
   .continue-bar {
     display: block;
   }
+  /* 移动端：隐藏最近阅读的进度（"上次读到 X%" + 进度条），只留标题和按钮 */
   .continue-meta {
+    display: none;
+  }
+  .continue-bar .ghost {
     margin-top: 14px;
   }
 }

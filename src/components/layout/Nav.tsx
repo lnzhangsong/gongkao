@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 
 const LINKS = [
@@ -17,7 +17,6 @@ function today(): string {
 
 export function Nav() {
   const { pathname } = useLocation()
-  const navigate = useNavigate()
   const isReading = pathname.startsWith('/reading')
   const [menuOpen, setMenuOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -53,16 +52,11 @@ export function Nav() {
   return (
     <nav className="nav">
       <span className="nav-left">
-        {isReading && (
-          <button className="nav-back" onClick={() => navigate(-1)}>
-            ← 返回
-          </button>
-        )}
         <NavLink to="/" className="brand">
           读本<span className="brand-en">READBOOK</span>
         </NavLink>
       </span>
-      <div className="nav-links">
+      {!isReading && <div className="nav-links">
         {LINKS.map((l) => (
           <NavLink
             key={l.to}
@@ -73,20 +67,22 @@ export function Nav() {
             {l.label}
           </NavLink>
         ))}
-      </div>
+      </div>}
       <div className="nav-right">{today()}</div>
 
-      {/* 移动端：汉堡菜单入口（≤800px 显示，桌面导航隐藏时的替代方案） */}
-      <button
-        ref={toggleRef}
-        type="button"
-        className="nav-mobile-toggle"
-        onClick={() => setMenuOpen((o) => !o)}
-        aria-label={menuOpen ? '关闭导航菜单' : '打开导航菜单'}
-        aria-expanded={menuOpen}
-      >
-        {menuOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+      {/* 移动端：汉堡菜单入口（≤800px 显示；阅读页由阅读辅助菜单替代，隐藏此按钮） */}
+      {!isReading && (
+        <button
+          ref={toggleRef}
+          type="button"
+          className="nav-mobile-toggle"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label={menuOpen ? '关闭导航菜单' : '打开导航菜单'}
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      )}
 
       {menuOpen && (
         <>
@@ -103,7 +99,6 @@ export function Nav() {
                 {l.label}
               </NavLink>
             ))}
-            <div className="nav-mobile-date">{today()}</div>
           </div>
         </>
       )}

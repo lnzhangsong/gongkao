@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BookOpen, Download, Minus, Plus, Trash2, Upload } from 'lucide-react'
 import { useThemeStore, THEMES } from '../stores/themeStore'
 import { useReaderStore, FONT_FAMILIES } from '../stores/readerStore'
+import { loadFontFamily } from '../lib/fonts'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { Toggle } from '../components/ui/Toggle'
@@ -179,7 +180,11 @@ export function SettingsPage() {
                 <select
                   className="select"
                   value={settings.fontFamily}
-                  onChange={(e) => setFontFamily(e.target.value as typeof settings.fontFamily)}
+                  onChange={(e) => {
+                    const key = e.target.value as typeof settings.fontFamily
+                    setFontFamily(key)
+                    void loadFontFamily(key)
+                  }}
                 >
                   {FONT_FAMILIES.map((f) => (
                     <option key={f.key} value={f.key}>

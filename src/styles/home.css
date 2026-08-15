@@ -314,9 +314,10 @@
     padding: 42px 20px 30px;
     border-right: 0;
   }
+  /* 字号随视口宽度缩放，保证「读懂时代，」「写好答案。」each 5 字单行不因逐字换行断成两行 */
   .hero h1,
   .hero h1 span {
-    font-size: 72px;
+    font-size: clamp(40px, 15vw, 72px);
   }
   .stage {
     min-height: 350px;

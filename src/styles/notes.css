@@ -246,6 +246,31 @@
   padding-bottom: 15px;
 }
 
+.detail-label-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 详情关闭按钮：仅移动端抽屉模式显示 */
+.note-detail-close {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px;
+  align-items: center;
+}
+
+.note-detail-close:hover {
+  color: var(--accent);
+}
+
+.note-detail-backdrop {
+  display: none;
+}
+
 .detail-content {
   padding-top: 38px;
 }
@@ -389,6 +414,33 @@
   .note-detail {
     display: none;
   }
+  /* 详情抽屉：底部弹层，覆盖在列表之上（点击列表行后打开） */
+  .note-detail.mobile-open {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    height: auto;
+    max-height: 82vh;
+    z-index: 120;
+    border-left: 0;
+    border-top: 1px solid var(--ink);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.24);
+    padding-bottom: calc(25px + env(safe-area-inset-bottom, 0px));
+  }
+  .note-detail-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: rgba(0, 0, 0, 0.32);
+  }
+  .note-detail-close {
+    display: inline-flex;
+  }
 }
 
 @media (max-width: 760px) {
@@ -434,5 +486,8 @@
   }
   .note-detail {
     display: none;
+  }
+  .note-detail.mobile-open {
+    display: block;
   }
 }

@@ -281,6 +281,10 @@
     display: block;
     padding: 42px 20px 32px;
   }
+  /* 副标题用 nowrap，字号需按视口收紧，否则窄屏会横向溢出 */
+  .settings-header h1 {
+    font-size: clamp(30px, 9vw, 46px);
+  }
   .settings-header p {
     margin-top: 20px;
   }

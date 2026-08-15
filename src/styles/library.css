@@ -385,3 +385,14 @@
     font-size: 11px;
   }
 }
+
+/* 移动端：主题筛选容器真正截断溢出（横向滚动），不再撑出屏幕 */
+@media (max-width: 800px) {
+  .topic-toolbar {
+    max-width: 100%;
+  }
+  .topic-filters {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}

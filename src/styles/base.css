@@ -370,20 +370,21 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  flex-wrap: wrap;
+  gap: 10px;
   padding: 30px 0 8px;
   font: 12px var(--mono);
   color: var(--muted);
 }
 
 .page-btn {
-  min-width: 32px;
   height: 32px;
+  padding: 0 14px;
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
   font: 12px var(--mono);
-  border-radius: 50%;
+  border-radius: 4px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -397,19 +398,60 @@ a {
   color: var(--paper);
 }
 
-.page-btn.current {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
-}
-
 .page-btn:disabled {
   opacity: 0.4;
   pointer-events: none;
 }
 
-.page-ellipsis {
-  padding: 0 2px;
+.page-info {
+  font: 12px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 跳转页码 */
+.page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-jump input {
+  width: 52px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: 12px var(--mono);
+  text-align: center;
+  outline: none;
+  border-radius: 4px;
+}
+
+.page-jump input:focus {
+  border-color: var(--accent);
+}
+
+.page-jump-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: 12px var(--mono);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.page-jump-btn:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.page-label {
+  font: 12px var(--mono);
+  color: var(--muted);
 }
 
 /* 开关 */
@@ -864,5 +906,13 @@ a {
   }
   .loading-foot {
     left: 20px;
+  }
+}
+
+/* 移动端：简洁分页自动换行，不溢出 */
+@media (max-width: 800px) {
+  .pagination {
+    gap: 8px;
+    padding: 24px 10px 8px;
   }
 }

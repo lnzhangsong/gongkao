@@ -198,6 +198,12 @@
   margin: 0;
 }
 
+/* 已读文章：标题置灰（替代行尾状态文字） */
+.article-title.is-read {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .article-topic {
   font: 12px var(--sans);
   color: var(--muted);

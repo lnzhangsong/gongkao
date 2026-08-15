@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Download, Search, Trash2, X } from 'lucide-react'
+
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { formatDate } from '../data'
@@ -62,6 +63,8 @@ export function NotesPage() {
   const [editNoteId, setEditNoteId] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [tagDraft, setTagDraft] = useState('')
+  /** 移动端：详情栏收进底部抽屉，点击列表行时打开；桌面端右侧栏常驻不受影响 */
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
 
   /** 按同一段话合并标注为行 */
   const rows = useMemo<Row[]>(() => {
@@ -312,7 +315,10 @@ export function NotesPage() {
                   <div
                     className={`note-row${selectedKey === r.key ? ' selected' : ''}`}
                     key={r.key}
-                    onClick={() => setSelectedKey(r.key)}
+                    onClick={() => {
+                      setSelectedKey(r.key)
+                      setMobileDetailOpen(true)
+                    }}
                   >
                     <span className="note-check" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -346,13 +352,26 @@ export function NotesPage() {
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </section>
 
-        <aside className="note-detail">
+        {/* 移动端：详情收进底部抽屉，需要先点列表行打开；桌面端此遮罩不渲染交互层 */}
+        {mobileDetailOpen && (
+          <div className="note-detail-backdrop" onClick={() => setMobileDetailOpen(false)} />
+        )}
+
+        <aside className={`note-detail${mobileDetailOpen ? ' mobile-open' : ''}`}>
           {selectedRow ? (
             <>
               <div className="detail-label">
                 <span>NOTE DETAIL</span>
-                <span>
+                <span className="detail-label-right">
                   {kindLabel(rowKinds(selectedRow))} / {rows.length}
+                  <button
+                    type="button"
+                    className="note-detail-close"
+                    onClick={() => setMobileDetailOpen(false)}
+                    aria-label="关闭详情"
+                  >
+                    <X size={16} />
+                  </button>
                 </span>
               </div>
               <div className="detail-content">

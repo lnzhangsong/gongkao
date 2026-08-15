@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Article, ArticleInput, ReadingProgress } from '../types'
-import { MOCK_ARTICLES_ALL, computeReadTime } from '../data'
+import { ARTICLES, computeReadTime } from '../data'
 import { idbStorage } from '../lib/idbStorage'
 import { useAnnotationStore } from './annotationStore'
 
@@ -49,7 +49,7 @@ const empty = (id: string): ReadingProgress => ({
 export const useArticleStore = create<ArticleState>()(
   persist(
     (set, get) => ({
-      articles: MOCK_ARTICLES_ALL,
+      articles: ARTICLES,
       progress: {},
       _hasHydrated: false,
 
@@ -150,8 +150,15 @@ export const useArticleStore = create<ArticleState>()(
     }),
     {
       name: 'readbook:articles',
+      version: 1,
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({ articles: s.articles, progress: s.progress }),
+      // v1：文章内容改为源码数据（SQLite 生成），丢弃持久化中的旧 demo 文章，进度保留
+      migrate: (persisted) => {
+        const p = persisted as { articles?: unknown }
+        if ('articles' in p) delete p.articles
+        return p as never
+      },
       onRehydrateStorage: () => () => {
         // 必须用 setState 通知订阅者（直接赋值不会触发重渲染）
         useArticleStore.setState({ _hasHydrated: true })

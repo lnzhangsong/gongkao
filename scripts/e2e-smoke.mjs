@@ -346,12 +346,15 @@ await page.locator('.admin-edit input[placeholder="文章标题"]').fill('测试
 await page.locator('.admin-form-actions .ghost').first().click()
 await page.waitForTimeout(400)
 check('编辑保存生效', (await page.evaluate(() => window.location.pathname === '/admin' && document.body.innerText.includes('（改）'))))
+// 删除统一在编辑器页执行（列表行不再提供删除）
 await page.evaluate(() => {
   const row = [...document.querySelectorAll('.admin-row')].find((r) => r.innerText.includes('测试录入'))
-  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('删除')) b.click()
+  for (const b of row.querySelectorAll('button')) if (b.textContent.includes('编辑')) b.click()
 })
-await page.waitForTimeout(300)
-check('删除文章', (await page.evaluate(() => !document.body.innerText.includes('测试录入'))))
+await page.waitForTimeout(500)
+await page.locator('.admin-form-actions .ghost.danger').click()
+await page.waitForTimeout(400)
+check('删除文章（编辑器页）', (await page.evaluate(() => window.location.pathname === '/admin' && !document.body.innerText.includes('测试录入'))))
 
 // ---------- 数据导入 ----------
 await open('/settings')

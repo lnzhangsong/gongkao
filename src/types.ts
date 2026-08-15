@@ -88,6 +88,17 @@ export interface ReaderSettings {
 
 export type AnnotationKind = 'highlight' | 'underline' | 'note'
 
+/** 下划线样式 */
+export const UNDERLINE_STYLES = ['solid', 'double', 'wavy', 'dotted'] as const
+export type UnderlineStyle = (typeof UNDERLINE_STYLES)[number]
+
+export const UNDERLINE_STYLE_LABELS: Record<UnderlineStyle, string> = {
+  solid: '实线',
+  double: '双线',
+  wavy: '波浪',
+  dotted: '点线',
+}
+
 /** 高亮可选颜色 */
 export const HL_COLORS = ['yellow', 'blue', 'green', 'pink', 'violet'] as const
 export type HighlightColor = (typeof HL_COLORS)[number]
@@ -115,6 +126,8 @@ export interface Annotation {
   createdAt: string
   /** highlight 类型的颜色（默认 yellow） */
   color?: HighlightColor
+  /** underline 类型的样式（默认 solid） */
+  underlineStyle?: UnderlineStyle
   /** note 类型时：笔记正文 */
   noteText?: string
   tags?: string[]

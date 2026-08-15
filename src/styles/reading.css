@@ -585,13 +585,27 @@
 }
 
 /* ---------- 正文加载骨架 ---------- */
+.reading-loading {
+  padding-top: 6px;
+}
+
 .reading-loading .skeleton-line {
-  height: 1.5em;
-  margin: 0 0 1.1em;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--soft) 25%, var(--line) 50%, var(--soft) 75%);
+  height: 1.6em;
+  margin: 0 0 1.15em;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--line) 22%, transparent) 25%,
+    color-mix(in srgb, var(--line) 55%, transparent) 50%,
+    color-mix(in srgb, var(--line) 22%, transparent) 75%
+  );
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+/* 骨架段落：首行缩进与正文一致，更贴近真实排版 */
+.reading-loading .skeleton-line:first-child {
+  text-indent: 0;
 }
 
 @keyframes skeleton-shimmer {

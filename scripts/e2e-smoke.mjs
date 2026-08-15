@@ -36,7 +36,10 @@ function check(name, ok, detail = '') {
 /** 打开页面并等待 React 挂载、effects 生效 */
 async function open(path) {
   await page.goto(BASE + path, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(700)
+  // 首屏 loading 动画（最短 1.4s）结束后页面才可用
+  await page.waitForSelector('.loading-screen', { timeout: 3000 }).catch(() => {})
+  await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 5000 }).catch(() => {})
+  await page.waitForTimeout(300)
   // 阅读页：正文异步拉取，等待段落渲染
   if (path.includes('/reading/')) {
     await page.waitForSelector('[data-para]', { timeout: 8000 }).catch(() => {})
@@ -139,7 +142,8 @@ for (const [path, sel] of [
 // 阅读页刷新不 404（HashRouter 静态托管安全）
 await open('/reading/p0001')
 await page.reload({ waitUntil: 'domcontentloaded' })
-await page.waitForTimeout(700)
+await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 5000 }).catch(() => {})
+await page.waitForTimeout(300)
 check('阅读页刷新不 404', (await page.locator('.reading-page').count()) > 0)
 
 // ---------- 首页 ----------

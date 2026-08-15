@@ -360,7 +360,7 @@ export function SettingsPage() {
           <div className="settings-section" id="about" ref={(el) => { sectionRefs.current.about = el }}>
             <h2>关于读本</h2>
             <div className="about-line" style={{ paddingBottom: 16 }}>
-              <strong>读本 READBOOK</strong> v0.1.0
+              <strong className="about-brand">读本</strong> <span className="about-en">READBOOK</span> v0.1.0
               <br />
               每日人民日报深度内容与申论素材的精读工作台。数据保存在当前设备浏览器中，导出后可在任意设备导入。
             </div>

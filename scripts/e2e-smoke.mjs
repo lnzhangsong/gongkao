@@ -112,7 +112,7 @@ async function clickPopoverButton(matchText) {
 for (const [path, sel] of [
   ['/', '#home'],
   ['/library', '#library'],
-  ['/reading/a01', '.reading-page'],
+  ['/reading/p0001', '.reading-page'],
   ['/notes', '.notes-page'],
   ['/settings', '.settings-page'],
 ]) {
@@ -120,7 +120,7 @@ for (const [path, sel] of [
   check(`路由 ${path} 渲染`, (await page.locator(sel).count()) > 0)
 }
 // 阅读页刷新不 404（HashRouter 静态托管安全）
-await open('/reading/a01')
+await open('/reading/p0001')
 await page.reload({ waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(700)
 check('阅读页刷新不 404', (await page.locator('.reading-page').count()) > 0)
@@ -148,13 +148,13 @@ await page.waitForTimeout(300)
 check('主题筛选写入 URL', new URL(page.url()).searchParams.get('topic') === '民生保障')
 
 // ---------- 阅读页：进度 ----------
-await open('/reading/a01')
+await open('/reading/p0001')
 check('正文段落渲染', (await page.locator('[data-para]').count()) >= 5)
 check('阅读工具侧栏', (await page.locator('.article-tools').count()) === 1)
 await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }))
 await page.waitForTimeout(2300)
 const progressData = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
-const p01 = progressData.state?.progress?.['a01']
+const p01 = progressData.state?.progress?.['p0001']
 check('滚动后进度持久化', p01 && p01.percent > 0, `percent=${p01?.percent ?? 'none'}`)
 // 真实阅读时长：导航栏实时显示 MM:SS
 const navTime = await page.locator('.article-status span').last().innerText()
@@ -172,7 +172,7 @@ const themeStoreData = await page.evaluate(() => JSON.parse(localStorage.getItem
 check('阅读页切主题持久化', themeStoreData.state?.theme === themeAfter, `theme=${themeStoreData.state?.theme}`)
 
 // ---------- 阅读页：高亮 ----------
-await open('/reading/a01')
+await open('/reading/p0001')
 await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 await selectRange(0, 4, 16)
@@ -217,15 +217,15 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(250)
 const mergedAnns = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
-const hlMerged = mergedAnns.filter((a) => a.kind === 'highlight' && a.articleId === 'a01')
+const hlMerged = mergedAnns.filter((a) => a.kind === 'highlight' && a.articleId === 'p0001')
 check('重叠高亮合并为一条', hlMerged.length === 1, `${hlMerged.length} 条`)
 check('合并区间取并集', hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24, `[${hlMerged[0]?.start},${hlMerged[0]?.end})`)
 check('合并后正文单段高亮', (await page.locator('.article-body .highlighted').count()) === 1)
 
 // ---------- 跨文章隔离：a01 的高亮不能出现在 a02 ----------
-await open('/reading/a02')
+await open('/reading/p0002')
 check('其他文章无串标', (await page.locator('.article-body .highlighted').count()) === 0)
-await open('/reading/a01')
+await open('/reading/p0001')
 await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 
@@ -251,7 +251,7 @@ check('inline note 展开', (await page.locator('.inline-note.show').count()) ==
 await open('/notes')
 // 离开阅读页后，实测时长已落盘
 const afterLeave = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
-const spent = afterLeave.state?.progress?.['a01']?.timeSpentSec
+const spent = afterLeave.state?.progress?.['p0001']?.timeSpentSec
 check('阅读时长持久化', spent >= 1, `timeSpentSec=${spent}`)
 const noteRows = await page.locator('.note-row').count()
 check('摘录列表', noteRows >= 3, `${noteRows} 行`)

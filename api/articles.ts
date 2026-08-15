@@ -9,7 +9,7 @@
  * 数据源：data/articles.db（SQLite，node:sqlite 只读）
  * 打包：data/articles.db 需通过 vercel.json functions.includeFiles 随函数部署
  */
-import { queryMetaList, queryArticle } from './_db'
+import { queryMetaList, queryArticle } from './db'
 
 /** Vercel Function：GET handler */
 export function GET(request: Request) {

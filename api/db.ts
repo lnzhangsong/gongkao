@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 let db: DatabaseSync | null = null
 
-/** 项目根：api/_db.ts 的父目录的父目录（本地与 Vercel 部署均适用） */
+/** 项目根：api/db.ts 的父目录的父目录（本地与 Vercel 部署均适用） */
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export function openDb(): DatabaseSync {

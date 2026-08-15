@@ -6,7 +6,7 @@
  *   GET /api/articles/:id
  */
 import { createServer } from 'node:http'
-import { queryMetaList, queryArticle } from '../api/_db.ts'
+import { queryMetaList, queryArticle } from '../api/db.ts'
 
 const PORT = Number(process.argv[2] ?? 8787)
 

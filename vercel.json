@@ -2,6 +2,9 @@
   "functions": {
     "api/articles.ts": {
       "includeFiles": "data/articles.db"
+    },
+    "api/diag.ts": {
+      "includeFiles": "data/articles.db"
     }
   },
   "rewrites": [

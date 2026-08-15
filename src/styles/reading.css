@@ -246,7 +246,7 @@
 
 /* 选择弹出工具栏 */
 .selection-popover {
-  position: absolute;
+  position: fixed;
   display: none;
   z-index: 50;
   gap: 3px;
@@ -573,11 +573,9 @@
     gap: 28px;
     padding: 42px 24px 65px;
   }
+  /* 阅读辅助挪入汉堡包菜单，右侧栏隐藏 */
   .article-tools {
-    order: 3;
-    position: static;
-    border-left: 0;
-    padding-left: 0;
+    display: none;
   }
   .article-head h1 {
     font-size: 46px;
@@ -614,5 +612,180 @@
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+/* ---------- 移动端阅读辅助菜单（右上角汉堡包） ---------- */
+.article-tools-menu {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 90;
+  display: none;
+}
+
+.tools-hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.tools-hamburger:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tools-menu-pop {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  z-index: 80;
+  width: 248px;
+  background: var(--dark);
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  padding: 6px 0;
+}
+
+.tools-menu-title {
+  display: block;
+  font: 500 14px var(--serif);
+  color: var(--paper);
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 4px;
+}
+
+.tools-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  font: 12px var(--mono);
+  color: var(--paper);
+}
+
+.tools-menu-item + .tools-menu-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tools-menu-item .tool-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tools-menu-item .tool-btns button {
+  border: 0;
+  background: none;
+  color: var(--paper);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+}
+
+.tools-menu-item .tool-btns button:hover {
+  color: var(--accent);
+}
+
+.tools-size-value {
+  font: 12px var(--mono);
+  color: var(--accent);
+  min-width: 34px;
+  text-align: center;
+}
+
+.tools-menu-item .menu-select-trigger {
+  color: var(--paper);
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+
+.tools-menu-action {
+  border: 0;
+  background: none;
+  color: var(--paper);
+  font: 12px var(--mono);
+  cursor: pointer;
+}
+
+.tools-menu-action:hover,
+.tools-menu-action.active {
+  color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  .article-tools-menu {
+    display: block;
+  }
+  .tools-menu-pop {
+    top: 48px;
+  }
+}
+
+/* ---------- 移动端：选择工具栏紧凑（放不进窄屏时） ---------- */
+@media (max-width: 500px) {
+  /* 窄屏：选择工具栏与管理菜单固定在屏幕底部（bottom sheet） */
+  .selection-popover.show,
+  .ann-popover.show {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    margin: 0;
+    max-width: calc(100vw - 24px);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3px 2px;
+    padding: 8px 10px;
+    white-space: normal;
+    z-index: 100;
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  }
+
+  /* 底部面板不需要箭头 */
+  .selection-popover.show::after,
+  .ann-popover.show::after,
+  .selection-popover.below::after,
+  .ann-popover.below::after {
+    display: none;
+  }
+
+  .selection-popover .hl-dots,
+  .ann-popover .hl-dots,
+  .selection-popover .ul-dots,
+  .ann-popover .ul-dots {
+    gap: 2px;
+    padding: 3px 4px;
+  }
+  .selection-popover .hl-dot,
+  .selection-popover .ul-dot,
+  .ann-popover .hl-dot,
+  .ann-popover .ul-dot {
+    width: 14px;
+    height: 14px;
+  }
+  .selection-popover button,
+  .ann-popover button {
+    padding: 6px 7px;
+    font-size: 11px;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  .selection-popover button svg,
+  .ann-popover button svg {
+    width: 10px;
+    height: 10px;
   }
 }

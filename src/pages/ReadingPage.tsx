@@ -14,6 +14,7 @@ import { useReaderStore, fontFamilyCss, FONT_FAMILIES } from '../stores/readerSt
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useThemeStore, THEMES } from '../stores/themeStore'
 import { MenuSelect } from '../components/ui/MenuSelect'
+import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { paragraphStarts, computeSelectionRange, splitParagraph, flatText } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
 import { formatDate } from '../data'
@@ -26,6 +27,8 @@ interface PopoverState {
   start: number
   end: number
   text: string
+  /** 上方放不下时翻到选区下方（移动端/顶部选区） */
+  below?: boolean
 }
 
 interface PendingNote {
@@ -118,6 +121,13 @@ export function ReadingPage() {
   const [noteDraft, setNoteDraft] = useState('')
   const [percent, setPercent] = useState(0)
   const [sessionSec, setSessionSec] = useState(0)
+  /** 窄屏（≤500px）：弹层固定在屏幕底部 */
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 500)
+  useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth <= 500)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
   const lastSavedRef = useRef(0)
   const saveTimerRef = useRef<number>(0)
 
@@ -133,6 +143,12 @@ export function ReadingPage() {
 
   /* ---------- 主题（阅读页可覆盖页面主题） ---------- */
   const activeTheme = settings.readerTheme || theme
+  /* 阅读页切换主题 = 全局切换（清除阅读页单独覆盖，整体生效） */
+  const cycleTheme = () => {
+    const idx = THEMES.findIndex((t) => t.name === activeTheme)
+    setTheme(THEMES[(idx + 1) % THEMES.length].name)
+    setReaderTheme('')
+  }
   useEffect(() => {
     document.documentElement.dataset.theme = activeTheme
     return () => {
@@ -249,31 +265,49 @@ export function ReadingPage() {
   const hideAnnPopover = useCallback(() => setAnnPopover(null), [])
 
   useEffect(() => {
-    const onMouseUp = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (popoverRef.current?.contains(target) || annPopoverRef.current?.contains(target)) return
-      const body = bodyRef.current
-      if (!body || !body.contains(target)) {
-        hidePopover()
-        return
-      }
-      const range = computeSelectionRange(body, starts)
+    const body = () => bodyRef.current
+
+    /** 计算选区并弹出工具栏（桌面 mouseup / 移动端 selectionchange 共用） */
+    const showPopoverFromSelection = () => {
+      const el = body()
+      if (!el) return
+      // 弹层内部交互不触发
+      if (popoverRef.current?.contains(document.activeElement ?? document.body)) return
+      const range = computeSelectionRange(el, starts)
       if (!range) {
         hidePopover()
         return
       }
       const selRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect()
-      const bodyRect = body.getBoundingClientRect()
-      if (!selRect) return
-      // 选中文字以偏移区间为准（与存储一致），不再依赖后续 selection 是否被点击清除
+      if (!selRect || selRect.width === 0 && selRect.height === 0) return
       const exactText = flatText(article?.content ?? []).slice(range.start, range.end)
+      // 上方放不下（选区贴近视口顶部）时翻到选区下方
+      const below = selRect.top < 140
+      // 水平夹紧：工具栏半宽约 150px（fixed + translate(-50%)）
+      const HALF = 150
+      const rawX = selRect.left + selRect.width / 2
+      const clampedX = Math.min(Math.max(rawX, HALF), Math.max(window.innerWidth - HALF, HALF))
+      // 工具栏 translate(-100%) 使底部贴在 y；上方模式 y=选区顶-6 间距；下方模式 y=选区底+6
+      const GAP = 6
       setPopover({
-        x: selRect.left + selRect.width / 2 - bodyRect.left,
-        y: selRect.top - bodyRect.top,
+        x: clampedX,
+        y: below ? selRect.bottom + GAP : selRect.top - GAP,
         start: range.start,
         end: range.end,
         text: exactText,
+        below,
       })
+    }
+
+    const onMouseUp = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (popoverRef.current?.contains(target) || annPopoverRef.current?.contains(target)) return
+      const el = body()
+      if (!el || !el.contains(target)) {
+        hidePopover()
+        return
+      }
+      showPopoverFromSelection()
     }
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
@@ -284,13 +318,27 @@ export function ReadingPage() {
       hidePopover()
       hideAnnPopover()
     }
+
+    // 移动端：触摸选词（触屏选择手柄）不触发 mouseup，用 selectionchange 兜底
+    let selTimer = 0
+    const onSelectionChange = () => {
+      window.clearTimeout(selTimer)
+      selTimer = window.setTimeout(() => {
+        const sel = window.getSelection()
+        if (sel && !sel.isCollapsed) showPopoverFromSelection()
+      }, 120)
+    }
+
     document.addEventListener('mouseup', onMouseUp)
     document.addEventListener('mousedown', onDown)
+    document.addEventListener('selectionchange', onSelectionChange)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       document.removeEventListener('mouseup', onMouseUp)
       document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('selectionchange', onSelectionChange)
       window.removeEventListener('scroll', onScroll)
+      window.clearTimeout(selTimer)
     }
   }, [starts, hidePopover, hideAnnPopover])
 
@@ -585,6 +633,19 @@ export function ReadingPage() {
   return (
     <section className="reading-page">
       <div className="scroll-progress" style={{ width: `${percent}%` }} />
+      {/* 移动端：页面顶部固定的阅读辅助菜单 */}
+      <ArticleToolsMenu
+        fontSize={settings.fontSize}
+        onFontSize={setFontSize}
+        fontFamily={settings.fontFamily}
+        onFontFamily={setFontFamily}
+        themeLabel={THEMES.find((t) => t.name === activeTheme)?.label ?? '跟随页面'}
+        onCycleTheme={cycleTheme}
+        favorite={isFavorite}
+        onToggleFavorite={() => toggleFavorite(article.id)}
+        annotationsVisible={annotationsVisible}
+        onToggleAnnotations={() => setAnnotationsVisible(!annotationsVisible)}
+      />
       <main className="reading-layout">
         <article>
           <header className="article-head">
@@ -710,9 +771,9 @@ export function ReadingPage() {
 
             {/* 选择弹出工具栏（位于 article-body 内，坐标相对正文） */}
             <div
-              className={`selection-popover${popover ? ' show' : ''}`}
+              className={`selection-popover${popover ? ' show' : ''}${popover?.below ? ' below' : ''}`}
               ref={popoverRef}
-              style={popover ? { left: popover.x, top: popover.y } : undefined}
+              style={popover && !isNarrow ? { left: popover.x, top: popover.y } : undefined}
             >
               <div className="hl-dots">
                 {HL_COLORS.map((c) => (
@@ -751,7 +812,7 @@ export function ReadingPage() {
             <div
               className={`selection-popover ann-popover${annPopover ? ' show' : ''}${annPopover?.below ? ' below' : ''}`}
               ref={annPopoverRef}
-              style={annPopover ? { left: annPopover.x, top: annPopover.y } : undefined}
+              style={annPopover && !isNarrow ? { left: annPopover.x, top: annPopover.y } : undefined}
             >
               <span className="ann-popover-label">
                 {annPopover && annPopoverHas('highlight') && '高亮'}

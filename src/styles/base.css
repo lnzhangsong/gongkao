@@ -124,7 +124,7 @@ a {
 }
 
 .brand {
-  font: 600 19px/1 var(--serif);
+  font: 400 20px/1 var(--display);
   letter-spacing: 0.02em;
   display: inline-flex;
   align-items: baseline;
@@ -174,8 +174,15 @@ a {
   padding: 14px 38px;
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   font: 12px var(--mono);
   color: var(--muted);
+}
+
+.footer-brand {
+  font: 400 20px/1 var(--display);
+  color: var(--ink);
+  letter-spacing: 0.02em;
 }
 
 /* ---------- 自定义光标（仅精细指针设备） ---------- */
@@ -622,4 +629,170 @@ a {
   left: 0;
   min-width: 0;
   width: 100%;
+}
+
+/* ---------- 全屏 loading（首次访问 / 数据加载） ----------
+ * 参考 design/reading-entry-07.html 波形动画，配色固定为「暖纸」主题 */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.loading-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* 背景进度层：accent 色从左侧填充全屏（跟随进度百分比） */
+.loading-bg-progress {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.18s ease-out;
+}
+
+/* 波形线条（双层，反向漂移） */
+.loading-wave {
+  position: absolute;
+  width: 780px;
+  height: 250px;
+  border-top: 1px solid var(--line);
+  border-radius: 50%;
+  transform: rotate(-14deg);
+  box-shadow:
+    0 -42px 0 var(--paper),
+    0 -41px 0 color-mix(in srgb, var(--line) 55%, transparent),
+    0 42px 0 var(--paper),
+    0 41px 0 color-mix(in srgb, var(--line) 55%, transparent);
+  animation: loading-drift 7s ease-in-out infinite;
+}
+
+.loading-wave.w2 {
+  width: 560px;
+  height: 165px;
+  border-top-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  box-shadow: none;
+  animation: loading-drift 5s ease-in-out infinite reverse;
+}
+
+@keyframes loading-drift {
+  0%,
+  100% {
+    margin-left: -22px;
+    opacity: 0.65;
+  }
+  50% {
+    margin-left: 22px;
+    opacity: 1;
+  }
+}
+
+.loading-copy {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.loading-copy small {
+  font: 9px var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.12em;
+}
+
+.loading-copy strong {
+  display: block;
+  font: 400 clamp(48px, 7vw, 96px) 'Ma Shan Zheng', 'Kaiti SC', serif;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  margin: 22px 0;
+  animation: loading-breathe 4s ease-in-out infinite;
+}
+
+.loading-hint {
+  display: block;
+  font: 12px var(--sans);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+@keyframes loading-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.84;
+  }
+  50% {
+    transform: scale(1.035);
+    opacity: 1;
+  }
+}
+
+/* 进度条（底部居中） */
+.loading-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: space-between;
+  width: 260px;
+  font: 10px var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.12em;
+}
+
+.loading-progress-track {
+  position: absolute;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.loading-progress-track i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.loading-foot {
+  position: absolute;
+  left: 38px;
+  bottom: 30px;
+  font: 10px var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  z-index: 2;
+}
+
+
+@media (max-width: 700px) {
+  .loading-wave {
+    width: 570px;
+    height: 190px;
+  }
+  .loading-wave.w2 {
+    width: 390px;
+    height: 125px;
+  }
+  .loading-foot {
+    left: 20px;
+  }
 }

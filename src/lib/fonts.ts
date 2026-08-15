@@ -127,12 +127,12 @@ async function doLoad(key: FontKey): Promise<void> {
   }
 }
 
-/** 装饰性标题字体（马善政楷书）：首页/文库大标题用，进入页面时按需加载 */
-const DISPLAY_SOURCE = {
-  css: ['ma-shan-zheng@5.3.0/400.css'],
-  family: 'Ma Shan Zheng',
-  label: '马善政楷书',
-}
+/**
+ * 装饰性标题字体（马善政楷书）：首页/文库大标题用。
+ * 自托管子集（public/fonts/ma-shan-zheng.woff2，仅标题用字），@font-face 在 tokens.css；
+ * 这里只需触发实际字形下载（@font-face 引用即懒加载）。
+ */
+const DISPLAY_SOURCE = { family: 'Ma Shan Zheng', label: '马善政楷书' }
 
 let displayLoaded = false
 let displayInflight: Promise<void> | null = null
@@ -144,13 +144,8 @@ export function loadDisplayFont(): Promise<void> {
   useFontLoad.setState({ loading: true, progress: 0.1, label: DISPLAY_SOURCE.label })
   displayInflight = (async () => {
     try {
-      await injectCSS(`${CDN}/${DISPLAY_SOURCE.css[0]}`)
-      if (id === reqId) useFontLoad.setState({ progress: 0.6 })
-      try {
-        await document.fonts.load('16px "' + DISPLAY_SOURCE.family + '"', '读本')
-      } catch {
-        /* 忽略 */
-      }
+      // 触发 woff2 实际下载（@font-face 已在 tokens.css）
+      await document.fonts.load('16px "' + DISPLAY_SOURCE.family + '"', '读懂时代写好答案')
       displayLoaded = true
     } finally {
       if (id === reqId) {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
@@ -9,7 +9,6 @@ const PAGE_SIZE = 20
 
 export function AdminPage() {
   const articles = useArticleStore((s) => s.articles)
-  const removeArticle = useArticleStore((s) => s.removeArticle)
   const navigate = useNavigate()
 
   const [q, setQ] = useState('')
@@ -26,12 +25,6 @@ export function AdminPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
-  const remove = (id: string, title: string) => {
-    const ok = window.confirm(`确定删除《${title}》吗？其阅读进度与摘录也会一并删除。`)
-    if (!ok) return
-    removeArticle(id)
-  }
 
   return (
     <section className="admin-page page-section">
@@ -92,9 +85,6 @@ export function AdminPage() {
                 </Link>
                 <button className="text-btn" onClick={() => navigate(`/admin/edit/${a.id}`)}>
                   编辑
-                </button>
-                <button className="text-btn danger" onClick={() => remove(a.id, a.title)}>
-                  <Trash2 size={11} /> 删除
                 </button>
               </div>
             </div>

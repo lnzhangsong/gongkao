@@ -762,7 +762,7 @@ a {
 }
 
 /* ---------- 全屏 loading（首次访问 / 数据加载） ----------
- * 参考 design/reading-entry-07.html 波形动画，配色固定为「暖纸」主题 */
+ * 参考 design/explorations/reading-entry-07.html 波形动画，配色固定为「暖纸」主题 */
 .loading-screen {
   position: fixed;
   inset: 0;

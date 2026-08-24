@@ -81,8 +81,15 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 | `blue` | 冷蓝 | `--paper:#e9edf4 --accent:#667ff0` |
 | `night` | 夜读绿 | `--paper:#20221f --accent:#d7f267` |
 | `violet` | 柔紫 | `--paper:#ebe8f6 --accent:#aa7bff` |
+| `graphite` | 墨夜 | `--paper:#101114 --accent:#d9ff5a`（提炼自 `design/2026-direction.html`） |
 
-阅读页可设置独立的「阅读主题」覆盖页面主题（设置 → 显示与主题）。
+阅读页可设置独立的「阅读主题」覆盖页面主题（设置 → 显示与主题）。设置页可开启「自动夜读」：系统进入深色模式时自动切换到夜读绿。
+
+## 设计优化
+
+- **视觉**：小字 muted 色加深至 WCAG AA 对比度；中文标题负字距放宽（-0.02em 左右），数字保持紧排；全局等宽数字（tabular-nums），进度/页码变化不抖动
+- **动效**：路由切换淡入过渡、数字滚动组件（Ticker）、文库列表加载骨架屏——全部尊重「减少动效」设置
+- **阅读体验**：段落聚焦模式（当前段落全彩，其余淡化）、版面宽度收窄（约 40 字/行）、段首缩进开关、打印样式（白底黑字存档版式）
 
 ## 首版完成标准对照
 

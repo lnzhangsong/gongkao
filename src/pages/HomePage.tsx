@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useArticleStore } from '../stores/articleStore'
 import { loadDisplayFont } from '../lib/fonts'
 import { useEffect } from 'react'
+import { Ticker } from '../components/ui/Ticker'
 import type { Article } from '../types'
 
 export function HomePage() {
@@ -94,8 +95,7 @@ export function HomePage() {
               <h3>{continueList[0].article.title}</h3>
               <div className="meta">
                 <span>
-                  预计 {continueList[0].article.readTime} MIN　/　已读{' '}
-                  {continueList[0].p?.percent ?? 0}%
+                  预计 {continueList[0].article.readTime} MIN　/　已读 <Ticker value={continueList[0].p?.percent ?? 0} />%
                 </span>
                 <span>
                   <button className="open-reading text-btn" onClick={() => open(continueList[0].article)}>
@@ -133,7 +133,9 @@ export function HomePage() {
               <div className="c-label">CONTINUE READING　/　最近阅读</div>
               <h3>{recentList[0].article.title}</h3>
               <div className="continue-meta">
-                <span>上次读到 {recentList[0].p?.percent ?? 0}%</span>
+                <span>
+                  上次读到 <Ticker value={recentList[0].p?.percent ?? 0} />%
+                </span>
                 <div className="progress">
                   <i style={{ width: `${recentList[0].p?.percent ?? 0}%` }} />
                 </div>

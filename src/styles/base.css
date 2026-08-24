@@ -19,6 +19,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   text-size-adjust: 100%;
+  /* 等宽数字：进度百分比、页码、统计数变化时不抖动 */
+  font-variant-numeric: tabular-nums;
 }
 
 /* 细滚动条：Windows/Edge 默认滚动条厚重，与版式不搭 */
@@ -72,6 +74,22 @@ a {
   background: var(--paper);
   min-height: 100vh;
   position: relative;
+}
+
+/* ---------- 路由切换过渡 ----------
+   仅淡入（不用 transform，避免影响 fixed 定位的进度条/工具栏）；
+   html.reduced-motion 下由全局规则关闭 */
+.route-fade {
+  animation: route-enter 0.35s ease both;
+}
+
+@keyframes route-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* 内容分区版心上限（4K 下居中，两侧为纸色留白） */

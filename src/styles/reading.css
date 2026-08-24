@@ -76,7 +76,7 @@
 
 .article-head h1 {
   font: 600 clamp(36px, 4.5vw, 58px) / 1.3 var(--serif);
-  letter-spacing: -0.055em;
+  letter-spacing: -0.02em;
   margin: 24px 0 22px;
   max-width: 760px;
 }
@@ -112,8 +112,30 @@
   letter-spacing: 0.01em;
   margin: 0 0 29px;
   color: var(--ink);
-  /* 中文排版惯例：段首空两格（跟随字号缩放） */
+  /* 中文排版惯例：段首空两格（跟随字号缩放）；设置页可关闭 */
   text-indent: 2em;
+}
+
+/* 版面收窄：约 40 字/行的舒适栏宽（设置 → 阅读偏好） */
+.reading-layout.narrow-measure > article {
+  max-width: min(100%, 720px);
+}
+
+/* 关闭段首缩进 */
+.article-body.no-indent > p {
+  text-indent: 0;
+}
+
+/* ---------- 段落聚焦模式 ----------
+   阅读带（视口中央约三分之一，页首/页尾自动贴边放宽）内的段落保持可读，
+   带外内容淡化，滚动时随进随出；
+   金句（pullquote）不参与淡化；dim 类由 ReadingPage 滚动时以 rAF 切换 */
+.article-body.focus-mode > p {
+  transition: opacity 0.45s ease;
+}
+
+.article-body.focus-mode > p.dim {
+  opacity: 0.3;
 }
 
 .pullquote {
@@ -121,7 +143,7 @@
   padding: 10px 0 10px 22px;
   margin: 38px 0;
   font: 600 21px/1.75 var(--serif);
-  letter-spacing: -0.045em;
+  letter-spacing: -0.01em;
 }
 
 /* 标注 */
@@ -861,5 +883,76 @@
   .ann-popover button svg {
     width: 10px;
     height: 10px;
+  }
+}
+
+/* ---------- 打印样式：输出干净的存档版式 ----------
+   隐藏界面元素，正文白底黑字、通栏排版；高亮/划线保留 */
+@media print {
+  :root {
+    --paper: #fff;
+    --ink: #111;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .nav,
+  .footer,
+  .cursor,
+  .cursor-label,
+  .font-load-bar,
+  .scroll-progress,
+  .article-tools,
+  .article-tools-menu,
+  .selection-popover,
+  .ann-popover,
+  .note-form,
+  .reading-nav {
+    display: none !important;
+  }
+
+  .page {
+    min-height: auto;
+  }
+
+  .reading-layout {
+    display: block;
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .reading-layout > article {
+    max-width: none;
+  }
+
+  .article-head h1 {
+    font-size: 26pt;
+    line-height: 1.35;
+  }
+
+  .article-body p {
+    font-size: 11.5pt;
+    line-height: 1.9;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* 段落聚焦在打印下无意义，全部恢复不透明 */
+  .article-body.focus-mode > p.dim {
+    opacity: 1;
+  }
+
+  /* 高亮色打印为浅灰底，避免耗墨且黑白打印仍可辨认 */
+  .highlighted {
+    background: #e8e6df !important;
+  }
+
+  p,
+  blockquote,
+  .inline-note {
+    break-inside: avoid;
   }
 }

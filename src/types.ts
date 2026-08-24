@@ -71,7 +71,7 @@ export interface ReadingProgress {
   timeSpentSec?: number
 }
 
-export type ThemeName = 'paper' | 'blue' | 'night' | 'violet'
+export type ThemeName = 'paper' | 'blue' | 'night' | 'violet' | 'graphite'
 
 /** 阅读器设置 */
 export interface ReaderSettings {
@@ -87,6 +87,12 @@ export interface ReaderSettings {
   reducedMotion: boolean
   /** 显示已保存的高亮/划线 */
   showAnnotations: boolean
+  /** 段落聚焦：突出当前段落，其余淡化 */
+  focusMode: boolean
+  /** 版面宽度：normal 标准 / narrow 收窄（约 40 字/行） */
+  measure: 'normal' | 'narrow'
+  /** 段首缩进两格（默认开，与现有排版一致） */
+  indent: boolean
 }
 
 export type AnnotationKind = 'highlight' | 'underline' | 'note'

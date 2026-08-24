@@ -6,6 +6,8 @@
   "description": "读本 READBOOK — 每日人民日报精读与申论素材阅读应用",
   "scripts": {
     "dev": "vite",
+    "dev:api": "node scripts/api-server.mjs",
+    "dev:all": "concurrently -n api,web -c blue,green --kill-others \"node scripts/api-server.mjs\" \"vite\"",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
@@ -20,6 +22,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
+    "concurrently": "^10.0.5",
     "playwright-core": "^1.62.1",
     "typescript": "^5.9.3",
     "vite": "^8.2.1"

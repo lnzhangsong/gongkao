@@ -160,7 +160,7 @@
 
 .featured-main h2 {
   font: 600 clamp(28px, 4vw, 53px) / 1.25 var(--serif);
-  letter-spacing: -0.08em;
+  letter-spacing: -0.02em;
   max-width: 650px;
   margin: 0;
 }
@@ -269,7 +269,7 @@
 
 .article-title {
   font: 500 20px var(--serif);
-  letter-spacing: -0.05em;
+  letter-spacing: -0.01em;
   margin: 0;
   min-width: 0;
   overflow-wrap: break-word;
@@ -395,4 +395,19 @@
     overflow-x: auto;
     overflow-y: hidden;
   }
+}
+
+/* ---------- 首次加载骨架行（复用 reading.css 的 skeleton-shimmer 关键帧） ---------- */
+.library-loading .skeleton-row {
+  height: 58px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--line) 22%, transparent) 25%,
+    color-mix(in srgb, var(--line) 50%, transparent) 50%,
+    color-mix(in srgb, var(--line) 22%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }

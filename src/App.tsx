@@ -8,9 +8,10 @@ import { NotesPage } from './pages/NotesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminEditPage } from './pages/AdminEditPage'
-import { useThemeStore } from './stores/themeStore'
+import { useThemeStore, resolveTheme } from './stores/themeStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
+import { usePrefersDark } from './lib/prefersDark'
 import { LoadingScreen } from './components/LoadingScreen'
 
 const LOADING_MIN_MS = 1400
@@ -19,6 +20,10 @@ const LOADING_FINISH_MS = 450
 
 function App() {
   const theme = useThemeStore((s) => s.theme)
+  const autoDark = useThemeStore((s) => s.autoDark)
+  const prefersDark = usePrefersDark()
+  /* 生效主题：autoDark 开启且系统深色时 → 夜读绿 */
+  const effectiveTheme = resolveTheme(theme, autoDark, prefersDark)
   const reducedMotion = useReaderStore((s) => s.settings.reducedMotion)
   const apiReady = useArticleStore((s) => s._apiReady)
   const [minElapsed, setMinElapsed] = useState(false)
@@ -26,10 +31,10 @@ function App() {
   const [phase, setPhase] = useState<'loading' | 'finishing' | 'done'>('loading')
   const mountAtRef = useRef(0)
 
-  /* 主题应用到 html 根节点 */
+  /* 主题应用到 html 根节点（含自动夜读解析） */
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-  }, [theme])
+    document.documentElement.dataset.theme = effectiveTheme
+  }, [effectiveTheme])
 
   /* 减少动效 */
   useEffect(() => {

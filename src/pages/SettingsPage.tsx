@@ -29,7 +29,13 @@ export function SettingsPage() {
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setReducedMotion = useReaderStore((s) => s.setReducedMotion)
+  const setFocusMode = useReaderStore((s) => s.setFocusMode)
+  const setMeasure = useReaderStore((s) => s.setMeasure)
+  const setIndent = useReaderStore((s) => s.setIndent)
   const resetSettings = useReaderStore((s) => s.resetSettings)
+
+  const autoDark = useThemeStore((s) => s.autoDark)
+  const setAutoDark = useThemeStore((s) => s.setAutoDark)
 
   const setAnnotationsVisible = useAnnotationStore((s) => s.setVisible)
   const annotationsVisible = useAnnotationStore((s) => s.visible)
@@ -237,6 +243,44 @@ export function SettingsPage() {
               </div>
             </div>
 
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">段落聚焦</div>
+                <div className="setting-desc">阅读时突出当前段落，其余淡化，减少串行</div>
+              </div>
+              <div className="setting-control">
+                <Toggle on={settings.focusMode} onChange={setFocusMode} label="段落聚焦" />
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">版面宽度</div>
+                <div className="setting-desc">收窄后每行约 40 字，长文精读更省力</div>
+              </div>
+              <div className="setting-control">
+                <MenuSelect
+                  value={settings.measure}
+                  options={[
+                    { key: 'normal', label: '标准宽度' },
+                    { key: 'narrow', label: '收窄' },
+                  ]}
+                  onChange={(key) => setMeasure(key as typeof settings.measure)}
+                  ariaLabel="版面宽度"
+                />
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">段首缩进</div>
+                <div className="setting-desc">正文段首空两格（中文排版惯例）</div>
+              </div>
+              <div className="setting-control">
+                <Toggle on={settings.indent} onChange={setIndent} label="段首缩进" />
+              </div>
+            </div>
+
             <div className="setting-row" style={{ borderBottom: 0 }}>
               <div>
                 <div className="setting-title">恢复默认</div>
@@ -285,6 +329,16 @@ export function SettingsPage() {
                   placeholder="跟随页面"
                   ariaLabel="阅读页主题"
                 />
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">自动夜读</div>
+                <div className="setting-desc">跟随系统：系统切换到深色模式时自动使用夜读绿</div>
+              </div>
+              <div className="setting-control">
+                <Toggle on={autoDark} onChange={setAutoDark} label="自动夜读" />
               </div>
             </div>
 

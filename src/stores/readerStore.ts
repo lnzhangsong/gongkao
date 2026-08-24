@@ -29,6 +29,9 @@ interface ReaderState {
   setReaderTheme: (theme: ThemeName | '') => void
   setReducedMotion: (v: boolean) => void
   setShowAnnotations: (v: boolean) => void
+  setFocusMode: (v: boolean) => void
+  setMeasure: (v: ReaderSettings['measure']) => void
+  setIndent: (v: boolean) => void
   /** 应用导入的阅读器设置（缺省字段保持默认） */
   applySettings: (patch: Partial<ReaderSettings>) => void
   resetSettings: () => void
@@ -41,6 +44,9 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   readerTheme: '',
   reducedMotion: false,
   showAnnotations: true,
+  focusMode: false,
+  measure: 'normal',
+  indent: true,
 }
 
 export const useReaderStore = create<ReaderState>()(
@@ -57,18 +63,23 @@ export const useReaderStore = create<ReaderState>()(
       setReaderTheme: (theme) => set((s) => ({ settings: { ...s.settings, readerTheme: theme } })),
       setReducedMotion: (v) => set((s) => ({ settings: { ...s.settings, reducedMotion: v } })),
       setShowAnnotations: (v) => set((s) => ({ settings: { ...s.settings, showAnnotations: v } })),
+      setFocusMode: (v) => set((s) => ({ settings: { ...s.settings, focusMode: v } })),
+      setMeasure: (v) => set((s) => ({ settings: { ...s.settings, measure: v } })),
+      setIndent: (v) => set((s) => ({ settings: { ...s.settings, indent: v } })),
       applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     {
       name: 'readbook:reader',
-      version: 1,
+      version: 2,
       // v1：移除「黑体」选项，旧设置映射到思源宋体
+      // v2：新增 focusMode / measure / indent，旧数据用默认值补齐（防止字段缺失为 undefined）
       migrate: (persisted) => {
         const p = persisted as { settings?: { fontFamily?: string } }
         if (p.settings?.fontFamily === 'heiti') {
           p.settings.fontFamily = 'songti'
         }
+        p.settings = { ...DEFAULT_SETTINGS, ...p.settings }
         return p as never
       },
     },

@@ -24,11 +24,11 @@ npm run preview    # 预览生产构建
 
 | 路由 | 页面 | 对应设计稿 |
 |---|---|---|
-| `/` | 首页工作台（今日推荐、继续阅读、最近阅读） | `design/app.html` 首页部分 |
-| `/library` | 文章库（搜索 / 主题 / 来源 / 状态筛选 / 排序 / 分页） | `design/library.html` |
-| `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记） | `design/reading.html` |
-| `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/notes.html` |
-| `/settings` | 设置（字体、字号、行高、主题、动效、数据导出 / 清空） | `design/settings.html` |
+| `/` | 首页工作台（今日推荐、继续阅读、最近阅读） | `design/pages/app.html` 首页部分 |
+| `/library` | 文章库（搜索 / 主题 / 来源 / 状态筛选 / 排序 / 分页） | `design/pages/library.html` |
+| `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记） | `design/pages/reading.html` |
+| `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
+| `/settings` | 设置（字体、字号、行高、主题、动效、数据导出 / 清空） | `design/pages/settings.html` |
 
 文章库的搜索状态同步到 URL（`/library?q=基层治理&topic=民生保障&page=2`），刷新后筛选条件不丢失。
 
@@ -73,7 +73,7 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 
 ## 主题
 
-四套主题与 `design/palettes.html` 一致，通过 `data-theme` 属性切换：
+四套主题与 `design/explorations/palettes.html` 一致，通过 `data-theme` 属性切换：
 
 | 主题 | 名称 | 关键色 |
 |---|---|---|
@@ -81,7 +81,7 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 | `blue` | 冷蓝 | `--paper:#e9edf4 --accent:#667ff0` |
 | `night` | 夜读绿 | `--paper:#20221f --accent:#d7f267` |
 | `violet` | 柔紫 | `--paper:#ebe8f6 --accent:#aa7bff` |
-| `graphite` | 墨夜 | `--paper:#101114 --accent:#d9ff5a`（提炼自 `design/2026-direction.html`） |
+| `graphite` | 墨夜 | `--paper:#101114 --accent:#d9ff5a`（提炼自 `design/explorations/2026-direction.html`） |
 
 阅读页可设置独立的「阅读主题」覆盖页面主题（设置 → 显示与主题）。设置页可开启「自动夜读」：系统进入深色模式时自动切换到夜读绿。
 

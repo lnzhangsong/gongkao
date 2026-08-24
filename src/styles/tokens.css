@@ -118,7 +118,7 @@
   --hl-violet: #c9b3f7;
 }
 
-/* 墨夜 / GRAPHITE —— 提炼自 design/2026-direction.html（暗色「阅读 OS」方向） */
+/* 墨夜 / GRAPHITE —— 提炼自 design/explorations/2026-direction.html（暗色「阅读 OS」方向） */
 :root[data-theme='graphite'] {
   --paper: #101114;
   --ink: #f5f5f1;

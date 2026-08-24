@@ -9,7 +9,7 @@ interface LoadingScreenProps {
 
 /**
  * 全屏 loading：首次访问加载数据时显示。
- * 参考 design/reading-entry-07.html 波形动画 + 背景进度层，配色固定为「暖纸」主题。
+ * 参考 design/explorations/reading-entry-07.html 波形动画 + 背景进度层，配色固定为「暖纸」主题。
  */
 export function LoadingScreen({ hint = '正在为你打开阅读空间…', finishing = false }: LoadingScreenProps) {
   const [pct, setPct] = useState(0)

@@ -90,6 +90,11 @@ const SAMPLE = '读书明理开卷有益持之以恒温故知新'
 
 async function doLoad(key: FontKey): Promise<void> {
   const src = SOURCES[key]
+  /* 未知字体 key（损坏/残缺的本地设置）：直接视为已加载，回退系统字体栈 */
+  if (!src) {
+    loadedKeys.add(key)
+    return
+  }
   const steps = src.css.length + (src.family ? 1 : 0)
   if (steps === 0) {
     loadedKeys.add(key)

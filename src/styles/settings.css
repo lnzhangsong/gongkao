@@ -220,6 +220,11 @@
   border-color: #282039;
 }
 
+.theme-dot.graphite {
+  background: #101114;
+  border-color: #d9ff5a;
+}
+
 /* 危险操作 */
 .danger {
   color: #b84b37;

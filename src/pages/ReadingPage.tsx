@@ -7,12 +7,13 @@ import {
   useState,
   type CSSProperties,
 } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { Bookmark, Highlighter, Minus, Plus, StickyNote, Underline as UnderlineIcon } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss, FONT_FAMILIES } from '../stores/readerStore'
 import { useAnnotationStore } from '../stores/annotationStore'
-import { useThemeStore, THEMES } from '../stores/themeStore'
+import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
+import { usePrefersDark } from '../lib/prefersDark'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { paragraphStarts, computeSelectionRange, splitParagraph, flatText } from '../lib/offsets'
@@ -30,6 +31,10 @@ interface PopoverState {
   /** 上方放不下时翻到选区下方（移动端/顶部选区） */
   below?: boolean
 }
+
+/** 段落聚焦带：视口高度的比例上下限（按手感可调） */
+const FOCUS_BAND_TOP = 0.35
+const FOCUS_BAND_BOTTOM = 0.65
 
 interface PendingNote {
   start: number
@@ -54,6 +59,8 @@ export function ReadingPage() {
   const ensureContent = useArticleStore((s) => s.ensureContent)
   const article = getArticle(articleId)
   const [contentReady, setContentReady] = useState(false)
+  /** 正文拉取失败（服务不可用 / 文章不存在）：显示错误态而不是无限骨架 */
+  const [loadError, setLoadError] = useState(false)
 
   /* 正文按需拉取（meta 不含正文）；缓存命中或拉取完成后置位 */
   useEffect(() => {
@@ -61,11 +68,15 @@ export function ReadingPage() {
     if (!articleId) return
     if (article?.content?.length) {
       setContentReady(true)
+      setLoadError(false)
       return
     }
     setContentReady(false)
+    setLoadError(false)
     void ensureContent(articleId).then((full) => {
-      if (alive && full?.content?.length) setContentReady(true)
+      if (!alive) return
+      if (full?.content?.length) setContentReady(true)
+      else setLoadError(true)
     })
     return () => {
       alive = false
@@ -82,6 +93,7 @@ export function ReadingPage() {
   const setFontSize = useReaderStore((s) => s.setFontSize)
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
+  const setFocusMode = useReaderStore((s) => s.setFocusMode)
 
   /* 进入阅读页或切换字体时，按需加载正文字体（其余字体不下载）。
      字体就绪前保持骨架，避免刷新后先系统字体后 swap 跳变 */
@@ -89,9 +101,12 @@ export function ReadingPage() {
   useEffect(() => {
     let alive = true
     setFontReady(false)
-    void loadFontFamily(settings.fontFamily).then(() => {
-      if (alive) setFontReady(true)
-    })
+    /* 字体失败不阻塞正文渲染：catch 后照样放行（回退系统字体栈） */
+    void loadFontFamily(settings.fontFamily)
+      .catch(() => {})
+      .then(() => {
+        if (alive) setFontReady(true)
+      })
     return () => {
       alive = false
     }
@@ -106,7 +121,9 @@ export function ReadingPage() {
   const updateAnnotation = useAnnotationStore((s) => s.update)
 
   const theme = useThemeStore((s) => s.theme)
+  const autoDark = useThemeStore((s) => s.autoDark)
   const setTheme = useThemeStore((s) => s.setTheme)
+  const prefersDark = usePrefersDark()
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
@@ -142,7 +159,8 @@ export function ReadingPage() {
   const displayAnnotations = annotationsVisible ? articleAnnotations : []
 
   /* ---------- 主题（阅读页可覆盖页面主题） ---------- */
-  const activeTheme = settings.readerTheme || theme
+  const pageTheme = resolveTheme(theme, autoDark, prefersDark)
+  const activeTheme = settings.readerTheme || pageTheme
   /* 阅读页切换主题 = 全局切换（清除阅读页单独覆盖，整体生效） */
   const cycleTheme = () => {
     const idx = THEMES.findIndex((t) => t.name === activeTheme)
@@ -152,9 +170,9 @@ export function ReadingPage() {
   useEffect(() => {
     document.documentElement.dataset.theme = activeTheme
     return () => {
-      document.documentElement.dataset.theme = theme
+      document.documentElement.dataset.theme = pageTheme
     }
-  }, [activeTheme, theme])  /* ---------- 阅读器 CSS 变量 ---------- */
+  }, [activeTheme, pageTheme])  /* ---------- 阅读器 CSS 变量 ---------- */
   const bodyStyle = useMemo<CSSProperties>(
     () => ({
       '--reader-font-size': `${settings.fontSize}px`,
@@ -185,9 +203,49 @@ export function ReadingPage() {
     }, 400)
   }, [articleId, saveProgress])
 
+  /** 段落聚焦：阅读带内的段落保持可读，带外内容淡化，滚动时随进随出。
+   *  带宽为视口中央约一半；页面顶部/底部时自动放宽贴边，
+   *  避免首段/末段永远进不了带。直接切换 <p> 的 dim 类（不经 React 状态）；
+   *  短文整页可见时不淡化任何段落 */
+  const updateFocus = useCallback(() => {
+    const body = bodyRef.current
+    if (!body) return
+    const paragraphs = body.querySelectorAll<HTMLParagraphElement>(':scope > p')
+    if (paragraphs.length === 0) return
+
+    if (!settings.focusMode) {
+      paragraphs.forEach((p) => p.classList.remove('dim'))
+      return
+    }
+
+    /* 页面不可滚动（正文一屏放得下）：全部保持可读 */
+    const doc = document.documentElement
+    if (doc.scrollHeight <= window.innerHeight + 4) {
+      paragraphs.forEach((p) => p.classList.remove('dim'))
+      return
+    }
+
+    const maxScroll = doc.scrollHeight - window.innerHeight
+    /* 贴边放宽：页首带上缘抬到 0，页尾带下缘压到视口底 */
+    const atTop = window.scrollY <= 4
+    const atBottom = window.scrollY >= maxScroll - 4
+    const bandTop = atTop ? 0 : window.innerHeight * FOCUS_BAND_TOP
+    const bandBottom = atBottom ? window.innerHeight : window.innerHeight * FOCUS_BAND_BOTTOM
+
+    paragraphs.forEach((p) => {
+      const rect = p.getBoundingClientRect()
+      const inBand = rect.top <= bandBottom && rect.bottom >= bandTop
+      p.classList.toggle('dim', !inBand)
+    })
+  }, [settings.focusMode])
+
   // 滚动监听：不依赖文章数据就绪，进入页面即注册（进度保存只用到 articleId）
   useEffect(() => {
-    const onScroll = () => requestAnimationFrame(computePercent)
+    const onScroll = () =>
+      requestAnimationFrame(() => {
+        computePercent()
+        updateFocus()
+      })
     window.addEventListener('scroll', onScroll, { passive: true })
     const flush = () => {
       saveProgress(articleId, percentRef.current, window.scrollY)
@@ -201,7 +259,19 @@ export function ReadingPage() {
       flush()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articleId, computePercent])
+  }, [articleId, computePercent, updateFocus])
+
+  /* 聚焦模式开启 / 正文、字体就绪后：计算淡化分布。
+     再延迟一帧补算一次，覆盖字体 swap 引起的排版位移与恢复滚动位置 */
+  useEffect(() => {
+    if (!settings.focusMode || !contentReady || !fontReady) return
+    const raf = requestAnimationFrame(updateFocus)
+    const late = window.setTimeout(updateFocus, 400)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(late)
+    }
+  }, [settings.focusMode, contentReady, fontReady, articleId, updateFocus])
 
   // 打开文章记录 + 恢复阅读位置：等文章数据与水合就绪
   useEffect(() => {
@@ -623,6 +693,33 @@ export function ReadingPage() {
     return map
   }, [articleAnnotations, article, starts])
 
+  /* 正文拉取失败（本地服务不可用 / 文章不存在）：错误态，而不是无限骨架 */
+  if (loadError) {
+    return (
+      <section className="reading-page">
+        <main className="reading-layout">
+          <article>
+            <header className="article-head">
+              <div className="tag">READBOOK / ERROR</div>
+              <h1>正文暂时无法加载</h1>
+              <p className="dek">本地 API 服务可能没有启动，或该文章不存在。服务恢复后可重试。</p>
+            </header>
+            <div className="empty-state">
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button className="ghost" onClick={() => window.location.reload()}>
+                  重试
+                </button>
+                <Link className="ghost" to="/library">
+                  返回文库
+                </Link>
+              </div>
+            </div>
+          </article>
+        </main>
+      </section>
+    )
+  }
+
   // 正文或字体未就绪：骨架占位（meta 已就绪则渲染标题，正文/字体异步就绪）
   if (!article?.content || !contentReady || !fontReady) {
     return (
@@ -665,8 +762,10 @@ export function ReadingPage() {
         onToggleFavorite={() => toggleFavorite(article.id)}
         annotationsVisible={annotationsVisible}
         onToggleAnnotations={() => setAnnotationsVisible(!annotationsVisible)}
+        focusMode={settings.focusMode}
+        onToggleFocus={() => setFocusMode(!settings.focusMode)}
       />
-      <main className="reading-layout">
+      <main className={`reading-layout${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
         <article>
           <header className="article-head">
             <div className="tag">
@@ -681,7 +780,11 @@ export function ReadingPage() {
             </div>
           </header>
 
-          <div className="article-body" ref={bodyRef} style={bodyStyle}>
+          <div
+            className={`article-body${settings.focusMode ? ' focus-mode' : ''}${settings.indent ? '' : ' no-indent'}`}
+            ref={bodyRef}
+            style={bodyStyle}
+          >
             {article.content.map((text, i) => {
               const paraStart = starts[i]
               const segments = splitParagraph(text, paraStart, displayAnnotations)
@@ -946,6 +1049,15 @@ export function ReadingPage() {
               onClick={() => setAnnotationsVisible(!annotationsVisible)}
             >
               {annotationsVisible ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          <div className="tool">
+            <span>段落聚焦</span>
+            <button
+              className={settings.focusMode ? 'active' : ''}
+              onClick={() => setFocusMode(!settings.focusMode)}
+            >
+              {settings.focusMode ? 'ON' : 'OFF'}
             </button>
           </div>
         </aside>

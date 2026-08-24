@@ -6,6 +6,7 @@ import { useArticleStore } from '../stores/articleStore'
 import { TOPICS, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
 import { MenuSelect } from '../components/ui/MenuSelect'
+import { Ticker } from '../components/ui/Ticker'
 import type { Article, ArticleSource } from '../types'
 
 const PAGE_SIZE = 8
@@ -40,6 +41,7 @@ export function LibraryPage() {
   }, [])
   const articles = useArticleStore((s) => s.articles)
   const progress = useArticleStore((s) => s.progress)
+  const apiReady = useArticleStore((s) => s._apiReady)
   const navigate = useNavigate()
 
   const [params, setParams] = useSearchParams()
@@ -222,11 +224,13 @@ export function LibraryPage() {
             <label>2024 年编</label>
             <h3>年度阅读进度</h3>
             <span className="count">
-              {completedCount}
+              <Ticker value={completedCount} />
               <span> / {articles.length}</span>
             </span>
             <div className="collection-foot">
-              <label>已完成 {annualPct}%</label>
+              <label>
+                已完成 <Ticker value={annualPct} duration={800} />%
+              </label>
               <button className="text-btn" onClick={() => setParam('status', 'done')}>
                 查看年编　↗
               </button>
@@ -241,10 +245,19 @@ export function LibraryPage() {
           </span>
         </div>
 
-        {pageItems.length === 0 && (
+        {pageItems.length === 0 && apiReady && (
           <div className="empty-state">
             <strong>没有找到匹配的文章</strong>
             换个关键词或筛选条件试试
+          </div>
+        )}
+
+        {/* 首次加载：灰色行架占位，避免闪白（API 就绪前 articles 为空） */}
+        {!apiReady && (
+          <div className="library-loading" aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="skeleton-row" style={{ animationDelay: `${i * 0.1}s` }} />
+            ))}
           </div>
         )}
 

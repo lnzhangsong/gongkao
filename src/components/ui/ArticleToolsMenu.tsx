@@ -16,6 +16,8 @@ interface ArticleToolsMenuProps {
   onToggleFavorite: () => void
   annotationsVisible: boolean
   onToggleAnnotations: () => void
+  focusMode: boolean
+  onToggleFocus: () => void
 }
 
 /**
@@ -33,6 +35,8 @@ export function ArticleToolsMenu({
   onToggleFavorite,
   annotationsVisible,
   onToggleAnnotations,
+  focusMode,
+  onToggleFocus,
 }: ArticleToolsMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -146,6 +150,19 @@ export function ArticleToolsMenu({
               }}
             >
               {annotationsVisible ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          <div className="tools-menu-item">
+            <span>段落聚焦</span>
+            <button
+              className={`tools-menu-action${focusMode ? ' active' : ''}`}
+              onClick={() => {
+                onToggleFocus()
+                setOpen(false)
+              }}
+            >
+              {focusMode ? 'ON' : 'OFF'}
             </button>
           </div>
         </div>

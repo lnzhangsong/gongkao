@@ -121,12 +121,14 @@
 .entry footer {
   font: 10px var(--mono);
   letter-spacing: 0.1em;
-  color: color-mix(in srgb, var(--yellow) 62%, #000);
+  /* 70% 混黑：五套主题下对 dark 底均 ≥4.8:1（原 62% 在 blue/violet 仅 ~3.9） */
+  color: color-mix(in srgb, var(--yellow) 70%, #000);
 }
 
 .entry strong {
-  font: 600 22px/1.4 var(--sans);
-  letter-spacing: -0.02em;
+  /* 与全站标题排版一致：衬线、微正字距（原为黑体粗负字距，与整体气质脱节） */
+  font: 500 22px/1.4 var(--serif);
+  letter-spacing: 0.02em;
   display: block;
 }
 
@@ -173,7 +175,7 @@
 
 .main-card .tag {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .main-card h3 {
@@ -216,14 +218,16 @@
   text-align: left;
   cursor: pointer;
   font-family: inherit;
+  color: var(--ink);
 }
 
 .item:nth-child(1) {
-  --item-bg: var(--blue);
+  /* 暗色主题由 --pick-a/-b 提供低饱和暗面板；浅色主题回退到 blue/yellow */
+  --item-bg: var(--pick-a, var(--blue));
 }
 
 .item:nth-child(2) {
-  --item-bg: var(--yellow);
+  --item-bg: var(--pick-b, var(--yellow));
 }
 
 .item:hover {
@@ -241,7 +245,8 @@
 
 .item small {
   font: 12px var(--mono);
-  color: var(--muted);
+  /* 中性深灰（ink 混纸色）：不随卡片底色带色相；任何卡色上 ≥4.5 */
+  color: color-mix(in srgb, var(--ink) 80%, var(--paper));
 }
 
 .item h4 {
@@ -264,7 +269,7 @@
 .continue-bar {
   margin-top: 44px;
   border: 1px solid var(--ink);
-  border-radius: 14px;
+  border-radius: 2px; /* 与 .item 等全站直角语言一致（原为 14px 圆角，是唯一异类） */
   padding: 22px 25px;
   display: flex;
   align-items: center;

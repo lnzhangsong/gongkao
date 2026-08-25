@@ -113,7 +113,7 @@
 }
 
 .topic-toggle:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .topic-toggle svg {
@@ -139,7 +139,7 @@
 .featured-main {
   background: var(--blue);
   min-height: 285px;
-  border-radius: 14px;
+  border-radius: 2px; /* 与全站直角语言一致（原 14px） */
   padding: 25px;
   display: flex;
   flex-direction: column;
@@ -155,7 +155,8 @@
 
 .featured-main .tag {
   font: 12px var(--mono);
-  color: var(--accent);
+  /* tag 压在 --blue 卡底上：accent-text 再向 ink 压深，保色相同时达标（violet 需 65%） */
+  color: color-mix(in srgb, var(--accent-text) 65%, var(--ink));
 }
 
 .featured-main h2 {
@@ -170,14 +171,15 @@
   padding-top: 12px;
   display: flex;
   justify-content: space-between;
-  color: var(--muted);
+  /* 中性深灰：muted 在 --blue 卡底上只有 3.4~4.2，混纸色后全主题 ≥4.9 */
+  color: color-mix(in srgb, var(--ink) 85%, var(--paper));
   font: 12px var(--mono);
 }
 
 .collection {
   border: 1px solid var(--ink);
   padding: 23px;
-  border-radius: 14px;
+  border-radius: 2px; /* 与全站直角语言一致（原 14px） */
   min-height: 285px;
   display: flex;
   flex-direction: column;
@@ -233,7 +235,7 @@
 }
 
 .collection-foot a:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* 文章列表行 */
@@ -254,6 +256,7 @@
   text-align: left;
   cursor: pointer;
   font-family: inherit;
+  color: var(--ink);
 }
 
 .article-row:hover {
@@ -264,7 +267,7 @@
 
 .article-no {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .article-title {
@@ -294,7 +297,7 @@
 }
 
 .article-time .done {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 @media (max-width: 800px) {

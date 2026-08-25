@@ -63,14 +63,14 @@
 }
 
 .article-index button.active {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   color: var(--ink);
 }
 
 /* 文章头 */
 .article-head .tag {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
   letter-spacing: 0.08em;
 }
 
@@ -214,7 +214,7 @@
   position: absolute;
   top: -13px;
   right: -9px;
-  color: var(--accent);
+  color: var(--accent-text);
   font: 12px var(--sans);
   cursor: pointer;
   user-select: none;
@@ -258,7 +258,7 @@
 }
 
 .inline-note .note-head button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .inline-note .note-body {
@@ -511,7 +511,7 @@
 }
 
 .note-form textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .note-form .note-form-actions {
@@ -582,12 +582,12 @@
 }
 
 .tool button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 
 .tool button.active {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 @media (max-width: 900px) {
@@ -665,8 +665,8 @@
 }
 
 .tools-hamburger:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent-text);
 }
 
 .tools-menu-pop {
@@ -737,7 +737,7 @@
 .tools-menu-nav-back:hover,
 .tools-menu-nav a.active {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tools-menu-item {
@@ -779,13 +779,13 @@
 }
 
 .tools-menu-item .tool-btns button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
   background: rgba(255, 255, 255, 0.06);
 }
 
 .tools-size-value {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
   min-width: 34px;
   text-align: center;
 }
@@ -808,7 +808,7 @@
 
 .tools-menu-action:hover,
 .tools-menu-action.active {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tools-menu-action:hover {

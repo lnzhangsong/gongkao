@@ -167,7 +167,7 @@
 }
 
 .note-check input {
-  accent-color: var(--accent);
+  accent-color: var(--accent-text);
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -175,7 +175,7 @@
 
 .note-no {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .note-text {
@@ -191,7 +191,7 @@
 .note-kinds {
   font-style: normal;
   margin-left: 6px;
-  color: var(--accent);
+  color: var(--accent-text);
   font: 10px var(--mono);
 }
 
@@ -209,7 +209,7 @@
 .note-swatch {
   display: inline-block;
   margin-right: 7px;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -264,7 +264,7 @@
 }
 
 .note-detail-close:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .note-detail-backdrop {
@@ -277,7 +277,7 @@
 
 .detail-topic {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .detail-content blockquote {
@@ -309,7 +309,7 @@
 
 .detail-note .label {
   font: 12px var(--mono);
-  color: var(--accent);
+  color: var(--accent-text);
   display: block;
   margin-bottom: 6px;
 }
@@ -327,7 +327,7 @@
 }
 
 .detail-note textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .detail-tags {
@@ -359,7 +359,7 @@
 }
 
 .detail-tags .tag-chip button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .detail-tags .tag-input {
@@ -373,7 +373,7 @@
 }
 
 .detail-tags .tag-input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .detail-actions {
@@ -400,7 +400,7 @@
 }
 
 .detail-actions button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .detail-actions button.danger {

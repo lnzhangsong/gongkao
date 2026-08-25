@@ -44,6 +44,8 @@
   --body-bg: #111;
   --highlight-bg: #d9eb73;
   --underline-color: #e96448;
+  /* accent 的可读文本变体：小字（tag/标签/hover）用，浅色主题下比 accent 深以满足 WCAG AA */
+  --accent-text: #a9431f;
   /* 高亮色板 */
   --hl-yellow: #e9dc66;
   --hl-blue: #9db9ea;
@@ -71,6 +73,7 @@
   --body-bg: #10141d;
   --highlight-bg: #c8d5ff;
   --underline-color: #667ff0;
+  --accent-text: #4557c4;
   --hl-yellow: #e0d95f;
   --hl-blue: #9db9ea;
   --hl-green: #8fd6a4;
@@ -80,8 +83,9 @@
 
 :root[data-theme='night'] {
   --paper: #20221f;
-  --ink: #f2f0e8;
-  --muted: #a2a89e;
+  --ink: #f4f2ea;
+  /* 次要文字提亮：暗底上小字更多，muted 需 ≥7:1 而非勉强 4.5 */
+  --muted: #b3b9ad;
   --line: #4a4f46;
   --accent: #d7f267;
   --yellow: #d7f267;
@@ -91,6 +95,12 @@
   --body-bg: #0d0e0c;
   --highlight-bg: #4a4f3a;
   --underline-color: #d7f267;
+  /* 深色主题 accent 本身高对比，文本变体与 accent 相同 */
+  --accent-text: #d7f267;
+  /* 首页 picks 卡片底色：暗色下 yellow 是亮 lime，直接做卡片底会亮底配亮字；
+     改为向 paper 混合的低饱和暗面板（14%：muted 小字在卡上仍 ≥4.5） */
+  --pick-a: color-mix(in srgb, var(--blue) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--yellow) 14%, var(--paper));
   --hl-yellow: rgba(233, 220, 102, 0.32);
   --hl-blue: rgba(157, 185, 234, 0.32);
   --hl-green: rgba(147, 216, 168, 0.32);
@@ -101,7 +111,7 @@
 :root[data-theme='violet'] {
   --paper: #ebe8f6;
   --ink: #282039;
-  --muted: #6b6480;
+  --muted: #655e78;
   --line: #cfc9e4;
   --accent: #aa7bff;
   --yellow: #d9c9ff;
@@ -111,6 +121,7 @@
   --body-bg: #13101c;
   --highlight-bg: #d9c9ff;
   --underline-color: #aa7bff;
+  --accent-text: #744bc2;
   --hl-yellow: #e2da6b;
   --hl-blue: #a9aef2;
   --hl-green: #94d4aa;
@@ -121,8 +132,9 @@
 /* 墨夜 / GRAPHITE —— 提炼自 design/explorations/2026-direction.html（暗色「阅读 OS」方向） */
 :root[data-theme='graphite'] {
   --paper: #101114;
-  --ink: #f5f5f1;
-  --muted: #9297a3;
+  --ink: #f7f7f4;
+  /* 次要文字提亮：同夜读绿策略 */
+  --muted: #a6acb8;
   --line: #33363f;
   --accent: #d9ff5a;
   --yellow: #d9ff5a;
@@ -132,6 +144,10 @@
   --body-bg: #050506;
   --highlight-bg: rgba(217, 255, 90, 0.26);
   --underline-color: #d9ff5a;
+  --accent-text: #d9ff5a;
+  /* 同夜读绿：picks 卡片用低饱和暗面板，避免亮 lime 底配亮字（14% 保证 muted 小字达标） */
+  --pick-a: color-mix(in srgb, var(--blue) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--yellow) 14%, var(--paper));
   /* 高亮色板：深底下统一半透明，与夜读绿同策略 */
   --hl-yellow: rgba(233, 220, 102, 0.32);
   --hl-blue: rgba(157, 185, 234, 0.32);

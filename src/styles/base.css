@@ -50,11 +50,14 @@ body {
 
 ::selection {
   background: var(--yellow);
-  color: var(--ink);
+  /* 暗色主题下 yellow 是亮 lime，文字须用深色（body-bg）而非浅色 ink，
+     否则亮底配亮字（≈1:1）；浅色主题 body-bg 本就是近黑，行为不变 */
+  color: var(--body-bg);
 }
 
 button {
   font-family: inherit;
+  color: inherit;
 }
 
 a {
@@ -138,7 +141,7 @@ a {
 }
 
 .nav-back:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .brand {
@@ -201,8 +204,8 @@ a {
 }
 
 .nav-mobile-toggle:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent-text);
 }
 
 .nav-mobile-backdrop {
@@ -447,7 +450,7 @@ a {
 }
 
 .page-jump input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .page-jump-btn {
@@ -533,7 +536,7 @@ a {
 }
 
 .menu-select .menu-select-trigger:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .menu-select .menu-select-chevron {
@@ -544,7 +547,7 @@ a {
   transform: rotate(180deg);
 }
 
-/* 弹出列表：固定深色（与正文选择工具栏一致，各主题通用） */
+/* 弹出列表：跟随主题（--soft 面板 + ink 描边，暗色主题下不再是「黑上黑」） */
 .menu-select .menu-select-pop {
   position: absolute;
   top: calc(100% + 6px);
@@ -552,9 +555,10 @@ a {
   z-index: 60;
   min-width: 138px;
   padding: 4px;
-  background: #242321;
+  background: var(--soft);
+  border: 1px solid var(--ink);
   border-radius: 3px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ink) 22%, transparent);
   display: grid;
   gap: 1px;
 }
@@ -563,7 +567,7 @@ a {
 .menu-select .menu-select-item {
   border: 0;
   background: transparent;
-  color: #f4f0e9;
+  color: var(--ink);
   font: 12px var(--mono);
   text-align: left;
   padding: 8px 10px;
@@ -577,7 +581,8 @@ a {
 
 .menu-select .menu-select-item:hover {
   background: var(--accent);
-  color: #1c1b1a;
+  /* accent 在暗色主题是亮 lime、浅色主题是深彩：body-bg 两头都成立 */
+  color: var(--body-bg);
 }
 
 .menu-select .menu-select-check {
@@ -596,7 +601,7 @@ a {
 }
 
 .text-btn:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* 顶部滚动进度条 */
@@ -653,7 +658,7 @@ a {
   }
 }
 
-/* ---------- 字体按需加载进度条 ---------- */
+/* ---------- 字体按需加载进度条（toast 跟随主题：--soft 面板 + ink 文字） ---------- */
 .font-load-bar {
   position: fixed;
   top: 14px;
@@ -665,16 +670,16 @@ a {
   align-items: center;
   gap: 6px;
   padding: 8px 18px 10px;
-  background: var(--dark);
-  border: 1px solid var(--line);
+  background: var(--soft);
+  border: 1px solid var(--ink);
   border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--ink) 24%, transparent);
   pointer-events: none;
 }
 
 .font-load-label {
   font: 12px var(--mono);
-  color: var(--paper);
+  color: var(--ink);
   letter-spacing: 0.06em;
 }
 
@@ -682,7 +687,7 @@ a {
   width: 200px;
   height: 3px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.18);
+  background: color-mix(in srgb, var(--ink) 15%, transparent);
   overflow: hidden;
 }
 
@@ -719,7 +724,7 @@ a {
 
 .menu-select.form .menu-select-trigger:hover {
   color: var(--ink);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .menu-select.form .menu-select-pop {
@@ -750,7 +755,7 @@ a {
 
 .setting-control .menu-select .menu-select-trigger:hover {
   color: var(--ink);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .setting-control .menu-select .menu-select-pop {

@@ -75,7 +75,7 @@
 
 .settings-nav button.active {
   color: var(--ink);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   background: color-mix(in srgb, var(--paper) 82%, #fff 18%);
 }
 
@@ -138,7 +138,7 @@
 }
 
 .font-size-ctl button:hover {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .font-size-ctl .value {
@@ -310,7 +310,7 @@
     padding: 8px 10px;
   }
   .settings-nav button.active {
-    border-color: var(--accent);
+    border-color: var(--accent-text);
     border-left: 0;
     border-bottom: 1px solid var(--accent);
     background: transparent;

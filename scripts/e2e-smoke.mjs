@@ -3,8 +3,8 @@
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 
-const BASE = 'http://localhost:5173'
-const API_PORT = 8787
+const BASE = process.env.E2E_BASE || 'http://localhost:5173'
+const API_PORT = Number(process.env.E2E_API_PORT || 8787)
 
 // 启动本地 API server（数据：data/articles.db）
 const apiServer = spawn(process.execPath, ['scripts/api-server.mjs', String(API_PORT)], {

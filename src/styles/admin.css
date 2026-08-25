@@ -50,8 +50,8 @@
 }
 
 .badge-local {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 
 .admin-row-actions {
@@ -114,7 +114,7 @@
 .admin-field input:focus,
 .admin-field textarea:focus,
 .admin-field select:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .admin-field textarea {
@@ -182,7 +182,7 @@
 
 .admin-meta-row select:focus,
 .admin-meta-row input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .admin-hint {
@@ -288,8 +288,8 @@
 }
 
 .admin-mode-toggle button.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 
 .admin-content-input {

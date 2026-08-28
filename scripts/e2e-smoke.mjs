@@ -598,6 +598,39 @@ check('导入进度合并', impArt.state?.progress?.['a05']?.percent === 42, `pe
 const impAnn = JSON.parse((await idbGet('readbook:annotations')) ?? '{}')
 check('导入摘录合并', (impAnn.state?.annotations ?? []).some((a) => a.id === 'imp-1'))
 
+// ---------- P0 入口规则 + 本周统计 ----------
+await open('/')
+const entrySmall = await page.locator('.entry small').innerText()
+check('入场卡真实编号', /NO\. \d{3}/.test(entrySmall), entrySmall)
+const homeEyebrow = await page.locator('.eyebrow').first().innerText()
+const today = new Date().toISOString().slice(0, 10)
+check('首页 eyebrow 当日日期', homeEyebrow.includes(today), homeEyebrow)
+check('本周阅读统计卡', (await page.locator('.week-stats').count()) === 1)
+
+// ---------- 相邻文章导航（上一篇/下一篇） ----------
+const listRes = await fetch(`http://localhost:${API_PORT}/api/articles`).then((r) => r.json())
+const cur = listRes.articles[5]
+const prevArt = listRes.articles[4]
+const nextArt = listRes.articles[6]
+await open(`/reading/${cur.id}`)
+check('文末相邻导航', (await page.locator('.article-pager').count()) === 1)
+check('顶部相邻导航', (await page.locator('.article-pager-top').count()) === 1)
+check('文末显示下一篇标题', (await page.locator('.article-pager .pager-item.next').innerText()).includes(nextArt.title.slice(0, 8)))
+check('上一篇指向排序前一篇', (await page.locator('.article-pager-top a', { hasText: '上一篇' }).getAttribute('href')) === `/reading/${prevArt.id}`)
+await page.locator('.article-pager-top a', { hasText: '下一篇' }).click()
+await page.waitForTimeout(1000)
+check('下一篇跳转', new URL(page.url()).pathname.endsWith(nextArt.id), page.url())
+
+// ---------- 全文搜索（正文命中） ----------
+const fullArt = await fetch(`http://localhost:${API_PORT}/api/articles?id=${cur.id}`).then((r) => r.json())
+const para = fullArt.content[1] ?? fullArt.content[0]
+const kw = para.slice(3, 11)
+const metaHit = `${fullArt.title}${fullArt.summary}`.toLowerCase().includes(kw.toLowerCase())
+await open(`/library?q=${encodeURIComponent(kw)}`)
+await page.waitForTimeout(900) // 前端 300ms 防抖 + 服务端检索
+const ftRows = await page.locator('.article-row').count()
+check('全文搜索正文命中', ftRows > 0, `kw=${kw}　meta命中=${metaHit}　${ftRows} 行`)
+
 // ---------- 摘要 ----------
 console.log('\n================ 测试摘要 ================')
 const fails = results.filter((r) => !r.ok)

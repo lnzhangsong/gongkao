@@ -67,6 +67,27 @@ const empty = (id: string): ReadingProgress => ({
   timeSpentSec: 0,
 })
 
+/* ---------- 离线缓存（IndexedDB 直存，不经 zustand persist） ---------- */
+const META_CACHE_KEY = 'readbook:cache:meta'
+const contentCacheKey = (id: string) => `readbook:cache:content:${id}`
+
+async function cachePut(key: string, value: unknown) {
+  try {
+    await idbStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* 缓存失败不影响主流程 */
+  }
+}
+
+async function cacheGet<T>(key: string): Promise<T | undefined> {
+  try {
+    const raw = await idbStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** 用 API meta + localEdits/deletedIds 重建合并视图 */
 function buildArticles(
   apiMeta: Article[],
@@ -104,14 +125,19 @@ export const useArticleStore = create<ArticleState>()(
       hydrate: async () => {
         try {
           const { articles } = await fetchMetaList()
+          void cachePut(META_CACHE_KEY, articles)
           set((s) => ({
             articles: buildArticles(articles, s.localEdits, s.deletedIds),
             _apiReady: true,
           }))
         } catch (e) {
-          console.error('加载文章列表失败', e)
+          /* 无网/服务不可用：回退离线缓存的 meta（真·离线阅读） */
+          const cached = await cacheGet<Article[]>(META_CACHE_KEY)
+          if (!cached && Object.keys(get().localEdits).length === 0) {
+            console.error('加载文章列表失败', e)
+          }
           set((s) => ({
-            articles: buildArticles([], s.localEdits, s.deletedIds),
+            articles: buildArticles(cached ?? [], s.localEdits, s.deletedIds),
             _apiReady: true,
           }))
         }
@@ -132,12 +158,24 @@ export const useArticleStore = create<ArticleState>()(
         }
         try {
           const full = await fetchArticle(id)
+          void cachePut(contentCacheKey(id), full)
           set((s) => ({
             contentCache: { ...s.contentCache, [id]: full },
             articles: s.articles.map((a) => (a.id === id ? full : a)),
           }))
           return full
         } catch {
+          /* 拉取失败（离线等）：回退离线缓存的全文 */
+          const offline = await cacheGet<Article>(contentCacheKey(id))
+          if (offline?.content?.length) {
+            set((s) => ({
+              contentCache: { ...s.contentCache, [id]: offline },
+              articles: s.articles.some((a) => a.id === id)
+                ? s.articles.map((a) => (a.id === id ? offline : a))
+                : s.articles,
+            }))
+            return offline
+          }
           return undefined
         }
       },

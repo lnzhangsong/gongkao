@@ -46,14 +46,31 @@
   margin: 0;
 }
 
+/* 本周阅读统计：muted 小字 + tabular 数字，贴 hero-foot 底部对齐 */
+.week-stats {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+  font: 12px/1.75 var(--mono);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-stats-sep {
+  opacity: 0.5;
+}
+
 .hero-date {
   font: 12px/1.75 var(--mono);
   color: var(--muted);
   white-space: nowrap;
 }
 
+/* hero 右侧舞台：与全站一致的纸面制图风——纸底、细线十字、同心圆规线，
+   替换原型的整块 lime 底 + 倾斜暗卡（新粗野风与站内纸面编辑气质脱节） */
 .stage {
-  background: var(--yellow);
+  background: var(--paper);
   position: relative;
   display: grid;
   place-items: center;
@@ -65,14 +82,25 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, transparent 49.8%, color-mix(in srgb, var(--ink) 8%, transparent) 50%, transparent 50.2%),
-    linear-gradient(0deg, transparent 49.8%, color-mix(in srgb, var(--ink) 8%, transparent) 50%, transparent 50.2%);
+    linear-gradient(90deg, transparent 49.8%, color-mix(in srgb, var(--ink) 6%, transparent) 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 49.8%, color-mix(in srgb, var(--ink) 6%, transparent) 50%, transparent 50.2%);
+}
+
+/* 图纸注记：左下角 mono 小字，填充大留白的「制图感」 */
+.stage::after {
+  content: 'FIG. 01　/　DAILY ENTRY';
+  position: absolute;
+  left: 22px;
+  bottom: 16px;
+  font: 10px var(--mono);
+  letter-spacing: 0.14em;
+  color: var(--muted);
 }
 
 .halo {
   width: 282px;
   height: 282px;
-  border: 1px solid var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
   border-radius: 50%;
   position: absolute;
 }
@@ -81,7 +109,7 @@
 .halo::after {
   content: '';
   position: absolute;
-  border: 1px solid var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
   border-radius: 50%;
 }
 
@@ -93,41 +121,46 @@
   inset: 64px;
 }
 
+/* 入场卡：直角纸卡 + 1px 墨框，hover 位移 + 硬阴影（与 .item 卡片语言一致） */
 .entry {
   z-index: 1;
-  width: 146px;
+  width: 156px;
   height: 178px;
-  background: var(--dark);
-  color: var(--yellow);
+  background: var(--paper);
+  color: var(--ink);
   padding: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 13px 16px color-mix(in srgb, var(--ink) 20%, transparent);
-  transform: rotate(-5deg);
-  transition: transform 0.4s, box-shadow 0.4s;
+  border: 1px solid var(--ink);
+  transition: transform 0.35s, box-shadow 0.35s;
   text-align: left;
-  border: 0;
   cursor: pointer;
   font-family: inherit;
 }
 
-.stage:hover .entry {
-  transform: rotate(-1deg) translateY(-8px);
-  box-shadow: 17px 24px color-mix(in srgb, var(--ink) 26%, transparent);
+.entry:hover {
+  transform: translateY(-5px);
+  box-shadow: 7px 8px 0 var(--ink);
 }
 
 .entry small,
 .entry footer {
   font: 10px var(--mono);
   letter-spacing: 0.1em;
-  /* 70% 混黑：五套主题下对 dark 底均 ≥4.8:1（原 62% 在 blue/violet 仅 ~3.9） */
-  color: color-mix(in srgb, var(--yellow) 70%, #000);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 脚注与卡身之间加 hairline，呼应全站 meta 行的细分隔语言 */
+.entry footer {
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  padding-top: 9px;
 }
 
 .entry strong {
-  /* 与全站标题排版一致：衬线、微正字距（原为黑体粗负字距，与整体气质脱节） */
-  font: 500 22px/1.4 var(--serif);
+  /* 与全站标题排版一致：衬线、微正字距 */
+  font: 500 24px/1.4 var(--serif);
   letter-spacing: 0.02em;
   display: block;
 }
@@ -135,6 +168,7 @@
 .entry i {
   font-style: normal;
   font-size: 19px;
+  color: var(--accent-text);
 }
 
 /* ---------- 今日值得阅读 ---------- */

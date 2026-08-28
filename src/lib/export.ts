@@ -2,6 +2,15 @@
 
 export function downloadJSON(filename: string, data: unknown) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  triggerDownload(filename, blob)
+}
+
+/** 通用文本文件下载（Markdown 导出等） */
+export function downloadText(filename: string, content: string, mime = 'text/markdown;charset=utf-8') {
+  triggerDownload(filename, new Blob([content], { type: mime }))
+}
+
+function triggerDownload(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

@@ -3,6 +3,7 @@ import { loadDisplayFont } from '../lib/fonts'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, PenLine, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
+import { fetchMetaList } from '../lib/api'
 import { TOPICS, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
 import { MenuSelect } from '../components/ui/MenuSelect'
@@ -60,6 +61,31 @@ export function LibraryPage() {
     setParams(next, { replace: false })
   }
 
+  /* 全文搜索：API /api/articles?q= 支持服务端检索正文。
+     防抖 300ms 拉取命中 id 集合，与本地 meta 过滤取并集（本地录入文章仍可按标题命中） */
+  const [fulltextIds, setFulltextIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    const kw = q.trim()
+    if (!kw) {
+      setFulltextIds(new Set())
+      return
+    }
+    let alive = true
+    const t = window.setTimeout(() => {
+      fetchMetaList({ q: kw })
+        .then((res) => {
+          if (alive) setFulltextIds(new Set(res.articles.map((a) => a.id)))
+        })
+        .catch(() => {
+          if (alive) setFulltextIds(new Set())
+        })
+    }, 300)
+    return () => {
+      alive = false
+      window.clearTimeout(t)
+    }
+  }, [q])
+
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase()
     let list = articles.filter((a) => {
@@ -72,7 +98,7 @@ export function LibraryPage() {
       if (status === 'favorite' && !p?.favorite) return false
       if (kw) {
         const hay = `${a.title} ${a.summary} ${a.topic} ${a.source}`.toLowerCase()
-        if (!hay.includes(kw)) return false
+        if (!hay.includes(kw) && !fulltextIds.has(a.id)) return false
       }
       return true
     })
@@ -90,13 +116,18 @@ export function LibraryPage() {
       return tb < ta ? -1 : 1
     })
     return list
-  }, [articles, progress, q, topic, source, status, sort])
+  }, [articles, progress, q, topic, source, status, sort, fulltextIds])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const completedCount = articles.filter((a) => progress[a.id]?.completed).length
   const annualPct = Math.round((completedCount / Math.max(1, articles.length)) * 100)
+  /* 年份由文章日期动态推导，避免写死 */
+  const years = useMemo(
+    () => [...new Set(articles.map((a) => a.date.slice(0, 4)))].sort().join(' · '),
+    [articles],
+  )
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
@@ -107,7 +138,7 @@ export function LibraryPage() {
     <section id="library" className="page-section">
       <header className="subpage-header">
         <div>
-          <div className="eyebrow">THE READING ARCHIVE　/　2024</div>
+          <div className="eyebrow">THE READING ARCHIVE　/　{years || '……'}</div>
           <h1>
             找到值得
             <br />
@@ -152,7 +183,7 @@ export function LibraryPage() {
           <label className="search-box">
             <Search size={14} className="search-icon" />
             <input
-              placeholder="搜索文章、主题或关键词"
+              placeholder="搜索标题、摘要或正文"
               value={q}
               onChange={(e) => setParam('q', e.target.value)}
             />
@@ -221,7 +252,7 @@ export function LibraryPage() {
             </div>
           </article>
           <aside className="collection">
-            <label>2024 年编</label>
+            <label>{years || '年编'}</label>
             <h3>年度阅读进度</h3>
             <span className="count">
               <Ticker value={completedCount} />
@@ -252,11 +283,18 @@ export function LibraryPage() {
           </div>
         )}
 
-        {/* 首次加载：灰色行架占位，避免闪白（API 就绪前 articles 为空） */}
+        {/* 首次加载：淡墨行架占位，避免闪白（API 就绪前 articles 为空） */}
         {!apiReady && (
           <div className="library-loading" aria-hidden="true">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="skeleton-row" style={{ animationDelay: `${i * 0.1}s` }} />
+              <div key={i} className="skeleton-row" style={{ ['--d' as string]: `${i * 0.12}s` }}>
+                <span className="sk-no" />
+                <span className="sk-main">
+                  <span className="sk-title" />
+                  <span className="sk-meta" />
+                </span>
+                <span className="sk-date" />
+              </div>
             ))}
           </div>
         )}

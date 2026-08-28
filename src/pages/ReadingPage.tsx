@@ -57,7 +57,18 @@ export function ReadingPage() {
 
   const getArticle = useArticleStore((s) => s.getArticle)
   const ensureContent = useArticleStore((s) => s.ensureContent)
+  const allArticles = useArticleStore((s) => s.articles)
   const article = getArticle(articleId)
+
+  /* 相邻篇目：按文库当前排序（date DESC, id）取前后一篇 */
+  const { prevArticle, nextArticle } = useMemo(() => {
+    const idx = allArticles.findIndex((a) => a.id === articleId)
+    return {
+      prevArticle: idx > 0 ? allArticles[idx - 1] : undefined,
+      nextArticle: idx >= 0 && idx < allArticles.length - 1 ? allArticles[idx + 1] : undefined,
+    }
+  }, [allArticles, articleId])
+
   const [contentReady, setContentReady] = useState(false)
   /** 正文拉取失败（服务不可用 / 文章不存在）：显示错误态而不是无限骨架 */
   const [loadError, setLoadError] = useState(false)
@@ -280,6 +291,9 @@ export function ReadingPage() {
     const p = getProgress(article.id)
     if (p && p.lastPosition > 0) {
       requestAnimationFrame(() => window.scrollTo({ top: p.lastPosition, behavior: 'instant' }))
+    } else {
+      /* 新文章（如「下一篇」进入）：回到顶部 */
+      window.scrollTo(0, 0)
     }
     setPercent(p?.percent ?? 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -733,9 +747,17 @@ export function ReadingPage() {
               <h1>{article?.title ?? '加载文章…'}</h1>
               {article?.summary && <p className="dek">{article.summary}</p>}
             </header>
-            <div className="article-body reading-loading">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <p key={i} className="skeleton-line" style={{ width: `${92 - i * 6}%` }} />
+            <div className="article-body reading-loading" aria-hidden="true">
+              {/* 段落式占位：每段 2~3 行、首行缩进、末行收窄（样式见 reading.css） */}
+              {[3, 2, 3, 2].map((lines, gi) => (
+                <div className="skeleton-para" key={gi}>
+                  {Array.from({ length: lines }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={`skeleton-line${i === 0 ? ' first' : ''}${i === lines - 1 ? ' last' : ''}`}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           </article>
@@ -778,6 +800,20 @@ export function ReadingPage() {
               <span>预计　{article.readTime} MIN</span>
               <span>文章编号　NO. {article.id.slice(1)}</span>
             </div>
+            {(prevArticle || nextArticle) && (
+              <nav className="article-pager-top" aria-label="相邻文章">
+                {prevArticle ? (
+                  <Link to={`/reading/${prevArticle.id}`}>←　上一篇</Link>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+                {nextArticle ? (
+                  <Link to={`/reading/${nextArticle.id}`}>下一篇　→</Link>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+              </nav>
+            )}
           </header>
 
           <div
@@ -996,6 +1032,28 @@ export function ReadingPage() {
               )}
             </div>
           </div>
+
+          {/* 文末相邻篇目：按文库排序取前后一篇 */}
+          {(prevArticle || nextArticle) && (
+            <nav className="article-pager" aria-label="相邻文章">
+              {prevArticle ? (
+                <Link className="pager-item prev" to={`/reading/${prevArticle.id}`}>
+                  <small>←　上一篇</small>
+                  <span>{prevArticle.title}</span>
+                </Link>
+              ) : (
+                <span />
+              )}
+              {nextArticle ? (
+                <Link className="pager-item next" to={`/reading/${nextArticle.id}`}>
+                  <small>下一篇　↗</small>
+                  <span>{nextArticle.title}</span>
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          )}
         </article>
 
         <aside className="article-tools">

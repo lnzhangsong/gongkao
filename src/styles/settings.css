@@ -164,7 +164,7 @@
   color: var(--ink);
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: 2px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;

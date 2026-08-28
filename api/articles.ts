@@ -28,16 +28,33 @@ function openDb(): DatabaseSync {
   return db
 }
 
-/** 列表 meta 查询（不含正文，轻量） */
-function queryMetaList() {
+/** 列表 meta 查询（不含正文，轻量）；kw 非空时全文搜索（标题/摘要/正文） */
+function queryMetaList(kw?: string) {
   const d = openDb()
+  if (kw) {
+    const like = `%${kw}%`
+    // instr(content_json, kw)：正文检索（content_json 为 JSON 文本，中文原样存储）
+    return d
+      .prepare(
+        `SELECT id, title, summary, source, topic, date, read_time, featured, pullquote, finish_note
+         FROM articles
+         WHERE title LIKE ? OR summary LIKE ? OR instr(content_json, ?) > 0
+         ORDER BY date DESC, id`,
+      )
+      .all(like, like, kw)
+      .map(mapMetaRow)
+  }
   return d
     .prepare(
       `SELECT id, title, summary, source, topic, date, read_time, featured, pullquote, finish_note
        FROM articles ORDER BY date DESC, id`,
     )
     .all()
-    .map((r: any) => ({
+    .map(mapMetaRow)
+}
+
+function mapMetaRow(r: any) {
+  return {
       id: r.id,
       title: r.title,
       summary: r.summary,
@@ -48,7 +65,7 @@ function queryMetaList() {
       featured: Boolean(r.featured),
       ...(r.pullquote ? { pullquote: r.pullquote } : {}),
       ...(r.finish_note ? { finishNote: r.finish_note } : {}),
-    }))
+  }
 }
 
 /** 单篇全文（含正文段落） */
@@ -96,13 +113,8 @@ export function GET(request: Request) {
   const sort = url.searchParams.get('sort') ?? 'date'
   const limit = Number(url.searchParams.get('limit') ?? '0')
 
-  let list = queryMetaList()
-  if (q) {
-    const kw = q.toLowerCase()
-    list = list.filter(
-      (a) => a.title.toLowerCase().includes(kw) || a.summary.toLowerCase().includes(kw),
-    )
-  }
+  // q 的全文检索（标题/摘要/正文）已在 queryMetaList 的 SQL 中完成
+  let list = queryMetaList(q || undefined)
   if (topic) list = list.filter((a) => a.topic === topic)
   if (source) list = list.filter((a) => a.source === source)
   if (sort === 'title') list = [...list].sort((a, b) => a.title.localeCompare(b.title, 'zh'))

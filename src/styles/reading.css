@@ -609,28 +609,97 @@
   }
 }
 
-/* ---------- 正文加载骨架 ---------- */
+/* ---------- 相邻文章导航（顶部 + 文末） ---------- */
+.article-pager-top {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.article-pager-top a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.article-pager-top a:hover {
+  color: var(--accent-text);
+}
+
+.article-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 46px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.article-pager .pager-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 46%;
+  text-decoration: none;
+}
+
+.article-pager .pager-item.next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.article-pager .pager-item small {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.article-pager .pager-item span {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink);
+  transition: color 0.2s;
+}
+
+.article-pager .pager-item:hover span {
+  color: var(--accent-text);
+}
+
+/* ---------- 正文加载骨架：淡墨纸面 ----------
+   用 --ink 低透明度代替中性灰（五主题自动适配）；直角、行高对齐正文节奏；
+   每段 = 首行缩进两格 + 2~3 行 + 末行收窄，段间距与正文一致 */
 .reading-loading {
-  padding-top: 6px;
+  padding-top: 38px;
+}
+
+.reading-loading .skeleton-para {
+  margin: 0 0 29px;
 }
 
 .reading-loading .skeleton-line {
-  height: 1.6em;
-  margin: 0 0 1.15em;
-  border-radius: 3px;
+  display: block;
+  height: calc(var(--reader-font-size) * var(--reader-line-height));
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--line) 22%, transparent) 25%,
-    color-mix(in srgb, var(--line) 55%, transparent) 50%,
-    color-mix(in srgb, var(--line) 22%, transparent) 75%
+    color-mix(in srgb, var(--ink) 5%, transparent) 25%,
+    color-mix(in srgb, var(--ink) 10%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 5%, transparent) 75%
   );
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
 }
 
-/* 骨架段落：首行缩进与正文一致，更贴近真实排版 */
-.reading-loading .skeleton-line:first-child {
-  text-indent: 0;
+/* 段首缩进两格（跟随正文缩进节奏） */
+.reading-loading .skeleton-line.first {
+  margin-left: 2em;
+}
+
+/* 末行收窄，模拟自然段落参差 */
+.reading-loading .skeleton-line.last {
+  width: 72%;
 }
 
 @keyframes skeleton-shimmer {

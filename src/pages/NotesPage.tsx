@@ -5,7 +5,7 @@ import { Download, Search, Trash2, X } from 'lucide-react'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { formatDate } from '../data'
-import { downloadJSON, formatDateTime, monthOf } from '../lib/export'
+import { downloadJSON, downloadText, formatDateTime, monthOf } from '../lib/export'
 import { Pagination } from '../components/ui/Pagination'
 import type { Annotation, AnnotationKind } from '../types'
 
@@ -171,6 +171,30 @@ export function NotesPage() {
     )
   }
 
+  /** 导出 Markdown：按主题分组的写作素材库格式（比 JSON 直接可用） */
+  const exportMarkdown = () => {
+    const data = checked.size > 0 ? filtered.filter((r) => checked.has(r.key)) : filtered
+    const byTopic = new Map<string, Row[]>()
+    for (const r of data) {
+      if (!byTopic.has(r.topic)) byTopic.set(r.topic, [])
+      byTopic.get(r.topic)!.push(r)
+    }
+    let md = `# 申论素材摘录\n\n> 导出自 读本 READBOOK　·　${formatDateTime(new Date().toISOString())}　·　共 ${data.length} 条\n`
+    for (const [topic, list] of byTopic) {
+      md += `\n## ${topic}\n`
+      for (const r of list) {
+        md += `\n### ${r.title}\n\n`
+        md += `> ${r.text.replace(/\n/g, '\n> ')}\n\n`
+        md += `—— ${r.source}\n`
+        for (const n of r.notes) {
+          if (n.noteText) md += `\n**笔记**：${n.noteText}\n`
+          if ((n.tags ?? []).length > 0) md += `\n${(n.tags ?? []).map((t) => `#${t}`).join(' ')}\n`
+        }
+      }
+    }
+    downloadText(`readbook-notes-${new Date().toISOString().slice(0, 10)}.md`, md)
+  }
+
   const deleteSelected = () => {
     if (checked.size === 0) return
     removeMany(selectedAnns(checked).map((a) => a.id))
@@ -288,6 +312,9 @@ export function NotesPage() {
             {checked.size > 0 && <span>已选 {checked.size} 条</span>}
             <button onClick={exportSelected}>
               <Download size={11} /> 导出{checked.size > 0 ? '选中' : '当前结果'}
+            </button>
+            <button onClick={exportMarkdown}>
+              <Download size={11} /> Markdown
             </button>
             {checked.size > 0 && (
               <button className="danger" onClick={deleteSelected}>

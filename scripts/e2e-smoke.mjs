@@ -23,7 +23,8 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 page.on('console', (m) => {
-  if (m.type() === 'error' && !m.text().includes('404')) errors.push(`console: ${m.text()}`)
+  // 404：预期内的探测；ERR_FAILED：加载失败错误态用例主动 abort 所致
+  if (m.type() === 'error' && !m.text().includes('404') && !m.text().includes('ERR_FAILED')) errors.push(`console: ${m.text()}`)
 })
 // 接受所有 confirm / alert（删除确认、导入确认等）
 page.on('dialog', (d) => d.accept())
@@ -200,6 +201,51 @@ await page.locator('.menu-select-item', { hasText: '仿宋' }).click()
 await page.waitForTimeout(250)
 const fontData = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:reader') || '{}'))
 check('正文字体下拉切换持久化', fontData.state?.settings?.fontFamily === 'fangsong', `fontFamily=${fontData.state?.settings?.fontFamily}`)
+
+// ---------- 阅读页：段落聚焦（带内可读 / 带外淡化） ----------
+await page.evaluate(() => {
+  const tools = [...document.querySelectorAll('.article-tools .tool')]
+  const focusTool = tools.find((t) => t.querySelector('span')?.textContent === '段落聚焦')
+  focusTool?.querySelector('button')?.click()
+})
+await page.waitForTimeout(300)
+// 滚到页中段，等延迟补算（400ms）完成后检查带内外分布
+await page.evaluate(() => window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.5, behavior: 'instant' }))
+await page.waitForTimeout(700)
+const focusDist = await page.evaluate(() => ({
+  dim: document.querySelectorAll('.article-body p.dim').length,
+  total: document.querySelectorAll('.article-body p').length,
+}))
+check('段落聚焦带外淡化', focusDist.dim >= 1 && focusDist.dim < focusDist.total, `${focusDist.total - focusDist.dim}/${focusDist.total} 可读`)
+await page.evaluate(() => {
+  const tools = [...document.querySelectorAll('.article-tools .tool')]
+  const focusTool = tools.find((t) => t.querySelector('span')?.textContent === '段落聚焦')
+  focusTool?.querySelector('button')?.click()
+})
+await page.waitForTimeout(300)
+check('段落聚焦关闭恢复', (await page.locator('.article-body p.dim').count()) === 0)
+
+// ---------- 阅读页：graphite（墨夜）主题 ----------
+await page.evaluate(() => localStorage.setItem('readbook:theme', JSON.stringify({ state: { theme: 'graphite', autoDark: false }, version: 0 })))
+await page.reload({ waitUntil: 'domcontentloaded' })
+await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 8000 }).catch(() => {})
+await page.waitForTimeout(600)
+const gTheme = await page.evaluate(() => document.documentElement.dataset.theme)
+const gBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+check('graphite 主题生效', gTheme === 'graphite' && gBg !== 'rgb(244, 240, 233)', `${gTheme} bg=${gBg}`)
+// 还原暖纸，避免影响后续用例
+await page.evaluate(() => localStorage.setItem('readbook:theme', JSON.stringify({ state: { theme: 'paper', autoDark: false }, version: 0 })))
+await page.reload({ waitUntil: 'domcontentloaded' })
+await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 8000 }).catch(() => {})
+await page.waitForTimeout(400)
+
+// ---------- 阅读页：正文加载失败错误态 ----------
+// 拦截单篇全文请求（meta 列表不受影响）；p0009 从未打开过，无离线缓存可回退
+await page.route('**/api/articles?id=p0009*', (route) => route.abort())
+await open('/reading/p0009')
+check('加载失败显示错误态', (await page.locator('.reading-page').innerText()).includes('正文暂时无法加载'))
+check('错误态可返回文库', (await page.locator('.reading-page a', { hasText: '返回文库' }).count()) === 1)
+await page.unroute('**/api/articles?id=p0009*')
 
 // ---------- 阅读页：高亮 ----------
 await open('/reading/p0001')

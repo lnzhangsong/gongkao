@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
 /* 路由代码分割：非首屏页面按需加载（首页保持静态，保证首屏不被 chunk 拖慢） */
@@ -18,6 +18,16 @@ import { LoadingScreen } from './components/LoadingScreen'
 const LOADING_MIN_MS = 1400
 /** 收尾阶段：进度冲到 100% 后的停留时长 */
 const LOADING_FINISH_MS = 450
+
+/** 路由切换时回到页顶：SPA 不会自动重置滚动位置，浏览器会把上次的滚动带进新页面。
+ *  阅读页不受影响——它在文章数据就绪后自行恢复上次阅读位置（晚于本组件执行） */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
 
 function App() {
   const theme = useThemeStore((s) => s.theme)
@@ -41,6 +51,11 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion)
   }, [reducedMotion])
+
+  /* 滚动位置统一由 ScrollToTop 管理，禁用浏览器原生恢复（前进/后退不再跳回旧位置） */
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+  }, [])
 
   /* 启动时从 API 加载文章列表（meta，不含正文） */
   useEffect(() => {
@@ -72,6 +87,8 @@ function App() {
 
   return (
     <BrowserRouter>
+      {/* 浏览器原生的 popstate 滚动恢复与 SPA 异步渲染不合拍，统一由 ScrollToTop 接管 */}
+      <ScrollToTop />
       {/* chunk 加载间隙不渲染任何内容（页面级骨架已由各页面/启动 loading 覆盖） */}
       <Suspense fallback={null}>
         <Routes>

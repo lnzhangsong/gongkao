@@ -2,9 +2,9 @@
  * GET /api/exams — 申论真题数据 API（Vercel Function，fetch Web Standard export）
  *
  * 用法：
- *   GET /api/exams           → 全部试卷 meta（按年份倒序）
+ *   GET /api/exams              → 全部试卷 meta（按年份倒序）
  *   GET /api/exams?year=&level= → 筛选
- *   GET /api/exams/:id       → 单卷详情（materials + questions + answersRaw）
+ * 单卷详情见 api/exams/[id].ts
  *
  * 数据源：data/articles.db（SQLite，node:sqlite 只读；papers/materials/questions 表）
  * 注意：本文件自包含全部逻辑（不 import 兄弟模块）——Vercel 只打包入口文件，
@@ -30,47 +30,9 @@ const json = (data: unknown, status = 200) =>
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, s-maxage=3600' },
   })
 
-export default function handler(req: Request): Response {
-  const url = new URL(req.url)
+export function GET(request: Request): Response {
+  const url = new URL(request.url)
   const d = openDb()
-
-  // 单卷详情：/api/exams/:id
-  const idMatch = url.pathname.match(/^\/api\/exams\/(.+)$/)
-  if (idMatch) {
-    const id = decodeURIComponent(idMatch[1])
-    const paper = d.prepare('SELECT * FROM papers WHERE id = ?').get(id) as any
-    if (!paper) return json({ error: 'not found' }, 404)
-    const materials = (
-      d.prepare('SELECT idx, label, content FROM materials WHERE paper_id = ? ORDER BY idx').all(id) as any[]
-    ).map((m) => ({ idx: m.idx, label: m.label, content: m.content }))
-    const questions = (
-      d
-        .prepare(
-          'SELECT idx, type, stem, requirement, word_limit, points, answer, answer_matched FROM questions WHERE paper_id = ? ORDER BY idx',
-        )
-        .all(id) as any[]
-    ).map((q) => ({
-      idx: q.idx,
-      type: q.type ?? null,
-      stem: q.stem,
-      requirement: q.requirement ?? '',
-      wordLimit: q.word_limit ?? null,
-      points: q.points ?? null,
-      answer: q.answer ?? null,
-      answerMatched: !!q.answer_matched,
-    }))
-    const answersRawRow = paper.answers_raw as string | null
-    return json({
-      id: paper.id,
-      year: paper.year,
-      level: paper.level,
-      title: paper.title,
-      warnings: paper.warnings ?? undefined,
-      materials,
-      questions,
-      answersRaw: answersRawRow ?? undefined,
-    })
-  }
 
   // 列表：/api/exams?year=&level=
   let list = (

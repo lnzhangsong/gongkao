@@ -386,18 +386,10 @@ export function ReadingPage() {
               <h1>{article?.title ?? '加载文章…'}</h1>
               {article?.summary && <p className="dek">{article.summary}</p>}
             </header>
-            <div className="article-body reading-loading" aria-hidden="true">
-              {/* 段落式占位：每段 2~3 行、首行缩进、末行收窄（样式见 reading.css） */}
-              {[3, 2, 3, 2].map((lines, gi) => (
-                <div className="skeleton-para" key={gi}>
-                  {Array.from({ length: lines }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`skeleton-line${i === 0 ? ' first' : ''}${i === lines - 1 ? ' last' : ''}`}
-                    />
-                  ))}
-                </div>
-              ))}
+            <div className="route-loading" aria-hidden="true">
+              <i />
+              <i />
+              <i />
             </div>
           </article>
         </main>
@@ -426,7 +418,7 @@ export function ReadingPage() {
         focusMode={settings.focusMode}
         onToggleFocus={() => setFocusMode(!settings.focusMode)}
       />
-      <main className={`reading-layout${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
+      <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
         <article>
           <header className="article-head">
             <div className="tag">

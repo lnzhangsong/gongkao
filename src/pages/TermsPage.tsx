@@ -191,19 +191,6 @@ export default function TermsPage() {
         </nav>
       )}
 
-      {/* 首次加载骨架：与真题卡同语言的细线占位 */}
-      {terms === null && (
-        <div className="terms-grid" aria-hidden="true">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <span key={i} className="terms-sk-card" style={{ ['--d' as string]: `${i * 0.1}s` }}>
-              <span className="exam-sk-line" style={{ width: '42%', height: 16, animationDelay: `${i * 0.1}s` }} />
-              <span className="exam-sk-line" style={{ width: '88%', animationDelay: `${i * 0.1 + 0.06}s` }} />
-              <span className="exam-sk-line" style={{ width: '65%', animationDelay: `${i * 0.1 + 0.12}s` }} />
-            </span>
-          ))}
-        </div>
-      )}
-
       {loadError && terms !== null && (
         <div className="empty-state">
           <strong>规范词库暂时无法加载</strong>
@@ -218,6 +205,7 @@ export default function TermsPage() {
         <p className="terms-empty">没有匹配「{q}」的规范词，换个说法试试。</p>
       )}
 
+      <div key={terms === null ? 'loading' : 'ready'} className={terms !== null ? 'fade-in' : undefined}>
       {grouped.map(([name, list]) => (
         <section key={name}>
           <div className="content-head exam-year-head terms-theme-head">
@@ -285,6 +273,7 @@ export default function TermsPage() {
           </div>
         </section>
       ))}
+      </div>
     </div>
   )
 }

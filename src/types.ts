@@ -95,6 +95,8 @@ export interface ReaderSettings {
   measure: 'normal' | 'narrow'
   /** 段首缩进两格（默认开，与现有排版一致） */
   indent: boolean
+  /** 规范词方框标注（阅读时圈出正文中的申论规范词） */
+  termBox: boolean
 }
 
 export type AnnotationKind = 'highlight' | 'underline' | 'note'

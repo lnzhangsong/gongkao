@@ -109,6 +109,7 @@ export default function ExamPreviewPage() {
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setFocusMode = useReaderStore((s) => s.setFocusMode)
+  const setTermBox = useReaderStore((s) => s.setTermBox)
   const theme = useThemeStore((st) => st.theme)
   const autoDark = useThemeStore((st) => st.autoDark)
   const setTheme = useThemeStore((st) => st.setTheme)
@@ -663,6 +664,7 @@ export default function ExamPreviewPage() {
             annotationsVisible={false}
             onToggleAnnotations={() => {}}
             onToggleFocus={() => setFocusMode(!settings.focusMode)}
+            onToggleTermBox={() => setTermBox(!settings.termBox)}
           />
 
           {confirmBox && (

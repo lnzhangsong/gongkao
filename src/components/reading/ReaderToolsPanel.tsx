@@ -16,6 +16,7 @@ interface ReaderToolsPanelProps {
   annotationsVisible: boolean
   onToggleAnnotations: () => void
   onToggleFocus: () => void
+  onToggleTermBox: () => void
   /** 标签字号（申论真题页传入；阅读页不传则隐藏该行） */
   labelFontSize?: number
   onLabelFontSizeDelta?: (delta: number) => void
@@ -33,6 +34,7 @@ export function ReaderToolsPanel({
   annotationsVisible,
   onToggleAnnotations,
   onToggleFocus,
+  onToggleTermBox,
   labelFontSize,
   onLabelFontSizeDelta,
 }: ReaderToolsPanelProps) {
@@ -90,6 +92,12 @@ export function ReaderToolsPanel({
         <span>显示标注</span>
         <button className={annotationsVisible ? 'active' : ''} onClick={onToggleAnnotations}>
           {annotationsVisible ? 'ON' : 'OFF'}
+        </button>
+      </div>
+      <div className="tool">
+        <span>规范词框</span>
+        <button className={settings.termBox ? 'active' : ''} onClick={onToggleTermBox}>
+          {settings.termBox ? 'ON' : 'OFF'}
         </button>
       </div>
       <div className="tool">

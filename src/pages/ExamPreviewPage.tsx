@@ -273,17 +273,9 @@ export default function ExamPreviewPage() {
     return [...g.entries()].sort((a, b) => b[0] - a[0])
   }, [papers])
 
-  // ---------- 详情：加载中（三点脉冲，内容就绪后整体淡入） ----------
+  // ---------- 详情：加载中（不放占位动画，列表停留原位，内容就绪后整体淡入） ----------
   if (!draft && loadingDetail) {
-    return (
-      <section className="reading-page">
-        <div className="route-loading" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-      </section>
-    )
+    return null
   }
 
   // ---------- 详情：加载失败（服务不可用 / 试卷不存在） ----------
@@ -641,14 +633,6 @@ export default function ExamPreviewPage() {
           <div style={{ marginTop: 12 }}>
             <button className="ghost" onClick={reloadList}>重试</button>
           </div>
-        </div>
-      )}
-      {/* 首次加载：三点脉冲，列表就绪后整体淡入 */}
-      {papers === null && (
-        <div className="route-loading" aria-hidden="true">
-          <i />
-          <i />
-          <i />
         </div>
       )}
       {papers !== null && !listError && (

@@ -164,6 +164,38 @@ const server = createServer((req, res) => {
   }
 
   // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
+  // 新增试卷（body: { year, level, title }）
+  if (url.pathname === '/api/exams' && req.method === 'POST') {
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const year = parseInt(data.year, 10)
+        const level = String(data.level || '未分级')
+        const title = String(data.title || '').trim()
+        if (!year || !title) {
+          void respond(json({ error: 'year 与 title 必填' }, 400))
+          return
+        }
+        const d = openExamDb({ write: true })
+        const id = `guokao-shenlun-${year}-${level}`
+        if (d.prepare('SELECT id FROM papers WHERE id = ?').get(id)) {
+          void respond(json({ error: `已存在同年份同层级的试卷：${id}` }, 409))
+          return
+        }
+        d.prepare(
+          `INSERT INTO papers (id, year, level, title, subject, source_file)
+           VALUES (?, ?, ?, ?, '申论', ?)`,
+        ).run(id, year, level, title, `manual/${id}.md`)
+        void respond(json({ ok: true, id }))
+      } catch (err) {
+        void respond(json({ error: String(err) }, 400))
+      }
+    })
+    return
+  }
+
   if (url.pathname.startsWith('/api/exams/') && req.method === 'POST') {
     const id = decodeURIComponent(url.pathname.slice('/api/exams/'.length))
     const d = openExamDb({ write: true })
@@ -178,21 +210,33 @@ const server = createServer((req, res) => {
       try {
         const data = JSON.parse(body)
         const updPaper = d.prepare('UPDATE papers SET title = ?, warnings = ? WHERE id = ?')
-        const updMat = d.prepare('UPDATE materials SET content = ? WHERE paper_id = ? AND idx = ?')
-        const updQ = d.prepare(
-          'UPDATE questions SET type = ?, stem = ?, requirement = ?, word_limit = ?, word_limit_json = ?, points = ?, answer = ? WHERE paper_id = ? AND idx = ?',
+        const delMats = d.prepare('DELETE FROM materials WHERE paper_id = ?')
+        const insMat = d.prepare('INSERT INTO materials (id, paper_id, idx, label, content, chars) VALUES (?, ?, ?, ?, ?, ?)')
+        const delQs = d.prepare('DELETE FROM questions WHERE paper_id = ?')
+        const insQ = d.prepare(
+          'INSERT INTO questions (id, paper_id, idx, type, stem, requirement, word_limit, word_limit_json, points, answer, answer_matched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         )
         d.exec('BEGIN')
-        if (typeof data.title === 'string') updPaper.run(data.title, typeof data.warnings === 'string' ? data.warnings : null, id)
-        for (const m of data.materials ?? [])
-          if (typeof m.content === 'string') updMat.run(m.content, id, m.idx)
-        for (const q of data.questions ?? []) {
+        updPaper.run(
+          typeof data.title === 'string' ? data.title : '',
+          typeof data.warnings === 'string' ? data.warnings : null,
+          id,
+        )
+        // 整卷替换：materials/questions 按提交顺序重排 idx（支持新增与删除行）
+        delMats.run(id)
+        for (const [i, m] of (data.materials ?? []).entries()) {
+          if (typeof m.content !== 'string') continue
+          insMat.run(`${id}-m${i + 1}`, id, i + 1, m.label || `材料${i + 1}`, m.content, m.content.length)
+        }
+        delQs.run(id)
+        for (const [i, q] of (data.questions ?? []).entries()) {
           if (typeof q.stem !== 'string') continue
           const wl = q.wordLimit ?? null
-          updQ.run(
+          insQ.run(
+            `${id}-q${i + 1}`, id, i + 1,
             q.type || null, q.stem, q.requirement || '', wl,
             wl ? JSON.stringify({ max: wl }) : null,
-            q.points ?? null, q.answer ?? null, id, q.idx,
+            q.points ?? null, q.answer ?? null, q.answer ? 1 : 0,
           )
         }
         d.exec('COMMIT')

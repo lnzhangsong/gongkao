@@ -16,6 +16,9 @@ interface ReaderToolsPanelProps {
   annotationsVisible: boolean
   onToggleAnnotations: () => void
   onToggleFocus: () => void
+  /** 标签字号（申论真题页传入；阅读页不传则隐藏该行） */
+  labelFontSize?: number
+  onLabelFontSizeDelta?: (delta: number) => void
 }
 
 /** 阅读页右侧「阅读辅助」面板（移动端收进 ArticleToolsMenu 汉堡菜单） */
@@ -30,6 +33,8 @@ export function ReaderToolsPanel({
   annotationsVisible,
   onToggleAnnotations,
   onToggleFocus,
+  labelFontSize,
+  onLabelFontSizeDelta,
 }: ReaderToolsPanelProps) {
   return (
     <aside className="article-tools">
@@ -40,11 +45,26 @@ export function ReaderToolsPanel({
           <button onClick={() => onFontSizeDelta(-1)} aria-label="减小字号">
             <Minus size={12} />
           </button>
+          <span className="tool-val">{settings.fontSize}</span>
           <button onClick={() => onFontSizeDelta(1)} aria-label="增大字号">
             <Plus size={12} />
           </button>
         </span>
       </div>
+      {labelFontSize !== undefined && onLabelFontSizeDelta && (
+        <div className="tool">
+          <span>标签字号</span>
+          <span className="tool-btns">
+            <button onClick={() => onLabelFontSizeDelta(-1)} aria-label="减小标签字号">
+              <Minus size={12} />
+            </button>
+            <span className="tool-val">{labelFontSize}</span>
+            <button onClick={() => onLabelFontSizeDelta(1)} aria-label="增大标签字号">
+              <Plus size={12} />
+            </button>
+          </span>
+        </div>
+      )}
       <div className="tool">
         <span>正文字体</span>
         <MenuSelect

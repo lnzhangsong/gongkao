@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
 import { fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta } from '../lib/api'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
@@ -339,14 +338,17 @@ export default function ExamPreviewPage() {
   // ---------- 列表 ----------
   return (
     <div className="exam-page">
-      <header className="exam-hero">
-        <span className="eyebrow">GUOKAO SHENLUN　/　2000–2026</span>
-        <h1>
-          申论<span>真题</span>
-        </h1>
-        <p className="subpage-copy">国考申论真题库：给定资料、作答要求与参考答案的结构化整理，可就地校对修订。</p>
-        <div className="exam-hero-meta">
-          data/exams.db · {papers?.length ?? '…'} 卷 · <Link to="/">返回首页</Link>
+      <header className="subpage-header exam-hero">
+        <div>
+          <div className="eyebrow">GUOKAO SHENLUN　/　2000–2026</div>
+          <h1>
+            把真题，
+            <br />
+            <span>读成素材。</span>
+          </h1>
+        </div>
+        <div className="exam-hero-side">
+          <p className="subpage-copy">历年国考申论真题与参考答案，按年份、层级整理，和人民日报时评对照着读。</p>
         </div>
       </header>
       {grouped.map(([year, list]) => (

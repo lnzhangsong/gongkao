@@ -4,7 +4,7 @@
  * 路由：
  *   GET /api/articles
  *   GET /api/articles/:id
- *   GET /api/exams            申论真题试卷列表（?year=&level= 过滤）
+ *   GET /api/exams            申论真题试卷列表（?year=&level= 过滤；与文章同库）
  *   GET /api/exams/:id        试卷详情（材料 + 题目 + 答案）
  */
 import { createServer } from 'node:http'
@@ -58,17 +58,16 @@ function queryArticle(id) {
   }
 }
 
-// —— 申论真题（data/exams.db）——
-let _examDb = null
+// —— 申论真题（与文章同库：data/articles.db 的 papers/materials/questions 三表）——
 function openExamDb(opts) {
   const readOnly = !opts?.write
-  if (_examDb && _examReadOnly === readOnly) return _examDb
-  if (_examDb) _examDb.close()
-  _examReadOnly = readOnly
-  _examDb = new DatabaseSync(path.join(PROJECT_ROOT, 'data', 'exams.db'), { readOnly })
-  return _examDb
+  if (_db && _dbReadOnly === readOnly) return _db
+  if (_db) _db.close()
+  _dbReadOnly = readOnly
+  _db = new DatabaseSync(path.join(PROJECT_ROOT, 'data', 'articles.db'), { readOnly })
+  return _db
 }
-let _examReadOnly = true
+let _dbReadOnly = true
 function queryExamList() {
   const d = openExamDb()
   return d

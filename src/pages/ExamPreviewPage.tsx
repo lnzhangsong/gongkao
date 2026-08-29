@@ -80,6 +80,7 @@ const levelMark = (level: string): string => {
 export default function ExamPreviewPage() {
   const [papers, setPapers] = useState<ExamPaperMeta[] | null>(null)
   const [draft, setDraft] = useState<ExamDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [editing, setEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -147,11 +148,15 @@ export default function ExamPreviewPage() {
     listScrollRef.current = window.scrollY
     setInList(false)
     setDraft(null)
+    setLoadingDetail(true)
     setEditing(false)
     setDirty(false)
     setSavedAt(null)
     window.scrollTo({ top: 0 })
-    fetchExam(id).then((d) => setDraft(structuredClone(d))).catch(() => setDraft(null))
+    fetchExam(id)
+      .then((d) => setDraft(structuredClone(d)))
+      .catch(() => setDraft(null))
+      .finally(() => setLoadingDetail(false))
   }
 
   const backToList = () => {
@@ -254,6 +259,35 @@ export default function ExamPreviewPage() {
     }
     return [...g.entries()].sort((a, b) => b[0] - a[0])
   }, [papers])
+
+  // ---------- 详情：详情骨架（复用阅读页段落式骨架，样式见 reading.css） ----------
+  if (!draft && loadingDetail) {
+    return (
+      <section className="reading-page">
+        <main className="reading-layout">
+          <article>
+            <header className="article-head exam-sk-head" aria-hidden="true">
+              <span className="skeleton-line exam-sk-tag" />
+              <span className="skeleton-line exam-sk-title" />
+              <span className="skeleton-line exam-sk-meta" />
+            </header>
+            <div className="article-body reading-loading" aria-hidden="true">
+              {[3, 2, 3, 2].map((lines, gi) => (
+                <div className="skeleton-para" key={gi}>
+                  {Array.from({ length: lines }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={`skeleton-line${i === 0 ? ' first' : ''}${i === lines - 1 ? ' last' : ''}`}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </article>
+        </main>
+      </section>
+    )
+  }
 
   // ---------- 详情：复用阅读页排版 ----------
   if (draft) {
@@ -710,6 +744,14 @@ export default function ExamPreviewPage() {
           )}
         </div>
       </header>
+      {/* 首次加载：试卷卡骨架，避免空白（与 LibraryPage 骨架同源的 shimmer） */}
+      {papers === null && (
+        <div className="exam-grid exam-grid-loading" aria-hidden="true">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <span key={i} className="exam-sk-card" style={{ ['--d' as string]: `${i * 0.1}s` }} />
+          ))}
+        </div>
+      )}
       {grouped.map(([year, list]) => (
         <section key={year}>
           <div className="content-head exam-year-head">

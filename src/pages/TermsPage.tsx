@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addTerm, deleteTerm, fetchTerms, updateTerm, type GuiFanTerm } from '../lib/api'
+import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 /* .exam-page/.exam-hero 容器版式定义在 exam-preview.css（真题页组件私有的，这里复用需显式引入） */
 import '../styles/exam-preview.css'
 import '../styles/terms.css'
@@ -26,8 +27,6 @@ export default function TermsPage() {
   /* 行内编辑（一次只编一张卡） */
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ theme: '', term: '', example: '' })
-  /* 站内确认弹窗（复用真题页 .exam-modal 样式） */
-  const [confirmBox, setConfirmBox] = useState<{ message: string; onOk: () => void } | null>(null)
 
   const load = () => fetchTerms().then((r) => setTerms(r.terms)).catch(() => setTerms([]))
   useEffect(() => {
@@ -58,7 +57,7 @@ export default function TermsPage() {
   const submitAdd = async () => {
     const term = form.term.trim()
     if (!term) {
-      alert('规范词必填')
+      void alertDialog('规范词必填')
       return
     }
     try {
@@ -67,7 +66,7 @@ export default function TermsPage() {
       setForm({ theme: '', term: '', example: '' })
       await load()
     } catch (e) {
-      alert(String(e))
+      void alertDialog(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -80,7 +79,7 @@ export default function TermsPage() {
     if (editingId === null) return
     const term = editForm.term.trim()
     if (!term) {
-      alert('规范词必填')
+      void alertDialog('规范词必填')
       return
     }
     try {
@@ -88,7 +87,7 @@ export default function TermsPage() {
       setTerms((prev) => prev?.map((x) => (x.id === editingId ? { ...x, theme: editForm.theme.trim(), term, example: editForm.example.trim() } : x)) ?? prev)
       setEditingId(null)
     } catch (e) {
-      alert(String(e))
+      void alertDialog(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -97,7 +96,7 @@ export default function TermsPage() {
       await deleteTerm(t.id)
       setTerms((prev) => prev?.filter((x) => x.id !== t.id) ?? prev)
     } catch (e) {
-      alert(String(e))
+      void alertDialog(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -144,7 +143,7 @@ export default function TermsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, example: e.target.value }))}
               />
               <button className="ghost" onClick={submitAdd}>添加</button>
-              <button className="text-btn" style={{ color: 'var(--muted)' }} onClick={() => setAdding(false)}>取消</button>
+              <button className="text-btn muted" onClick={() => setAdding(false)}>取消</button>
             </div>
           ) : (
             <button className="ghost" onClick={() => setAdding(true)}>＋ 新增规范词</button>
@@ -216,7 +215,7 @@ export default function TermsPage() {
                   />
                   <div className="terms-edit-actions">
                     <button className="ghost" onClick={submitEdit}>保存</button>
-                    <button className="text-btn" style={{ color: 'var(--muted)' }} onClick={() => setEditingId(null)}>取消</button>
+                    <button className="text-btn muted" onClick={() => setEditingId(null)}>取消</button>
                   </div>
                 </article>
               ) : (
@@ -231,7 +230,9 @@ export default function TermsPage() {
                       className="text-btn terms-del-btn"
                       title="删除此词"
                       onClick={() =>
-                        setConfirmBox({ message: `确定删除「${t.term}」？`, onOk: () => void remove(t) })
+                        void confirmDialog(`确定删除「${t.term}」？`, { danger: true }).then((ok) => {
+                          if (ok) void remove(t)
+                        })
                       }
                     >
                       删除
@@ -243,27 +244,6 @@ export default function TermsPage() {
           </div>
         </section>
       ))}
-
-      {confirmBox && (
-        <div className="exam-modal-mask" onClick={() => setConfirmBox(null)}>
-          <div className="exam-modal" role="alertdialog" onClick={(e) => e.stopPropagation()}>
-            <p className="exam-modal-msg">{confirmBox.message}</p>
-            <div className="exam-modal-actions">
-              <button className="ghost" onClick={() => setConfirmBox(null)}>取消</button>
-              <button
-                className="ghost exam-btn-primary"
-                onClick={() => {
-                  const fn = confirmBox.onOk
-                  setConfirmBox(null)
-                  fn()
-                }}
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

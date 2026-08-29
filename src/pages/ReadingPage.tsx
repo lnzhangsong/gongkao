@@ -12,14 +12,16 @@ import { Highlighter, StickyNote, Underline as UnderlineIcon, BookPlus } from 'l
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { addTerm } from '../lib/api'
+import { alertDialog } from '../components/ui/ConfirmDialog'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
-import { usePrefersDark } from '../lib/prefersDark'
 import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
 import { TermText, hasTermCached } from '../components/reading/TermHighlight'
 import { useFocusMode } from '../lib/useFocusMode'
 import { useReadingTimer } from '../hooks/useReadingTimer'
+import { useCycleTheme } from '../hooks/useCycleTheme'
+import { useIsNarrow } from '../lib/breakpoints'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
 import { paragraphStarts, splitParagraph } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
@@ -89,7 +91,6 @@ export function ReadingPage() {
   const settings = useReaderStore((s) => s.settings)
   const setFontSize = useReaderStore((s) => s.setFontSize)
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
-  const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setFocusMode = useReaderStore((s) => s.setFocusMode)
   const setTermBox = useReaderStore((s) => s.setTermBox)
 
@@ -114,21 +115,12 @@ export function ReadingPage() {
   const setAnnotationsVisible = useAnnotationStore((s) => s.setVisible)
   const removeAnnotation = useAnnotationStore((s) => s.remove)
 
-  const theme = useThemeStore((s) => s.theme)
-  const autoDark = useThemeStore((s) => s.autoDark)
-  const setTheme = useThemeStore((s) => s.setTheme)
-  const prefersDark = usePrefersDark()
-
   const bodyRef = useRef<HTMLDivElement>(null)
   useFocusMode(bodyRef, settings.focusMode, contentReady && fontReady)
-  const [percent, setPercent] = useState(0)
-  /** 窄屏（≤500px）：弹层固定在屏幕底部 */
-  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900)
-  useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth <= 900)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  /* 窄屏（≤900px）：弹层固定在屏幕底部（matchMedia 驱动，免 resize 抖动） */
+  const isNarrow = useIsNarrow()
+  /* 进度条直接改 DOM 宽度：滚动每帧 setState 会整页重渲染（正文重新切分 + 词库匹配） */
+  const progressBarRef = useRef<HTMLDivElement>(null)
   const lastSavedRef = useRef(0)
   const saveTimerRef = useRef<number>(0)
 
@@ -174,7 +166,7 @@ export function ReadingPage() {
     if (!popover) return
     const term = popover.text.trim().replace(/\s+/g, '')
     if (!term || term.length > 20) {
-      alert('请选中 20 字以内的词语')
+      void alertDialog('请选中 20 字以内的词语')
       return
     }
     if (hasTermCached(term)) {
@@ -187,29 +179,47 @@ export function ReadingPage() {
       setTermSaved('ok')
       window.setTimeout(() => setTermSaved('idle'), 1500)
     } catch (e) {
-      alert(String(e))
+      void alertDialog(e instanceof Error ? e.message : String(e))
     }
   }
   const displayAnnotations = annotationsVisible ? articleAnnotations : []
+
+  /* 段落切分与标注匹配只在正文/标注变化时重算一次：
+     滚动、弹层、笔记编辑等高频 state 变化不再触发全正文 O(段落数×标注数) 重算 */
+  const allSegments = useMemo(
+    () =>
+      (article?.content ?? []).map((text, i) => splitParagraph(text, starts[i] ?? 0, displayAnnotations)),
+    [article, starts, displayAnnotations],
+  )
+  /** 段落 index → 该段的笔记标注（渲染行内笔记用，免去每段每次渲染全量 filter） */
+  const notesByPara = useMemo(() => {
+    const map = new Map<number, typeof displayAnnotations>()
+    for (const a of displayAnnotations) {
+      if (a.kind !== 'note') continue
+      const idx = noteParaIndex[a.id]
+      if (idx === undefined) continue
+      const list = map.get(idx)
+      if (list) list.push(a)
+      else map.set(idx, [a])
+    }
+    return map
+  }, [displayAnnotations, noteParaIndex])
 
   /* 实测阅读时长（拆分至 useReadingTimer） */
   const { sessionSec } = useReadingTimer(articleId)
 
   /* ---------- 主题（阅读页可覆盖页面主题） ---------- */
-  const pageTheme = resolveTheme(theme, autoDark, prefersDark)
-  const activeTheme = settings.readerTheme || pageTheme
-  /* 阅读页切换主题 = 全局切换（清除阅读页单独覆盖，整体生效） */
-  const cycleTheme = () => {
-    const idx = THEMES.findIndex((t) => t.name === activeTheme)
-    setTheme(THEMES[(idx + 1) % THEMES.length].name)
-    setReaderTheme('')
-  }
+  const [activeTheme, cycleTheme] = useCycleTheme()
   useEffect(() => {
     document.documentElement.dataset.theme = activeTheme
     return () => {
-      document.documentElement.dataset.theme = pageTheme
+      /* 卸载时取最新 store 状态恢复（避免用过期闭包里的主题覆盖用户中途的切换） */
+      const st = useThemeStore.getState()
+      document.documentElement.dataset.theme = resolveTheme(st.theme, st.autoDark, window.matchMedia('(prefers-color-scheme: dark)').matches)
     }
-  }, [activeTheme, pageTheme])  /* ---------- 阅读器 CSS 变量 ---------- */
+  }, [activeTheme])
+
+  /* ---------- 阅读器 CSS 变量 ---------- */
   const bodyStyle = useMemo<CSSProperties>(
     () => ({
       '--reader-font-size': `${settings.fontSize}px`,
@@ -225,7 +235,8 @@ export function ReadingPage() {
     const max = document.documentElement.scrollHeight - window.innerHeight
     if (max <= 0) return
     const pct = Math.min(100, Math.max(0, (window.scrollY / max) * 100))
-    setPercent(pct)
+    // 进度条直接写 DOM：避免每帧 setState 触发整篇正文重渲染
+    if (progressBarRef.current) progressBarRef.current.style.width = `${pct}%`
     const now = Date.now()
     // 节流：至少每 1.5s 保存一次
     if (now - lastSavedRef.current > 1500) {
@@ -272,14 +283,12 @@ export function ReadingPage() {
       /* 新文章（如「下一篇」进入）：回到顶部 */
       window.scrollTo(0, 0)
     }
-    setPercent(p?.percent ?? 0)
+    percentRef.current = p?.percent ?? 0
+    if (progressBarRef.current) progressBarRef.current.style.width = `${percentRef.current}%`
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId, article, storeHydrated])
 
-  const percentRef = useRef(percent)
-  useEffect(() => {
-    percentRef.current = percent
-  }, [percent])
+  const percentRef = useRef(0)
 
   /* 正文拉取失败（本地服务不可用 / 文章不存在）：错误态，而不是无限骨架 */
   if (loadError) {
@@ -345,7 +354,7 @@ export function ReadingPage() {
 
   return (
     <section className="reading-page">
-      <div className="scroll-progress" style={{ width: `${percent}%` }} />
+      <div ref={progressBarRef} className="scroll-progress" />
       {/* 移动端：页面顶部固定的阅读辅助菜单 */}
       <ArticleToolsMenu
         fontSize={settings.fontSize}
@@ -397,9 +406,9 @@ export function ReadingPage() {
           >
             {article.content.map((text, i) => {
               const paraStart = starts[i]
-              const segments = splitParagraph(text, paraStart, displayAnnotations)
+              const segments = allSegments[i] ?? splitParagraph(text, paraStart, displayAnnotations)
               const hasPending = pendingNote && paraStart <= pendingNote.start && pendingNote.start < paraStart + text.length
-              const openNotes = displayAnnotations.filter((a) => a.kind === 'note' && noteParaIndex[a.id] === i)
+              const openNotes = notesByPara.get(i) ?? []
               return (
                 <Fragment key={i}>
                   <p data-para={i}>
@@ -484,7 +493,6 @@ export function ReadingPage() {
                       {editingNoteId === n.id ? (
                         <textarea
                           className="note-edit"
-                          style={{ width: '100%', border: '1px solid var(--line)', background: 'transparent', padding: 8, font: '12px/1.7 var(--serif)', color: 'var(--ink)', minHeight: 60, resize: 'vertical' }}
                           value={noteDraft}
                           onChange={(e) => setNoteDraft(e.target.value)}
                           autoFocus
@@ -644,12 +652,7 @@ export function ReadingPage() {
           onFontSizeDelta={(delta) => setFontSize(settings.fontSize + delta)}
           onFontFamily={setFontFamily}
           activeTheme={activeTheme}
-          onCycleTheme={() => {
-            const idx = THEMES.findIndex((t) => t.name === activeTheme)
-            // 阅读页切换主题 = 全局切换（清除阅读页单独覆盖，整体生效）
-            setTheme(THEMES[(idx + 1) % THEMES.length].name)
-            setReaderTheme('')
-          }}
+          onCycleTheme={cycleTheme}
           favorite={isFavorite}
           onToggleFavorite={() => toggleFavorite(article.id)}
           annotationsVisible={annotationsVisible}

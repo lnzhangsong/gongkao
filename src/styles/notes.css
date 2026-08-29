@@ -424,7 +424,7 @@
     top: auto;
     height: auto;
     max-height: 82vh;
-    z-index: 120;
+    z-index: var(--z-drawer);
     border-left: 0;
     border-top: 1px solid var(--ink);
     border-radius: 14px 14px 0 0;
@@ -435,7 +435,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 110;
+    z-index: var(--z-drawer-backdrop);
     background: rgba(0, 0, 0, 0.32);
   }
   .note-detail-close {

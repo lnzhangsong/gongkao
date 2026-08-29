@@ -570,45 +570,7 @@
   margin-bottom: 8px;
 }
 
-/* ---------- 站内确认弹窗 ---------- */
-.exam-modal-mask {
-  position: fixed;
-  inset: 0;
-  background: color-mix(in srgb, var(--ink) 18%, transparent);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 90;
-}
-
-.exam-modal {
-  width: min(400px, calc(100vw - 48px));
-  background: var(--paper);
-  border: 1px solid var(--ink);
-  border-radius: 2px;
-  box-shadow: 7px 8px 0 var(--ink);
-  padding: 26px 26px 22px;
-}
-
-.exam-modal-msg {
-  margin: 0 0 22px;
-  font-size: 15px;
-  line-height: 1.8;
-  color: var(--ink);
-}
-
-.exam-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.exam-btn-danger {
-  color: var(--paper);
-  background: var(--accent-text);
-  border-color: var(--accent-text);
-}
+/* 站内确认弹窗样式已提升为全站组件（.exam-modal-* 定义在 base.css，ConfirmDialog 使用） */
 
 /* ---------- 材料快速跳转锚点 ---------- */
 .exam-jump {
@@ -886,7 +848,7 @@
   z-index: 1;
 }
 
-/* ---------- 骨架屏（shimmer 动画复用 reading.css 的 skeleton-shimmer） ---------- */
+/* ---------- 骨架屏（shimmer keyframes 定义在 base.css） ---------- */
 
 /* 骨架线条：极浅墨底 + 轻微 shimmer（比整块灰底安静得多） */
 .exam-sk-line {
@@ -900,7 +862,7 @@
     color-mix(in srgb, var(--ink) 4%, transparent) 75%
   );
   background-size: 200% 100%;
-  animation: skeleton-shimmer 2.4s ease-in-out infinite;
+  animation: skeleton-shimmer 2.4s ease-in-out infinite; /* keyframes 见 base.css */
   animation-delay: var(--d, 0s);
 }
 

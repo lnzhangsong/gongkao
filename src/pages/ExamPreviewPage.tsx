@@ -1,81 +1,29 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta } from '../lib/api'
+import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta, type ExamQuestion } from '../lib/api'
+import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
-import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
-import { usePrefersDark } from '../lib/prefersDark'
+import { useCycleTheme } from '../hooks/useCycleTheme'
 import { loadFontFamily } from '../lib/fonts'
 import { useFocusMode } from '../lib/useFocusMode'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
+import { ExamQuestionView } from '../components/exam/ExamQuestionView'
+import { ExamQuestionEditor } from '../components/exam/ExamQuestionEditor'
+import {
+  joinParagraphs,
+  reflowParagraphs,
+  reflowInline,
+  questionMaterials,
+  levelClass,
+  levelMark,
+} from '../lib/examText'
 import '../styles/exam-preview.css'
 
 /**
  * 申论真题（/exams）：列表 + 详情
  * 详情正文直接复用阅读页排版（article-head / article-body / 阅读设置变量），
  * 题目与参考答案在正文语言之上做专门设计（mono 题头 + 答题纸式答案面板）。
+ * 文本工具（重排/题干抽取/材料关联）在 lib/examText.ts。
  */
-
-/** 段内硬换行拼接：返回重排后的段落数组 */
-export function joinParagraphs(text: string): string[] {
-  const HEAD = /^(?:材料\s*[0-9一二三四五六七八九十]+|【[^】]*】|问题\s*[一二三四五六七八九十1-9]+[：:：]?|[一二三四五六七八九十]+[、.]|\d{1,2}[、.．]|要求[（(:：]|答卷|参考答案)/
-  const paras: string[] = []
-  let cur = ''
-  for (const raw of text.split('\n')) {
-    const line = raw.replace(/[ \t\u3000]+/g, ' ').trim()
-    if (!line) {
-      if (cur) paras.push(cur)
-      cur = ''
-      continue
-    }
-    if (!cur) {
-      cur = line
-      continue
-    }
-    if (HEAD.test(line) || /[。！？；…”）』」!?]$/.test(cur)) {
-      paras.push(cur)
-      cur = line
-    } else {
-      cur += line
-    }
-  }
-  if (cur) paras.push(cur)
-  return paras
-}
-
-const reflowParagraphs = (text: string) => joinParagraphs(text).join('\n\n')
-const reflowInline = (text: string) => text.replace(/\s+/g, '')
-
-/* 从题干自动读取字数限制与分值（“不超过300字”“250-300字”“（15分）”等） */
-const toAsciiNum = (s: string) => parseInt(s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)), 10)
-const extractWordLimit = (text: string): number | null => {
-  for (const [, a, b] of text.matchAll(/(?:不超过|不多于|不多于|不超过|不得超过|字数\s*(?:在|为)?|控制在)?\s*([0-9０-９]{2,4})\s*(?:[-—~至]\s*([0-9０-９]{2,4}))?\s*字/g)) {
-    const hi = b ? toAsciiNum(b) : toAsciiNum(a)
-    if (hi >= 20 && hi <= 5000) return hi
-  }
-  return null
-}
-const extractPoints = (text: string): number | null => {
-  for (const m of text.matchAll(/(?:^|[^\d])([0-9０-９]{1,3})\s*分/g)) {
-    const v = toAsciiNum(m[1])
-    if (v >= 1 && v <= 100) return v
-  }
-  return null
-}
-
-/* 层级 → 卡片底色（与首页三卡同源的配色语言；未知层级回退纸面） */
-const levelClass = (level: string): string => {
-  if (level.includes('副省')) return ' exam-lv-a'
-  if (level.includes('地市')) return ' exam-lv-b'
-  if (level.includes('行政执法')) return ' exam-lv-c'
-  return ''
-}
-
-/* 层级 → 右下角水印单字 */
-const levelMark = (level: string): string => {
-  if (level.includes('副省')) return '省'
-  if (level.includes('地市')) return '市'
-  if (level.includes('行政执法')) return '法'
-  return ''
-}
 
 export default function ExamPreviewPage() {
   const [papers, setPapers] = useState<ExamPaperMeta[] | null>(null)
@@ -88,8 +36,6 @@ export default function ExamPreviewPage() {
   const [showRaw, setShowRaw] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newForm, setNewForm] = useState({ year: String(new Date().getFullYear() + 1), level: '地市级', title: '' })
-  /* 站内确认弹窗（替代原生 confirm，样式与全站一致） */
-  const [confirmBox, setConfirmBox] = useState<{ message: string; danger?: boolean; onOk: () => void } | null>(null)
   /* 折叠的材料（阅读态点击材料标签收起/展开） */
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const toggleCollapsed = (idx: number) =>
@@ -107,19 +53,9 @@ export default function ExamPreviewPage() {
   const setFontSize = useReaderStore((s) => s.setFontSize)
   const setLabelFontSize = useReaderStore((s) => s.setLabelFontSize)
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
-  const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setFocusMode = useReaderStore((s) => s.setFocusMode)
   const setTermBox = useReaderStore((s) => s.setTermBox)
-  const theme = useThemeStore((st) => st.theme)
-  const autoDark = useThemeStore((st) => st.autoDark)
-  const setTheme = useThemeStore((st) => st.setTheme)
-  const prefersDark = usePrefersDark()
-  const activeTheme = settings.readerTheme || resolveTheme(theme, autoDark, prefersDark)
-  const cycleTheme = () => {
-    const idx = THEMES.findIndex((t) => t.name === activeTheme)
-    setTheme(THEMES[(idx + 1) % THEMES.length].name)
-    setReaderTheme('')
-  }
+  const [activeTheme, cycleTheme] = useCycleTheme()
   const readerVars = useMemo<CSSProperties>(
     () =>
       ({
@@ -155,7 +91,7 @@ export default function ExamPreviewPage() {
     setSavedAt(null)
     window.scrollTo({ top: 0 })
     fetchExam(id)
-      .then((d) => setDraft(structuredClone(d)))
+      .then((d) => setDraft(cloneDraft(d)))
       .catch(() => setDraft(null))
       .finally(() => setLoadingDetail(false))
   }
@@ -167,15 +103,28 @@ export default function ExamPreviewPage() {
     setInList(true)
   }
 
+  /* 浅层不可变更新：只拷贝对象外壳（数组 + 单项），字符串不可变无需拷贝。
+     原实现 structuredClone 整卷，编辑长卷时每次键入都深拷贝数万字 */
   const patchDraft = (fn: (d: ExamDetail) => void) => {
     setDraft((prev) => {
       if (!prev) return prev
-      const next = structuredClone(prev)
+      const next: ExamDetail = {
+        ...prev,
+        materials: prev.materials.map((m) => ({ ...m })),
+        questions: prev.questions.map((q) => ({ ...q })),
+      }
       fn(next)
       return next
     })
     setDirty(true)
   }
+
+  /** 单题补丁：patchDraft + 按 idx 定位（题目编辑器子组件用） */
+  const patchQuestion = (fn: (t: ExamQuestion) => void, idx: number) =>
+    patchDraft((d) => {
+      const t = d.questions.find((x) => x.idx === idx)
+      if (t) fn(t)
+    })
 
   /* 快速跳转：平滑滚动到材料/题目锚点 */
   const jumpTo = (id: string) => {
@@ -193,29 +142,24 @@ export default function ExamPreviewPage() {
       arr.forEach((x, k) => void (x.idx = k + 1))
     })
 
-  /* 题干/要求中引用的材料编号（“给定资料N”“材料N”“资料1-4”，含中文数字） */
-  const CN_NUM: Record<string, number> = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
-  const toNum = (num: string): number => {
-    const ascii = num.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248))
-    return /^[0-9]+$/.test(ascii) ? parseInt(ascii, 10) : CN_NUM[num] ?? 0
-  }
-  const questionMaterials = (q: { stem: string; requirement: string }): number[] => {
-    const text = `${q.stem}\n${q.requirement}`
-    const found = new Set<number>()
-    for (const [, a, b] of text.matchAll(/(?:给定)?[材资]料?\s*([0-9０-９]+|[一二三四五六七八九十]+)(?:\s*[-—~至]\s*([0-9０-９]+|[一二三四五六七八九十]+))?/g)) {
-      const start = toNum(a)
-      const end = b ? toNum(b) : start
-      for (let n = start; n >= 1 && n <= end && n - start < 12; n++) found.add(n)
+  /* 题目 idx → 关联材料编号（渲染前统一算好，避免阅读态每题每次渲染重复 matchAll） */
+  const materialAnchors = useMemo(() => {
+    const map = new Map<number, number[]>()
+    if (!draft) return map
+    for (const q of draft.questions) map.set(q.idx, questionMaterials(q))
+    return map
+  }, [draft])
+  /* 材料编号 → 锚点 id（label 匹配优先，否则按位置取） */
+  const anchorByNum = useMemo(() => {
+    const map = new Map<number, string>()
+    if (!draft) return map
+    for (let n = 1; n <= draft.materials.length + 5; n++) {
+      const byLabel = draft.materials.find((m) => new RegExp(`[材资]料${n}(?![0-9])`).test(m.label) || m.label.includes(`资料${n}`))
+      const target = byLabel ?? draft.materials[n - 1]
+      if (target) map.set(n, `exam-mat-${target.idx}`)
     }
-    return [...found].sort((x, y) => x - y)
-  }
-  /* 编号 → 对应材料（label 匹配优先，否则按位置取） */
-  const materialIdByNum = (n: number): string | null => {
-    if (!draft) return null
-    const byLabel = draft.materials.find((m) => new RegExp(`[材资]料${n}(?![0-9])`).test(m.label) || m.label.includes(`资料${n}`))
-    const target = byLabel ?? draft.materials[n - 1]
-    return target ? `exam-mat-${target.idx}` : null
-  }
+    return map
+  }, [draft])
 
   const reflowAll = () =>
     patchDraft((d) => {
@@ -246,7 +190,7 @@ export default function ExamPreviewPage() {
       setDirty(false)
       setSavedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
     } catch (e) {
-      alert(String(e))
+      void alertDialog(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
@@ -314,11 +258,8 @@ export default function ExamPreviewPage() {
             <button
               type="button"
               className="tag exam-tag-link"
-              onClick={() => {
-                if (dirty) {
-                  setConfirmBox({ message: '有未保存修改，确定离开？', onOk: backToList })
-                  return
-                }
+              onClick={async () => {
+                if (dirty && !(await confirmDialog('有未保存修改，确定离开？'))) return
                 backToList()
               }}
             >
@@ -375,20 +316,15 @@ export default function ExamPreviewPage() {
                   <button className="ghost" onClick={() => setEditing(false)}>退出编辑</button>
                   <button
                     className="text-btn exam-del-btn"
-                    onClick={() => {
-                      setConfirmBox({
-                        message: `确定删除整张试卷「${draft.title}」？其材料与题目会一并删除，且不可恢复。`,
-                        danger: true,
-                        onOk: async () => {
-                          try {
-                            await deleteExam(draft.id)
-                            backToList()
-                            setPapers((prev) => prev?.filter((p) => p.id !== draft.id) ?? prev)
-                          } catch (e) {
-                            alert(String(e))
-                          }
-                        },
-                      })
+                    onClick={async () => {
+                      if (!(await confirmDialog(`确定删除整张试卷「${draft.title}」？其材料与题目会一并删除，且不可恢复。`, { danger: true }))) return
+                      try {
+                        await deleteExam(draft.id)
+                        backToList()
+                        setPapers((prev) => prev?.filter((p) => p.id !== draft.id) ?? prev)
+                      } catch (e) {
+                        void alertDialog(e instanceof Error ? e.message : String(e))
+                      }
                     }}
                   >
                     删除试卷
@@ -511,126 +447,21 @@ export default function ExamPreviewPage() {
                   </span>
                 </header>
                 {editing ? (
-                  <>
-                    <div className="exam-q-edit-bar">
-                      <span className="exam-q-edit-left">
-                        第 {q.idx} 题
-                        <select
-                          className="exam-select"
-                          value={q.type ?? ''}
-                          onChange={(e) => patchDraft((d) => void (d.questions.find((x) => x.idx === q.idx)!.type = e.target.value || null))}
-                        >
-                          <option value="">未分类</option>
-                          {['概括', '分析', '对策', '应用文', '大作文'].map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
-                      </span>
-                      <span className="exam-move-group">
-                        <button className="exam-move-btn" title="上移" disabled={q.idx === 1} onClick={() => moveItem('questions', q.idx, -1)}>↑</button>
-                        <button className="exam-move-btn" title="下移" disabled={q.idx === draft.questions.length} onClick={() => moveItem('questions', q.idx, 1)}>↓</button>
-                      </span>
-                      <button
-                        className="text-btn exam-del-btn"
-                        onClick={() => patchDraft((d) => void (d.questions = d.questions.filter((x) => x.idx !== q.idx)))}
-                      >
-                        删除此题
-                      </button>
-                    </div>
-                    <div className="exam-q-fields">
-                      <span className="exam-edit-field">
-                        <label>字数</label>
-                        <input
-                          type="number"
-                          className="exam-select exam-num-input"
-                          min={0}
-                          value={q.wordLimit ?? ''}
-                          placeholder="—"
-                          onChange={(e) => patchDraft((d) => void (d.questions.find((x) => x.idx === q.idx)!.wordLimit = e.target.value === '' ? null : parseInt(e.target.value, 10)))}
-                        />
-                      </span>
-                      <span className="exam-edit-field">
-                        <label>分值</label>
-                        <input
-                          type="number"
-                          className="exam-select exam-num-input"
-                          min={0}
-                          value={q.points ?? ''}
-                          placeholder="—"
-                          onChange={(e) => patchDraft((d) => void (d.questions.find((x) => x.idx === q.idx)!.points = e.target.value === '' ? null : parseInt(e.target.value, 10)))}
-                        />
-                      </span>
-                      <span className="exam-q-fields-hint">字数/分值在题干失焦时自动从原文读取，可手动覆盖</span>
-                    </div>
-                    <textarea
-                      className="exam-ta"
-                      rows={Math.min(8, Math.max(3, Math.ceil(q.stem.length / 40)))}
-                      value={q.stem}
-                      onBlur={(e) => {
-                        const stem = e.target.value
-                        const wl = extractWordLimit(stem)
-                        const pts = extractPoints(stem)
-                        if (wl !== null || pts !== null) {
-                          patchDraft((d) => {
-                            const t = d.questions.find((x) => x.idx === q.idx)
-                            if (!t) return
-                            if (wl !== null) t.wordLimit = wl
-                            if (pts !== null) t.points = pts
-                          })
-                        }
-                      }}
-                      onChange={(e) => patchDraft((d) => void (d.questions.find((x) => x.idx === q.idx)!.stem = e.target.value))}
-                    />
-                    <textarea
-                      className="exam-ta"
-                      placeholder="要求（可空）"
-                      rows={Math.max(2, Math.ceil((q.requirement.length || 1) / 40))}
-                      value={q.requirement}
-                      onChange={(e) => patchDraft((d) => void (d.questions.find((x) => x.idx === q.idx)!.requirement = e.target.value))}
-                    />
-                    <textarea
-                      className="exam-ta"
-                      placeholder="参考答案（可空）"
-                      rows={Math.min(16, Math.max(3, Math.ceil((q.answer?.length || 1) / 40)))}
-                      value={q.answer ?? ''}
-                      onChange={(e) => patchDraft((d) => void (d.questions.find((x) => x.idx === q.idx)!.answer = e.target.value || null))}
-                    />
-                  </>
+                  <ExamQuestionEditor
+                    q={q}
+                    total={draft.questions.length}
+                    patch={patchQuestion}
+                    move={(key, delta) => moveItem('questions', key, delta)}
+                    onDelete={() => patchDraft((d) => void (d.questions = d.questions.filter((x) => x.idx !== q.idx)))}
+                  />
                 ) : (
-                  <>
-                    <p className="exam-q-stem">{q.stem.replace(/\n/g, '')}</p>
-                    {questionMaterials(q).length > 0 && (
-                      <div className="exam-q-mats">
-                        {questionMaterials(q).map((n) => {
-                          const anchor = materialIdByNum(n)
-                          return anchor ? (
-                            <button key={n} className="exam-jump-chip" onClick={() => jumpTo(anchor)}>
-                              材料{n} ↖
-                            </button>
-                          ) : null
-                        })}
-                      </div>
-                    )}
-                    {q.requirement ? (
-                      <p className="exam-q-req">
-                        <span className="exam-q-req-label">要求</span>
-                        {q.requirement.replace(/^要求[（(:：]?\s*/, '').replace(/\n+/g, ' ')}
-                      </p>
-                    ) : null}
-                    {q.answer ? (
-                      <details className="exam-answer">
-                        <summary>
-          参考答案
-          {q.answerMatched ? '' : <span className="exam-ans-warn">　未按题对齐</span>}
-        </summary>
-                        <div className={`exam-answer-sheet${settings.indent ? '' : ' no-indent'}`}>
-                          {joinParagraphs(q.answer).map((p, i) => (
-                            <p key={i}>{p}</p>
-                          ))}
-                        </div>
-                      </details>
-                    ) : null}
-                  </>
+                  <ExamQuestionView
+                    q={q}
+                    materialAnchors={materialAnchors}
+                    anchorByNum={anchorByNum}
+                    onJump={jumpTo}
+                    indent={settings.indent}
+                  />
                 )}
               </article>
             ))}
@@ -666,27 +497,6 @@ export default function ExamPreviewPage() {
             onToggleFocus={() => setFocusMode(!settings.focusMode)}
             onToggleTermBox={() => setTermBox(!settings.termBox)}
           />
-
-          {confirmBox && (
-            <div className="exam-modal-mask" onClick={() => setConfirmBox(null)}>
-              <div className="exam-modal" role="alertdialog" onClick={(e) => e.stopPropagation()}>
-                <p className="exam-modal-msg">{confirmBox.message}</p>
-                <div className="exam-modal-actions">
-                  <button className="ghost" onClick={() => setConfirmBox(null)}>取消</button>
-                  <button
-                    className={`ghost${confirmBox.danger ? ' exam-btn-danger' : ' exam-btn-primary'}`}
-                    onClick={() => {
-                      const fn = confirmBox.onOk
-                      setConfirmBox(null)
-                      void fn()
-                    }}
-                  >
-                    确定
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </main>
       </section>
     )
@@ -742,13 +552,13 @@ export default function ExamPreviewPage() {
                     open(id)
                     setEditing(true)
                   } catch (e) {
-                    alert(String(e))
+                    void alertDialog(e instanceof Error ? e.message : String(e))
                   }
                 }}
               >
                 创建
               </button>
-              <button className="text-btn" onClick={() => setCreating(false)} style={{ color: 'var(--muted)' }}>
+              <button className="text-btn muted" onClick={() => setCreating(false)}>
                 取消
               </button>
             </div>
@@ -803,4 +613,13 @@ export default function ExamPreviewPage() {
       ))}
     </div>
   )
+}
+
+/** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
+function cloneDraft(d: ExamDetail): ExamDetail {
+  return {
+    ...d,
+    materials: d.materials.map((m) => ({ ...m })),
+    questions: d.questions.map((q) => ({ ...q })),
+  }
 }

@@ -52,6 +52,12 @@
   --hl-green: #93d8a8;
   --hl-pink: #f2aec4;
   --hl-violet: #c6aaf5;
+  /* 高亮色点的固定品牌色（色点在深色弹出条上，不随主题透明度变化） */
+  --hl-dot-yellow: #e9dc66;
+  --hl-dot-blue: #9db9ea;
+  --hl-dot-green: #93d8a8;
+  --hl-dot-pink: #f2aec4;
+  --hl-dot-violet: #c6aaf5;
 
   /* 字体栈：Google Fonts 优先，随后按平台回退（Windows: 微软雅黑/宋体/楷体；macOS: 苹方/华文） */
   --serif: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif;
@@ -163,8 +169,28 @@
   --reader-font-family: var(--serif);
 
   /* 暗面板（--dark：划词工具栏/工具菜单）上的固定亮色文字：
-     夜读绿/墨夜主题的 --paper 本身是深色，不能用 --paper 当暗底文字 */
+     夜读绿/墨夜主题的 --paper 本身是深色，不能用 --paper 当暗底文字。
+     划词工具栏、工具菜单、弹层内的下划线示意点都必须用它 */
   --dark-ink: #f2efe6;
+
+  /* ---------- z-index 层级体系（全站统一引用，勿再写魔法数字） ----------
+     40 导航 / 46 移动导航面板 / 50 弹层 / 60 下拉与进度条 / 80-90 工具菜单与模态
+     / 100 移动端底部弹层 / 120 抽屉 / 200 光标 / 3000 toast / 9999 全屏 loading */
+  --z-nav: 40;
+  --z-nav-backdrop: 45;
+  --z-nav-panel: 46;
+  --z-popover: 50;
+  --z-dropdown: 60;
+  --z-progress: 60;
+  --z-toolbar-pop: 80;
+  --z-toolbar: 90;
+  --z-modal: 90;
+  --z-mobile-popover: 100;
+  --z-drawer-backdrop: 110;
+  --z-drawer: 120;
+  --z-cursor: 200;
+  --z-toast: 3000;
+  --z-loading: 9999;
 }
 
 /* 减少动效 */

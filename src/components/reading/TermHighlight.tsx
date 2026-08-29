@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import type { GuiFanTerm } from '../../lib/api'
 import { useReaderStore } from '../../stores/readerStore'
 
@@ -23,8 +23,10 @@ export function useGuifanTerms(): GuiFanTerm[] | null {
           return cache
         })
         .catch(() => {
-          cache = []
-          return cache
+          /* 失败不缓存为空数组：cache 保持 null，下次进入页面可重试；
+             pending 置回 null，避免本次会话内被永久短路 */
+          pending = null
+          return [] as GuiFanTerm[]
         })
     }
     void pending.then(setTerms)
@@ -102,8 +104,9 @@ export function splitTermSegments(text: string, terms: GuiFanTerm[]): TermSegmen
   return out
 }
 
-/** 段落文本 → 规范词方框标注的 React 节点（词库未就绪或开关关闭时原样返回） */
-export function TermText({ text }: { text: string }) {
+/** 段落文本 → 规范词方框标注的 React 节点（词库未就绪或开关关闭时原样返回）。
+ *  memo：正文渲染频繁重渲（弹层/进度等 state），同一段文本的逐字扫描结果不该重算 */
+export const TermText = memo(function TermText({ text }: { text: string }) {
   const terms = useGuifanTerms()
   const termBox = useReaderStore((s) => s.settings.termBox)
   if (!terms || !termBox) return <>{text}</>
@@ -124,7 +127,7 @@ export function TermText({ text }: { text: string }) {
       )}
     </>
   )
-}
+})
 
 function Fragmentish({ text }: { text: string }) {
   return <>{text}</>

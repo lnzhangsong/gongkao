@@ -68,13 +68,16 @@ export interface ExamDetail {
   answersRaw?: string
 }
 
-/** 申论真题试卷列表（按年份倒序） */
+/** 申论真题试卷列表（按年份倒序；绕过 HTTP 缓存保证增删改后即时可见） */
 export function fetchExamList(params?: { year?: number; level?: string }): Promise<{ papers: ExamPaperMeta[]; total: number }> {
   const sp = new URLSearchParams()
   if (params?.year) sp.set('year', String(params.year))
   if (params?.level) sp.set('level', params.level)
   const qs = sp.toString()
-  return getJSON(`/api/exams${qs ? `?${qs}` : ''}`)
+  return fetch(`/api/exams${qs ? `?${qs}` : ''}`, { cache: 'reload' }).then(async (res) => {
+    if (!res.ok) throw new Error(`API ${res.status}`)
+    return res.json() as Promise<{ papers: ExamPaperMeta[]; total: number }>
+  })
 }
 
 /** 申论真题试卷详情（材料 + 题目 + 答案） */
@@ -85,18 +88,18 @@ export function fetchExam(id: string): Promise<ExamDetail> {
 /** 保存试卷编辑（仅本地 api-server 提供写入） */
 export async function saveExam(
   id: string,
-  data: Pick<ExamDetail, 'title'> & {
+  data: Pick<ExamDetail, 'year' | 'level' | 'title'> & {
     materials: { idx: number; content: string }[]
     questions: { idx: number; type: string | null; stem: string; requirement: string; wordLimit: number | null; points: number | null; answer: string | null }[]
   },
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; id: string }> {
   const res = await fetch(`/api/exams/${encodeURIComponent(id)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error(`保存失败 API ${res.status}`)
-  return res.json() as Promise<{ ok: boolean }>
+  if (!res.ok) throw new Error(`保存失败 ${(await res.json()).error ?? res.status}`)
+  return res.json() as Promise<{ ok: boolean; id: string }>
 }
 
 /** 新增空白试卷（仅本地 api-server） */
@@ -108,4 +111,11 @@ export async function createExam(paper: { year: number; level: string; title: st
   })
   if (!res.ok) throw new Error(`创建失败 ${(await res.json()).error ?? res.status}`)
   return res.json() as Promise<{ ok: boolean; id: string }>
+}
+
+/** 删除试卷（连同材料与题目，仅本地 api-server） */
+export async function deleteExam(id: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/exams/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`删除失败 ${(await res.json()).error ?? res.status}`)
+  return res.json() as Promise<{ ok: boolean }>
 }

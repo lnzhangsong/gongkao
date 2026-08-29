@@ -16,6 +16,20 @@ import { fileURLToPath } from 'node:url'
 // 与 api/articles.ts 相同的查询逻辑（Vercel 打包只编译入口文件，这里本地自包含）
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 let _db = null
+
+// ---------- 写接口鉴权 ----------
+// 默认仅本机可用；若设置 WRITE_TOKEN 环境变量，则写请求必须带匹配的 x-write-token 头
+// （前端 src/lib/api.ts 会自动附带 localStorage.readbook:write-token）
+function writeAuthorized(req) {
+  const expected = process.env.WRITE_TOKEN
+  if (!expected) return true
+  return req.headers['x-write-token'] === expected
+}
+
+function denyWrite(respond) {
+  respond(json({ error: '未授权：缺少或错误的 x-write-token' }), 401)
+}
+
 function openDb() {
   if (_db) return _db
   _db = new DatabaseSync(path.join(PROJECT_ROOT, 'data', 'articles.db'), { readOnly: true })
@@ -165,6 +179,7 @@ const server = createServer((req, res) => {
 
   // 新增规范词（body: { theme, term, example? }）
   if (url.pathname === '/api/terms' && req.method === 'POST') {
+    if (!writeAuthorized(req)) return denyWrite(respond)
     let body = ''
     req.on('data', (c) => (body += c))
     req.on('end', () => {
@@ -189,6 +204,7 @@ const server = createServer((req, res) => {
 
   // 修改规范词（部分更新：传了哪个字段改哪个）
   if (url.pathname.startsWith('/api/terms/') && req.method === 'PATCH') {
+    if (!writeAuthorized(req)) return denyWrite(respond)
     const id = Number(decodeURIComponent(url.pathname.slice('/api/terms/'.length)))
     if (!Number.isInteger(id) || id <= 0) {
       void respond(json({ error: '无效 id' }, 400))
@@ -232,6 +248,7 @@ const server = createServer((req, res) => {
 
   // 删除规范词
   if (url.pathname.startsWith('/api/terms/') && req.method === 'DELETE') {
+    if (!writeAuthorized(req)) return denyWrite(respond)
     const id = Number(decodeURIComponent(url.pathname.slice('/api/terms/'.length)))
     if (!Number.isInteger(id) || id <= 0) {
       void respond(json({ error: '无效 id' }, 400))
@@ -274,6 +291,7 @@ const server = createServer((req, res) => {
   // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
   // 新增试卷（body: { year, level, title }）
   if (url.pathname === '/api/exams' && req.method === 'POST') {
+    if (!writeAuthorized(req)) return denyWrite(respond)
     let body = ''
     req.on('data', (c) => (body += c))
     req.on('end', () => {
@@ -305,6 +323,7 @@ const server = createServer((req, res) => {
   }
 
   if (url.pathname.startsWith('/api/exams/') && req.method === 'POST') {
+    if (!writeAuthorized(req)) return denyWrite(respond)
     const id = decodeURIComponent(url.pathname.slice('/api/exams/'.length))
     const d = openExamDb({ write: true })
     const exists = d.prepare('SELECT id FROM papers WHERE id = ?').get(id)
@@ -378,6 +397,7 @@ const server = createServer((req, res) => {
 
   // 删除试卷（连同其材料与题目）
   if (url.pathname.startsWith('/api/exams/') && req.method === 'DELETE') {
+    if (!writeAuthorized(req)) return denyWrite(respond)
     const id = decodeURIComponent(url.pathname.slice('/api/exams/'.length))
     const d = openExamDb({ write: true })
     const delPaper = d.prepare('DELETE FROM papers WHERE id = ?')

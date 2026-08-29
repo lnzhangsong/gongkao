@@ -37,8 +37,9 @@
   --muted: #6b665c;
   --line: #cac6bd;
   --accent: #e96448;
-  --yellow: #d9eb73;
-  --blue: #c9d8f1;
+  /* 面板底色 A/B（::selection、picks 卡等；暗色主题下是低饱和暗面板色） */
+  --surface-a: #d9eb73;
+  --surface-b: #c9d8f1;
   --dark: #242321;
   --soft: #fffaf2;
   --body-bg: #111;
@@ -72,8 +73,8 @@
   --muted: #56627a;
   --line: #c6cfdf;
   --accent: #667ff0;
-  --yellow: #c8d5ff;
-  --blue: #c8d5ff;
+  --surface-a: #c8d5ff;
+  --surface-b: #c8d5ff;
   --dark: #1e2a40;
   --soft: #eef2fa;
   --body-bg: #10141d;
@@ -94,8 +95,8 @@
   --muted: #b3b9ad;
   --line: #4a4f46;
   --accent: #d7f267;
-  --yellow: #d7f267;
-  --blue: #3a4a3f;
+  --surface-a: #d7f267;
+  --surface-b: #3a4a3f;
   --dark: #171915;
   --soft: #262923;
   --body-bg: #0d0e0c;
@@ -105,8 +106,8 @@
   --accent-text: #d7f267;
   /* 首页 picks 卡片底色：暗色下 yellow 是亮 lime，直接做卡片底会亮底配亮字；
      改为向 paper 混合的低饱和暗面板（14%：muted 小字在卡上仍 ≥4.5） */
-  --pick-a: color-mix(in srgb, var(--blue) 45%, var(--paper));
-  --pick-b: color-mix(in srgb, var(--yellow) 14%, var(--paper));
+  --pick-a: color-mix(in srgb, var(--surface-b) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--surface-a) 14%, var(--paper));
   --hl-yellow: rgba(233, 220, 102, 0.32);
   --hl-blue: rgba(157, 185, 234, 0.32);
   --hl-green: rgba(147, 216, 168, 0.32);
@@ -120,8 +121,8 @@
   --muted: #655e78;
   --line: #cfc9e4;
   --accent: #aa7bff;
-  --yellow: #d9c9ff;
-  --blue: #c9b8fa;
+  --surface-a: #d9c9ff;
+  --surface-b: #c9b8fa;
   --dark: #2b2340;
   --soft: #f3f0fb;
   --body-bg: #13101c;
@@ -143,8 +144,8 @@
   --muted: #a6acb8;
   --line: #33363f;
   --accent: #d9ff5a;
-  --yellow: #d9ff5a;
-  --blue: #232a36;
+  --surface-a: #d9ff5a;
+  --surface-b: #232a36;
   --dark: #191b20;
   --soft: #16171b;
   --body-bg: #050506;
@@ -152,8 +153,8 @@
   --underline-color: #d9ff5a;
   --accent-text: #d9ff5a;
   /* 同夜读绿：picks 卡片用低饱和暗面板，避免亮 lime 底配亮字（14% 保证 muted 小字达标） */
-  --pick-a: color-mix(in srgb, var(--blue) 45%, var(--paper));
-  --pick-b: color-mix(in srgb, var(--yellow) 14%, var(--paper));
+  --pick-a: color-mix(in srgb, var(--surface-b) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--surface-a) 14%, var(--paper));
   /* 高亮色板：深底下统一半透明，与夜读绿同策略 */
   --hl-yellow: rgba(233, 220, 102, 0.32);
   --hl-blue: rgba(157, 185, 234, 0.32);

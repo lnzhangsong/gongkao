@@ -790,11 +790,11 @@
 
 /* ---------- 层级卡片底色（副省级=蓝 / 地市级=黄 / 行政执法=橙，随主题取 --pick 混色） ---------- */
 .exam-card.exam-lv-a {
-  background: var(--pick-a, color-mix(in srgb, var(--blue) 45%, var(--paper)));
+  background: var(--pick-a, color-mix(in srgb, var(--surface-b) 45%, var(--paper)));
 }
 
 .exam-card.exam-lv-b {
-  background: var(--pick-b, color-mix(in srgb, var(--yellow) 14%, var(--paper)));
+  background: var(--pick-b, color-mix(in srgb, var(--surface-a) 14%, var(--paper)));
 }
 
 .exam-card.exam-lv-c {

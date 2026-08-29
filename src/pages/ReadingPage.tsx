@@ -8,15 +8,16 @@ import {
   type CSSProperties,
 } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Highlighter, StickyNote, Underline as UnderlineIcon } from 'lucide-react'
+import { Highlighter, StickyNote, Underline as UnderlineIcon, BookPlus } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
+import { addTerm } from '../lib/api'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
 import { usePrefersDark } from '../lib/prefersDark'
 import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
-import { TermText } from '../components/reading/TermHighlight'
+import { TermText, hasTermCached } from '../components/reading/TermHighlight'
 import { useFocusMode } from '../lib/useFocusMode'
 import { useReadingTimer } from '../hooks/useReadingTimer'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
@@ -167,6 +168,28 @@ export function ReadingPage() {
     addKindToAnn,
     noteParaIndex,
   } = useAnnotationPopover(articleId, article, starts, bodyRef)
+  /* 划词存入规范词库（成功后按钮短暂变 ✓） */
+  const [termSaved, setTermSaved] = useState<'idle' | 'ok' | 'dup'>('idle')
+  const saveSelectionAsTerm = async () => {
+    if (!popover) return
+    const term = popover.text.trim().replace(/\s+/g, '')
+    if (!term || term.length > 20) {
+      alert('请选中 20 字以内的词语')
+      return
+    }
+    if (hasTermCached(term)) {
+      setTermSaved('dup')
+      window.setTimeout(() => setTermSaved('idle'), 1500)
+      return
+    }
+    try {
+      await addTerm({ theme: '综合其他', term })
+      setTermSaved('ok')
+      window.setTimeout(() => setTermSaved('idle'), 1500)
+    } catch (e) {
+      alert(String(e))
+    }
+  }
   const displayAnnotations = annotationsVisible ? articleAnnotations : []
 
   /* 实测阅读时长（拆分至 useReadingTimer） */
@@ -515,6 +538,15 @@ export function ReadingPage() {
               </button>
               <button onClick={startNote}>
                 <StickyNote size={12} /> 笔记
+              </button>
+              <button
+                onClick={() => {
+                  if (termSaved === 'idle') void saveSelectionAsTerm()
+                }}
+                title="把选中词存入规范词库"
+              >
+                <BookPlus size={12} />
+                {termSaved === 'ok' ? '已入词库' : termSaved === 'dup' ? '已在词库' : '存规范词'}
               </button>
             </div>
 

@@ -6,6 +6,7 @@
  *   GET /api/articles/:id
  *   GET /api/exams            申论真题试卷列表（?year=&level= 过滤；与文章同库）
  *   GET /api/exams/:id        试卷详情（材料 + 题目 + 答案）
+ *   GET /api/terms            申论规范词全集（?theme=&q= 过滤；guifan_terms 表）
  */
 import { createServer } from 'node:http'
 import { DatabaseSync } from 'node:sqlite'
@@ -97,6 +98,14 @@ function queryExam(id) {
   }
 }
 
+// —— 申论规范词（guifan_terms 表，import-guifanci.mjs 全量重建）——
+function queryTerms() {
+  return openDb()
+    .prepare('SELECT id, theme, term, example FROM guifan_terms ORDER BY id')
+    .all()
+    .map((r) => ({ id: r.id, theme: r.theme, term: r.term, example: r.example }))
+}
+
 const PORT = Number(process.argv[2] ?? 8787)
 
 const json = (data, status = 200, extra = {}) =>
@@ -140,6 +149,105 @@ const server = createServer((req, res) => {
     if (sort === 'title') list = [...list].sort((a, b) => a.title.localeCompare(b.title, 'zh'))
     if (limit > 0) list = list.slice(0, limit)
     void respond(json({ articles: list, total: list.length }))
+    return
+  }
+
+  if (url.pathname === '/api/terms' && req.method === 'GET') {
+    // 规范词全集；theme / q（词与例句包含匹配）服务端过滤
+    let list = queryTerms()
+    const theme = url.searchParams.get('theme')
+    const q = url.searchParams.get('q')?.trim()
+    if (theme) list = list.filter((t) => t.theme === theme)
+    if (q) list = list.filter((t) => t.term.includes(q) || t.example.includes(q))
+    void respond(json({ terms: list, total: list.length }))
+    return
+  }
+
+  // 新增规范词（body: { theme, term, example? }）
+  if (url.pathname === '/api/terms' && req.method === 'POST') {
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const term = String(data.term || '').trim()
+        const theme = String(data.theme || '').trim() || '综合其他'
+        const example = String(data.example || '').trim()
+        if (!term) {
+          void respond(json({ error: 'term 必填' }, 400))
+          return
+        }
+        const d = openExamDb({ write: true })
+        const { lastInsertRowid } = d.prepare('INSERT INTO guifan_terms (theme, term, example) VALUES (?, ?, ?)').run(theme, term, example)
+        void respond(json({ ok: true, id: Number(lastInsertRowid) }))
+      } catch (err) {
+        void respond(json({ error: String(err) }, 400))
+      }
+    })
+    return
+  }
+
+  // 修改规范词（部分更新：传了哪个字段改哪个）
+  if (url.pathname.startsWith('/api/terms/') && req.method === 'PATCH') {
+    const id = Number(decodeURIComponent(url.pathname.slice('/api/terms/'.length)))
+    if (!Number.isInteger(id) || id <= 0) {
+      void respond(json({ error: '无效 id' }, 400))
+      return
+    }
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const sets = []
+        const vals = []
+        for (const key of ['theme', 'term', 'example']) {
+          if (typeof data[key] === 'string') {
+            const v = data[key].trim()
+            if (key !== 'example' && !v) {
+              void respond(json({ error: `${key} 不能为空` }, 400))
+              return
+            }
+            sets.push(`${key} = ?`)
+            vals.push(v)
+          }
+        }
+        if (sets.length === 0) {
+          void respond(json({ error: '没有可更新的字段' }, 400))
+          return
+        }
+        const d = openExamDb({ write: true })
+        const r = d.prepare(`UPDATE guifan_terms SET ${sets.join(', ')} WHERE id = ?`).run(...vals, id)
+        if (r.changes === 0) {
+          void respond(json({ error: 'not found' }, 404))
+          return
+        }
+        void respond(json({ ok: true }))
+      } catch (err) {
+        void respond(json({ error: String(err) }, 400))
+      }
+    })
+    return
+  }
+
+  // 删除规范词
+  if (url.pathname.startsWith('/api/terms/') && req.method === 'DELETE') {
+    const id = Number(decodeURIComponent(url.pathname.slice('/api/terms/'.length)))
+    if (!Number.isInteger(id) || id <= 0) {
+      void respond(json({ error: '无效 id' }, 400))
+      return
+    }
+    try {
+      const d = openExamDb({ write: true })
+      const r = d.prepare('DELETE FROM guifan_terms WHERE id = ?').run(id)
+      if (r.changes === 0) {
+        void respond(json({ error: 'not found' }, 404))
+        return
+      }
+      void respond(json({ ok: true }))
+    } catch (err) {
+      void respond(json({ error: String(err) }, 400))
+    }
     return
   }
 

@@ -5,6 +5,9 @@
     },
     "api/exams.ts": {
       "includeFiles": "data/articles.db"
+    },
+    "api/terms.ts": {
+      "includeFiles": "data/articles.db"
     }
   },
   "rewrites": [

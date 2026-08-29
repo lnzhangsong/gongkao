@@ -85,6 +85,52 @@ export function fetchExam(id: string): Promise<ExamDetail> {
   return getJSON(`/api/exams?id=${encodeURIComponent(id)}`)
 }
 
+/** 申论规范词条目 */
+export interface GuiFanTerm {
+  id: number
+  theme: string
+  term: string
+  example: string
+}
+
+/** 申论规范词全集（?theme=&q= 服务端过滤；前端通常一次拉全量本地分组/搜索） */
+export function fetchTerms(params?: { theme?: string; q?: string }): Promise<{ terms: GuiFanTerm[]; total: number }> {
+  const sp = new URLSearchParams()
+  if (params?.theme) sp.set('theme', params.theme)
+  if (params?.q) sp.set('q', params.q)
+  const qs = sp.toString()
+  return getJSON(`/api/terms${qs ? `?${qs}` : ''}`) as Promise<{ terms: GuiFanTerm[]; total: number }>
+}
+
+/** 新增规范词（仅本地 api-server 提供写入） */
+export async function addTerm(data: { theme: string; term: string; example?: string }): Promise<{ ok: boolean; id: number }> {
+  const res = await fetch('/api/terms', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res.json()
+}
+
+/** 修改规范词（部分更新；仅本地 api-server 提供写入） */
+export async function updateTerm(id: number, data: { theme?: string; term?: string; example?: string }): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/terms/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res.json()
+}
+
+/** 删除规范词（仅本地 api-server 提供写入） */
+export async function deleteTerm(id: number): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/terms/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res.json()
+}
+
 /** 保存试卷编辑（仅本地 api-server 提供写入） */
 export async function saveExam(
   id: string,

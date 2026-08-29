@@ -10,6 +10,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ de
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const AdminEditPage = lazy(() => import('./pages/AdminEditPage').then((m) => ({ default: m.AdminEditPage })))
 const ExamPreviewPage = lazy(() => import('./pages/ExamPreviewPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
@@ -103,6 +104,8 @@ function App() {
             <Route path="/admin/new" element={<AdminEditPage />} />
             {/* 申论真题预览（临时路由，未入导航） */}
             <Route path="/exams" element={<ExamPreviewPage />} />
+            {/* 申论规范词 */}
+            <Route path="/terms" element={<TermsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

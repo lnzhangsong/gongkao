@@ -6,6 +6,7 @@ const LINKS = [
   { to: '/', label: 'READ', end: true },
   { to: '/library', label: 'ARCHIVE' },
   { to: '/exams', label: 'EXAMS' },
+  { to: '/terms', label: 'TERMS' },
   { to: '/notes', label: 'NOTES' },
   { to: '/settings', label: 'SETTINGS' },
 ]

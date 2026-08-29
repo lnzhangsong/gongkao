@@ -1,0 +1,237 @@
+/* ============================================================
+   读本 READBOOK · 申论规范词（/terms）
+   容器复用真题页 .exam-page / .subpage-header / .exam-hero，
+   本文件只补：主题 chips、搜索框、规范词卡（词 + 例句）。
+   ============================================================ */
+
+/* 主题筛选条：mono chips，横向可换行 */
+.terms-theme-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.terms-chip {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.terms-chip:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.terms-chip.active {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* 搜索框：与 exam-new-input 同语言，稍宽 */
+.terms-search {
+  font: 13px var(--mono);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 8px 12px;
+  width: 240px;
+}
+
+.terms-search:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.terms-search::placeholder {
+  color: color-mix(in srgb, var(--ink) 45%, var(--paper));
+}
+
+/* 主题标题：与真题年份同款超大描边幽灵字（样式定义见 exam-preview.css，这里同步中文词场景） */
+.terms-theme-head {
+  margin-top: 36px;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.terms-theme-head h2 {
+  font: 800 clamp(56px, 8vw, 104px) / 1 var(--sans);
+  letter-spacing: -0.03em;
+  color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--ink) 26%, transparent);
+  margin: 0 0 -0.6em;
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.terms-theme-head + .terms-grid {
+  position: relative;
+  z-index: 1;
+}
+
+/* 词卡：2 列宽松网格，1px 细框直角，无 hover 位移（不是可点对象） */
+.terms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.terms-card {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 16px 18px 14px;
+}
+
+/* 卡片悬停工具组（编辑/删除）：默认隐形，hover 卡片时浮现（安静，不打扰阅读） */
+.terms-card-tools {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: inline-flex;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.terms-card:hover .terms-card-tools,
+.terms-card:focus-within .terms-card-tools {
+  opacity: 1;
+}
+
+.terms-card .terms-del-btn {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.terms-card .terms-del-btn:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 行内编辑态卡片 */
+.terms-edit-input {
+  display: block;
+  width: 100%;
+  font: 13px var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 6px 9px;
+}
+
+.terms-edit-input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.terms-edit-term {
+  margin-top: 8px;
+  font: 500 15px var(--serif);
+}
+
+.terms-edit-example {
+  margin-top: 8px;
+  font: 13px/1.8 var(--serif);
+  resize: vertical;
+}
+
+.terms-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.terms-card h4 {
+  font: 500 17px/1.5 var(--serif);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* 例句：材料里的口语表述（大白话 → 规范词的对照面） */
+.terms-example {
+  font: 13px/1.85 var(--serif);
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  margin: 8px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 新增表单：与真题页 .exam-new-form 同语言，例句输入占整行 */
+.terms-new-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 460px;
+}
+
+.terms-new-example {
+  flex: 1 1 100%;
+  font: 13px var(--serif);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 7px 10px;
+}
+
+/* 主题与词面两框等宽并排（placeholder 完整可读） */
+.terms-new-form .exam-new-input {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.terms-new-example:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+/* 空结果 */
+.terms-empty {
+  margin: 48px 0;
+  font: 14px/1.9 var(--serif);
+  color: var(--muted);
+}
+
+/* 加载骨架卡：与 exam-sk-card 同语言（细线 shimmer，样式复用 exam-preview.css） */
+.terms-sk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 96px;
+  padding: 16px 18px;
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  border-radius: 2px;
+}
+
+@media (max-width: 640px) {
+  .terms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .terms-search {
+    width: 100%;
+  }
+}

@@ -34,6 +34,42 @@ export function GET(request: Request): Response {
   const url = new URL(request.url)
   const d = openDb()
 
+  // 单卷详情：/api/exams?id=xxx（查询参数形式，避免动态路由与 SPA rewrites 的匹配问题）
+  const singleId = url.searchParams.get('id')
+  if (singleId) {
+    const paper = d.prepare('SELECT * FROM papers WHERE id = ?').get(singleId) as any
+    if (!paper) return json({ error: 'not found' }, 404)
+    const materials = (
+      d.prepare('SELECT idx, label, content FROM materials WHERE paper_id = ? ORDER BY idx').all(singleId) as any[]
+    ).map((m) => ({ idx: m.idx, label: m.label, content: m.content }))
+    const questions = (
+      d
+        .prepare(
+          'SELECT idx, type, stem, requirement, word_limit, points, answer, answer_matched FROM questions WHERE paper_id = ? ORDER BY idx',
+        )
+        .all(singleId) as any[]
+    ).map((q) => ({
+      idx: q.idx,
+      type: q.type ?? null,
+      stem: q.stem,
+      requirement: q.requirement ?? '',
+      wordLimit: q.word_limit ?? null,
+      points: q.points ?? null,
+      answer: q.answer ?? null,
+      answerMatched: !!q.answer_matched,
+    }))
+    return json({
+      id: paper.id,
+      year: paper.year,
+      level: paper.level,
+      title: paper.title,
+      ...(paper.warnings ? { warnings: paper.warnings } : {}),
+      materials,
+      questions,
+      ...(paper.answers_raw ? { answersRaw: paper.answers_raw } : {}),
+    })
+  }
+
   // 列表：/api/exams?year=&level=
   let list = (
     d

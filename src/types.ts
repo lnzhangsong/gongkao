@@ -60,6 +60,8 @@ export interface ReadingProgress {
   percent: number
   /** 滚动位置（px） */
   lastPosition: number
+  /** 最后阅读到的段落 index（data-para）：字号/设备变化时按段恢复比绝对 scrollY 更准 */
+  lastPara?: number
   lastReadAt: string
   completed: boolean
   /** 首次打开时间 */

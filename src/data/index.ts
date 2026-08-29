@@ -39,6 +39,20 @@ export function formatDate(iso: string): string {
   return iso.replace(/-/g, '.')
 }
 
+/** ISO 时间戳 → 本地日期字符串（yyyy.mm.dd）。
+ *  注意不能用 toISOString().slice(0,10)：那是 UTC 日期，东八区晚 8 点后会提前一天 */
+export function formatLocalDate(iso: string): string {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`
+}
+
+/** 文章 id → 统一编号展示（NO. 003 风格），全站一致 */
+export function formatArticleNo(id: string): string {
+  const n = Number(id.replace(/\D/g, ''))
+  return Number.isNaN(n) ? id : String(n).padStart(3, '0')
+}
+
 export function monthLabel(iso: string): string {
   const [, m] = iso.split('-')
   const y = iso.slice(0, 4)

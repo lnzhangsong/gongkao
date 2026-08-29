@@ -8,9 +8,21 @@ interface FontLoadState {
   loading: boolean
   progress: number // 0~1
   label: string
+  /** 最近一次加载失败（CDN 不可达等）：FontLoadBar 展示一次性提示后自动清除 */
+  failed: boolean
 }
 
-export const useFontLoad = create<FontLoadState>(() => ({ loading: false, progress: 0, label: '' }))
+export const useFontLoad = create<FontLoadState>(() => ({ loading: false, progress: 0, label: '', failed: false }))
+
+/** 弱网兜底：document.fonts.load 最长等待，避免骨架屏卡在「等字形」 */
+const FONTS_LOAD_TIMEOUT_MS = 2500
+
+function withTimeout<T>(p: Promise<T>, ms = FONTS_LOAD_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('font load timeout')), ms)),
+  ])
+}
 
 /* ---------- 每种字体需要的资源 ----------
  * css：jsDelivr @fontsource 样式表（含 unicode-range 子集，浏览器只取用到的字形）
@@ -88,6 +100,12 @@ function injectCSS(href: string): Promise<void> {
 
 const SAMPLE = '读书明理开卷有益持之以恒温故知新'
 
+/** 加载失败一次性提示（CDN 挂掉时用户只会看到「字体不对」，至少给个解释） */
+function markFontFailed() {
+  useFontLoad.setState({ failed: true })
+  setTimeout(() => useFontLoad.setState({ failed: false }), 3000)
+}
+
 async function doLoad(key: FontKey): Promise<void> {
   const src = SOURCES[key]
   /* 未知字体 key（损坏/残缺的本地设置）：直接视为已加载，回退系统字体栈 */
@@ -114,8 +132,11 @@ async function doLoad(key: FontKey): Promise<void> {
     }
     if (src.family) {
       try {
-        // 触发实际字形下载并等待就绪（CSS 注入 ≠ 字体可用）
-        await document.fonts.load(`16px "${src.family}"`, SAMPLE)
+        // 触发实际字形下载并等待就绪（CSS 注入 ≠ 字体可用），弱网 2.5s 超时兜底
+        await withTimeout(document.fonts.load(`16px "${src.family}"`, SAMPLE))
+        if (!document.fonts.check(`16px "${src.family}"`, SAMPLE)) {
+          markFontFailed()
+        }
       } catch {
         /* 忽略：回退系统字体 */
       }
@@ -149,8 +170,12 @@ export function loadDisplayFont(): Promise<void> {
   useFontLoad.setState({ loading: true, progress: 0.1, label: DISPLAY_SOURCE.label })
   displayInflight = (async () => {
     try {
-      // 触发 woff2 实际下载（@font-face 已在 tokens.css）
-      await document.fonts.load('16px "' + DISPLAY_SOURCE.family + '"', '读懂时代写好答案')
+      // 触发 woff2 实际下载（@font-face 已在 tokens.css），弱网超时兜底
+      try {
+        await withTimeout(document.fonts.load('16px "' + DISPLAY_SOURCE.family + '"', '读懂时代写好答案'))
+      } catch {
+        markFontFailed()
+      }
       displayLoaded = true
     } finally {
       if (id === reqId) {

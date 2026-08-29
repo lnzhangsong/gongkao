@@ -30,7 +30,25 @@ export function MenuSelect({ value, options, onChange, ariaLabel, placeholder, c
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        ref.current?.querySelector<HTMLButtonElement>('.menu-select-trigger')?.focus()
+        return
+      }
+      /* 上下键在选项间移动焦点（选项是真实 button，Enter/Space 原生激活） */
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const items = [...ref.current?.querySelectorAll<HTMLButtonElement>('.menu-select-item') ?? []]
+        if (items.length === 0) return
+        e.preventDefault()
+        const idx = items.indexOf(document.activeElement as HTMLButtonElement)
+        const next =
+          idx === -1
+            ? e.key === 'ArrowDown'
+              ? items[0]
+              : items[items.length - 1]
+            : items[(idx + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]
+        next?.focus()
+      }
     }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
@@ -49,6 +67,13 @@ export function MenuSelect({ value, options, onChange, ariaLabel, placeholder, c
         type="button"
         className={`menu-select-trigger${value === '' && placeholder ? ' placeholder' : ''}`}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          /* 关闭态下 Enter/ArrowDown 打开（打开后由 document 监听器接管导航） */
+          if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) {
+            e.preventDefault()
+            setOpen(true)
+          }
+        }}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}

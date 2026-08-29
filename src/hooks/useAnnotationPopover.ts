@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { confirmDialog } from '../components/ui/ConfirmDialog'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { computeSelectionRange, flatText } from '../lib/offsets'
 import { NARROW_BREAKPOINT } from '../lib/breakpoints'
@@ -132,6 +133,12 @@ export function useAnnotationPopover(
       hidePopover()
       hideAnnPopover()
     }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        hidePopover()
+        hideAnnPopover()
+      }
+    }
 
     // 移动端：触摸选词（触屏选择手柄）不触发 mouseup，用 selectionchange 兜底
     let selTimer = 0
@@ -146,11 +153,13 @@ export function useAnnotationPopover(
     document.addEventListener('mouseup', onMouseUp)
     document.addEventListener('mousedown', onDown)
     document.addEventListener('selectionchange', onSelectionChange)
+    document.addEventListener('keydown', onKeyDown)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       document.removeEventListener('mouseup', onMouseUp)
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('selectionchange', onSelectionChange)
+      document.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('scroll', onScroll)
       window.clearTimeout(selTimer)
     }
@@ -245,12 +254,18 @@ export function useAnnotationPopover(
     openAnnPopover(ids, rect.left + rect.width / 2 - bodyRect.left, rect.top - bodyRect.top)
   }
 
-  /** 按类型删除该段标注（高亮/下划线/笔记单独删） */
-  const deleteAnnKind = (kind: AnnotationKind) => {
+  /** 按类型删除该段标注（高亮/下划线/笔记单独删）；
+   *  笔记是手工长文本，删除前确认防误触丢稿 */
+  const deleteAnnKind = async (kind: AnnotationKind) => {
     if (!annPopover) return
     const targets = annPopover.ids
       .map((id) => articleAnnotations.find((a) => a.id === id))
       .filter((a): a is Annotation => a !== undefined && a.kind === kind)
+    if (kind === 'note') {
+      const n = targets.length
+      const ok = await confirmDialog(n > 1 ? `删除这 ${n} 条笔记？删除后不可恢复。` : '删除这条笔记？删除后不可恢复。', { danger: true })
+      if (!ok) return
+    }
     removeMany(targets.map((a) => a.id))
     setAnnPopover(null)
     // 只关闭被删除的笔记，其他笔记保持展开

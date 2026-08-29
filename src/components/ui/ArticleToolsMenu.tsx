@@ -83,7 +83,15 @@ export function ArticleToolsMenu({
 
           {/* 页面导航（替代头部跳转菜单） */}
           <div className="tools-menu-nav">
-            <button className="tools-menu-nav-back" onClick={() => navigate(-1)}>
+            <button
+              className="tools-menu-nav-back"
+              onClick={() => {
+                /* 外链/书签直达时没有可退的站内历史，回文库兜底 */
+                const idx: number | undefined = window.history.state?.idx
+                if (idx === undefined || idx <= 0) navigate('/library')
+                else navigate(-1)
+              }}
+            >
               <ArrowLeft size={12} /> 返回
             </button>
             <NavLink to="/library" onClick={() => setOpen(false)}>

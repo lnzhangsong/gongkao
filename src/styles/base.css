@@ -967,6 +967,47 @@ a {
   border-color: var(--accent-text);
 }
 
+/* ---------- 路由 chunk 加载占位 ---------- */
+.route-loading {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 120px 24px 0;
+}
+
+.route-loading-line {
+  display: block;
+  height: calc(var(--reader-font-size, 17px) * 1.6);
+  margin: 0 0 22px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ink) 5%, transparent) 25%,
+    color-mix(in srgb, var(--ink) 10%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 5%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
+}
+
+/* ---------- 移动端触控目标：小控件点热区扩到 ~44px（视觉大小不变） ---------- */
+@media (pointer: coarse) {
+  .selection-popover .hl-dot,
+  .selection-popover .ul-dot,
+  .exam-move-btn,
+  .tag-chip button {
+    position: relative;
+  }
+
+  .selection-popover .hl-dot::before,
+  .selection-popover .ul-dot::before,
+  .exam-move-btn::before,
+  .tag-chip button::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+}
+
 /* ---------- 共享骨架屏动画（reading/library/exam-preview/terms 四页引用） ---------- */
 @keyframes skeleton-shimmer {
   0% {

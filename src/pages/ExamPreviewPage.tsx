@@ -273,44 +273,15 @@ export default function ExamPreviewPage() {
     return [...g.entries()].sort((a, b) => b[0] - a[0])
   }, [papers])
 
-  // ---------- 详情：详情骨架（阅读页段落排版 + 材料标签气口，样式见 exam-preview.css） ----------
+  // ---------- 详情：加载中（三点脉冲，内容就绪后整体淡入） ----------
   if (!draft && loadingDetail) {
     return (
       <section className="reading-page">
-        <main className="reading-layout">
-          <article>
-            <header className="article-head exam-sk-head" aria-hidden="true">
-              <span className="exam-sk-line exam-sk-tag" />
-              <span className="exam-sk-line exam-sk-title" />
-              <span className="exam-sk-line exam-sk-meta" />
-            </header>
-            <span className="exam-sk-line exam-sk-secbar" aria-hidden="true" />
-            <div className="article-body exam-sk-body" aria-hidden="true">
-              {/* 段落组之间穿插「材料N」标签占位，模拟真实详情的节奏 */}
-              {[
-                { paras: [3, 2, 3] },
-                { paras: [3, 2] },
-                { paras: [2, 3, 2] },
-              ].map((mat, gi) => (
-                <div key={gi}>
-                  <span className="exam-sk-line exam-sk-matlabel" />
-                  {mat.paras.map((lines, pi) => (
-                    <div className="reading-loading" key={pi}>
-                      <div className="skeleton-para">
-                        {Array.from({ length: lines }).map((_, i) => (
-                          <span
-                            key={i}
-                            className={`skeleton-line${i === 0 ? ' first' : ''}${i === lines - 1 ? ' last' : ''}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </article>
-        </main>
+        <div className="route-loading" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
       </section>
     )
   }
@@ -347,7 +318,7 @@ export default function ExamPreviewPage() {
     const answered = draft.questions.filter((q) => q.answer).length
     return (
       <section className="reading-page">
-        <main className={`reading-layout${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
+        <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
           <article>
           <header className="article-head">
             <button
@@ -672,48 +643,45 @@ export default function ExamPreviewPage() {
           </div>
         </div>
       )}
-      {/* 首次加载：试卷卡骨架（与 .exam-card 同构，内部细线 shimmer，样式见 exam-preview.css） */}
+      {/* 首次加载：三点脉冲，列表就绪后整体淡入 */}
       {papers === null && (
-        <div className="exam-grid exam-grid-loading" aria-hidden="true">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <span key={i} className="exam-sk-card" style={{ ['--d' as string]: `${i * 0.12}s` }}>
-              <span className="exam-sk-line sk-tag" style={{ ['--d' as string]: `${i * 0.12}s` }} />
-              <span>
-                <span className="exam-sk-line sk-title" style={{ ['--d' as string]: `${i * 0.12 + 0.05}s` }} />
-                <span className="exam-sk-line sk-title w2" style={{ ['--d' as string]: `${i * 0.12 + 0.1}s`, marginTop: 10 }} />
-              </span>
-              <span className="exam-sk-line sk-meta" style={{ ['--d' as string]: `${i * 0.12 + 0.15}s` }} />
-            </span>
+        <div className="route-loading" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+      )}
+      {papers !== null && !listError && (
+        <div className="fade-in">
+          {grouped.map(([year, list]) => (
+            <section key={year}>
+              <div className="content-head exam-year-head">
+                <h2>{year}</h2>
+                <span>{list.length} 卷</span>
+              </div>
+              <div className="exam-grid">
+                {list.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`exam-card${levelClass(p.level)}`}
+                    title={`${p.level} · ${p.title}`}
+                    onClick={() => open(p.id)}
+                  >
+                    <small>{p.hasAnswer ? '有答案' : '无答案'}</small>
+                    <h4>{p.title}</h4>
+                    <span className="exam-card-meta">
+                      {p.materialCount} 材料 · {p.questionCount} 题
+                    </span>
+                    <span className="exam-card-mark" aria-hidden>
+                      {levelMark(p.level)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
-      {grouped.map(([year, list]) => (
-        <section key={year}>
-          <div className="content-head exam-year-head">
-            <h2>{year}</h2>
-            <span>{list.length} 卷</span>
-          </div>
-          <div className="exam-grid">
-            {list.map((p) => (
-              <button
-                key={p.id}
-                className={`exam-card${levelClass(p.level)}`}
-                title={`${p.level} · ${p.title}`}
-                onClick={() => open(p.id)}
-              >
-                <small>{p.hasAnswer ? '有答案' : '无答案'}</small>
-                <h4>{p.title}</h4>
-                <span className="exam-card-meta">
-                  {p.materialCount} 材料 · {p.questionCount} 题
-                </span>
-                <span className="exam-card-mark" aria-hidden>
-                  {levelMark(p.level)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ))}
     </div>
   )
 }

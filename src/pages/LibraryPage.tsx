@@ -238,7 +238,7 @@ export function LibraryPage() {
         </button>
       </div>
 
-      <main className="library-content">
+      <main key={apiReady ? 'ready' : 'loading'} className={`library-content${apiReady ? ' fade-in' : ''}`}>
         <section className="featured">
           <article
             className={`featured-main${articles[0] ? '' : ' is-loading'}`}
@@ -291,22 +291,6 @@ export function LibraryPage() {
           <div className="empty-state">
             <strong>没有找到匹配的文章</strong>
             换个关键词或筛选条件试试
-          </div>
-        )}
-
-        {/* 首次加载：淡墨行架占位，避免闪白（API 就绪前 articles 为空） */}
-        {!apiReady && (
-          <div className="library-loading" aria-hidden="true">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="skeleton-row" style={{ ['--d' as string]: `${i * 0.12}s` }}>
-                <span className="sk-no" />
-                <span className="sk-main">
-                  <span className="sk-title" />
-                  <span className="sk-meta" />
-                </span>
-                <span className="sk-date" />
-              </div>
-            ))}
           </div>
         )}
 

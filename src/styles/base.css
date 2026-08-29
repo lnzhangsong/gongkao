@@ -967,26 +967,56 @@ a {
   border-color: var(--accent-text);
 }
 
-/* ---------- 路由 chunk 加载占位 ---------- */
+/* ---------- 路由 chunk 加载占位（三点脉冲） ---------- */
 .route-loading {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 120px 24px 0;
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  padding: 160px 24px;
 }
 
-.route-loading-line {
-  display: block;
-  height: calc(var(--reader-font-size, 17px) * 1.6);
-  margin: 0 0 22px;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--ink) 5%, transparent) 25%,
-    color-mix(in srgb, var(--ink) 10%, transparent) 50%,
-    color-mix(in srgb, var(--ink) 5%, transparent) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 2s ease-in-out infinite;
+.route-loading i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: dot-pulse 1.1s ease-in-out infinite;
+}
+
+.route-loading i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.route-loading i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- 内容淡入过渡（数据/字体就绪挂载时轻轻上浮淡入，替代骨架屏） ---------- */
+.fade-in {
+  animation: content-in 0.5s ease both;
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ---------- 移动端触控目标：小控件点热区扩到 ~44px（视觉大小不变） ---------- */
@@ -1008,12 +1038,3 @@ a {
   }
 }
 
-/* ---------- 共享骨架屏动画（reading/library/exam-preview/terms 四页引用） ---------- */
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}

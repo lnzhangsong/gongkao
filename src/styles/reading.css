@@ -684,41 +684,6 @@
   color: var(--accent-text);
 }
 
-/* ---------- 正文加载骨架：淡墨纸面 ----------
-   用 --ink 低透明度代替中性灰（五主题自动适配）；直角、行高对齐正文节奏；
-   每段 = 首行缩进两格 + 2~3 行 + 末行收窄，段间距与正文一致；
-   shimmer 动画定义在 base.css（library/exam-preview/terms 共用） */
-.reading-loading {
-  padding-top: 38px;
-}
-
-.reading-loading .skeleton-para {
-  margin: 0 0 29px;
-}
-
-.reading-loading .skeleton-line {
-  display: block;
-  height: calc(var(--reader-font-size) * var(--reader-line-height));
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--ink) 5%, transparent) 25%,
-    color-mix(in srgb, var(--ink) 10%, transparent) 50%,
-    color-mix(in srgb, var(--ink) 5%, transparent) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 2s ease-in-out infinite;
-}
-
-/* 段首缩进两格（跟随正文缩进节奏） */
-.reading-loading .skeleton-line.first {
-  margin-left: 2em;
-}
-
-/* 末行收窄，模拟自然段落参差 */
-.reading-loading .skeleton-line.last {
-  width: 72%;
-}
-
 /* ---------- 移动端阅读辅助菜单（右上角汉堡包） ---------- */
 .article-tools-menu {
   position: fixed;

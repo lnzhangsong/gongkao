@@ -22,13 +22,13 @@ const LOADING_MIN_MS = 1400
 /** 收尾阶段：进度冲到 100% 后的停留时长 */
 const LOADING_FINISH_MS = 450
 
-/** 懒加载 chunk 间隙的轻量占位：避免整页闪白（正文骨架由各页面自行渲染） */
+/** 懒加载 chunk 间隙的轻量占位：三点脉冲 */
 function RouteLoading() {
   return (
     <div className="route-loading" aria-hidden="true">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <span key={i} className="route-loading-line" style={{ width: `${88 - i * 12}%` }} />
-      ))}
+      <i />
+      <i />
+      <i />
     </div>
   )
 }

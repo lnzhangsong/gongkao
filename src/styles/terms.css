@@ -214,17 +214,6 @@
   color: var(--muted);
 }
 
-/* 加载骨架卡：与 exam-sk-card 同语言（细线 shimmer，样式复用 exam-preview.css） */
-.terms-sk-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 96px;
-  padding: 16px 18px;
-  background: var(--paper);
-  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
-  border-radius: 2px;
-}
 
 @media (max-width: 640px) {
   .terms-grid {

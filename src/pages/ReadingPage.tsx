@@ -16,6 +16,7 @@ import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
 import { usePrefersDark } from '../lib/prefersDark'
 import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
+import { useFocusMode } from '../lib/useFocusMode'
 import { useReadingTimer } from '../hooks/useReadingTimer'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
 import { paragraphStarts, splitParagraph } from '../lib/offsets'
@@ -25,8 +26,6 @@ import { formatTimeOnly } from '../lib/export'
 import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS } from '../types'
 
 /** 段落聚焦带：视口高度的比例上下限（按手感可调） */
-const FOCUS_BAND_TOP = 0.35
-const FOCUS_BAND_BOTTOM = 0.65
 
 /** 秒 → MM:SS / H:MM:SS */
 function fmtDuration(totalSec: number): string {
@@ -118,6 +117,7 @@ export function ReadingPage() {
   const prefersDark = usePrefersDark()
 
   const bodyRef = useRef<HTMLDivElement>(null)
+  useFocusMode(bodyRef, settings.focusMode, contentReady && fontReady)
   const [percent, setPercent] = useState(0)
   /** 窄屏（≤500px）：弹层固定在屏幕底部 */
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900)
@@ -215,48 +215,11 @@ export function ReadingPage() {
     }, 400)
   }, [articleId, saveProgress])
 
-  /** 段落聚焦：阅读带内的段落保持可读，带外内容淡化，滚动时随进随出。
-   *  带宽为视口中央约一半；页面顶部/底部时自动放宽贴边，
-   *  避免首段/末段永远进不了带。直接切换 <p> 的 dim 类（不经 React 状态）；
-   *  短文整页可见时不淡化任何段落 */
-  const updateFocus = useCallback(() => {
-    const body = bodyRef.current
-    if (!body) return
-    const paragraphs = body.querySelectorAll<HTMLParagraphElement>(':scope > p')
-    if (paragraphs.length === 0) return
-
-    if (!settings.focusMode) {
-      paragraphs.forEach((p) => p.classList.remove('dim'))
-      return
-    }
-
-    /* 页面不可滚动（正文一屏放得下）：全部保持可读 */
-    const doc = document.documentElement
-    if (doc.scrollHeight <= window.innerHeight + 4) {
-      paragraphs.forEach((p) => p.classList.remove('dim'))
-      return
-    }
-
-    const maxScroll = doc.scrollHeight - window.innerHeight
-    /* 贴边放宽：页首带上缘抬到 0，页尾带下缘压到视口底 */
-    const atTop = window.scrollY <= 4
-    const atBottom = window.scrollY >= maxScroll - 4
-    const bandTop = atTop ? 0 : window.innerHeight * FOCUS_BAND_TOP
-    const bandBottom = atBottom ? window.innerHeight : window.innerHeight * FOCUS_BAND_BOTTOM
-
-    paragraphs.forEach((p) => {
-      const rect = p.getBoundingClientRect()
-      const inBand = rect.top <= bandBottom && rect.bottom >= bandTop
-      p.classList.toggle('dim', !inBand)
-    })
-  }, [settings.focusMode])
-
   // 滚动监听：不依赖文章数据就绪，进入页面即注册（进度保存只用到 articleId）
   useEffect(() => {
     const onScroll = () =>
       requestAnimationFrame(() => {
         computePercent()
-        updateFocus()
       })
     window.addEventListener('scroll', onScroll, { passive: true })
     const flush = () => {
@@ -271,20 +234,7 @@ export function ReadingPage() {
       flush()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articleId, computePercent, updateFocus])
-
-  /* 聚焦模式开启 / 正文、字体就绪后：计算淡化分布。
-     再延迟一帧补算一次，覆盖字体 swap 引起的排版位移与恢复滚动位置。
-     关闭聚焦时也立即重算一次（updateFocus 会清除 dim），不等下一次滚动 */
-  useEffect(() => {
-    if (settings.focusMode && (!contentReady || !fontReady)) return
-    const raf = requestAnimationFrame(updateFocus)
-    const late = window.setTimeout(updateFocus, 400)
-    return () => {
-      cancelAnimationFrame(raf)
-      window.clearTimeout(late)
-    }
-  }, [settings.focusMode, contentReady, fontReady, articleId, updateFocus])
+  }, [articleId, computePercent])
 
   // 打开文章记录 + 恢复阅读位置：等文章数据与水合就绪
   useEffect(() => {

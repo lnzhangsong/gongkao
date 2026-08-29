@@ -77,6 +77,8 @@ export type ThemeName = 'paper' | 'blue' | 'night' | 'violet' | 'graphite'
 export interface ReaderSettings {
   /** 正文字号 px */
   fontSize: number
+  /** mono 标签字号 px（申论真题页题头/材料标签/答案折叠头） */
+  labelFontSize: number
   /** 行高 */
   lineHeight: number
   /** 正文字体 */

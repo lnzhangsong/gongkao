@@ -217,6 +217,30 @@ function classifyQuestion(stem, requirement, wordLimit) {
 
 // ---------- 试卷级解析 ----------
 
+/** 材料去污：切掉内嵌的「作答要求」标题及之后一并吞入的题目文本（与 questions 表重复） */
+function cleanMaterial(content) {
+  for (const m of content.matchAll(/作答要求/g)) {
+    const before = m.index > 0 ? content[m.index - 1] : '\n'
+    const after = content.slice(m.index + 4, m.index + 6)
+    if (after.startsWith('两')) continue // 注意事项 boilerplate：「与作答要求两部分构成」
+    if (before in '\n【、三二一' || /^\s*[（(一二三四五1-9【问\n]/.test(after)) {
+      return content.slice(0, m.index).replace(/[【（(]\s*$/, '').replace(/\s+$/, '')
+    }
+  }
+  return content
+}
+
+/** 标题去污：截断吞入的注意事项/满分/本题本/材料正文，去掉【…】尾缀与页码残渣 */
+function cleanTitle(t) {
+  const cut = t.search(/一、注意事项|注意事项|满分\s*[：:]?\s*100|本题本|材料一/)
+  if (cut > 0) t = t.slice(0, cut)
+  return t
+    .replace(/【[^】]*】\s*$/, '')
+    .replace(/^\d+\s*\/\s*\d+\s+/, '')
+    .replace(/[—－-]+\s*$/, '')
+    .trim()
+}
+
 function parseLevel(meta, title) {
   const s = `${meta.level || ''}${title}`
   if (/行政执法/.test(s)) return '行政执法'
@@ -234,7 +258,8 @@ function parsePaper(relPath, text) {
   if (/(?:答案解析|大作文参考答案)\.md$/.test(base)) return null // 纯答案/解析文件，不是完整试卷
 
   const body = normalizeBody(raw)
-  const title = body.split('\n').map((l) => l.trim()).find((l) => l.length > 6) || meta.source_file
+  const rawTitle = body.split('\n').map((l) => l.trim()).find((l) => l.length > 6) || meta.source_file
+  const title = cleanTitle(rawTitle)
   const level = parseLevel(meta, title)
   const year = parseInt(meta.year, 10)
 
@@ -311,6 +336,7 @@ function parsePaper(relPath, text) {
   const matEnd = qRegionStart !== null ? qRegionStart : aStart ? aStart.index : body.length
   const matRegion = mStart && mStart.index < matEnd ? body.slice(mStart.index + mStart.text.length, matEnd) : ''
   const { parts: materials } = matRegion ? splitByHead(matRegion, reMaterialHead) : { parts: [] }
+  for (const m of materials) m.text = cleanMaterial(m.text)
   if (mStart && materials.length === 0 && matRegion.trim()) {
     materials.push({ index: 0, head: '', num: '1', text: matRegion.trim() })
     warnings.push('材料未按「材料N」分块，整体记为材料1')

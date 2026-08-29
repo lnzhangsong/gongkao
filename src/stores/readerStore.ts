@@ -24,6 +24,7 @@ export const FONT_FAMILIES: {
 interface ReaderState {
   settings: ReaderSettings
   setFontSize: (px: number) => void
+  setLabelFontSize: (px: number) => void
   setLineHeight: (lh: number) => void
   setFontFamily: (key: ReaderSettings['fontFamily']) => void
   setReaderTheme: (theme: ThemeName | '') => void
@@ -39,6 +40,7 @@ interface ReaderState {
 
 const DEFAULT_SETTINGS: ReaderSettings = {
   fontSize: 17,
+  labelFontSize: 13,
   lineHeight: 2.15,
   fontFamily: 'songti',
   readerTheme: '',
@@ -55,6 +57,8 @@ export const useReaderStore = create<ReaderState>()(
       settings: DEFAULT_SETTINGS,
       setFontSize: (px) =>
         set((s) => ({ settings: { ...s.settings, fontSize: Math.min(28, Math.max(14, px)) } })),
+      setLabelFontSize: (px) =>
+        set((s) => ({ settings: { ...s.settings, labelFontSize: Math.min(18, Math.max(11, px)) } })),
       setLineHeight: (lh) =>
         set((s) => ({
           settings: { ...s.settings, lineHeight: Math.min(2.4, Math.max(1.6, Math.round(lh * 100) / 100)) },

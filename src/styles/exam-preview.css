@@ -871,3 +871,42 @@
 .exam-year-head {
   align-items: center;
 }
+
+/* ---------- 骨架屏（shimmer 动画复用 reading.css 的 skeleton-shimmer） ---------- */
+
+/* 列表：试卷卡占位（与 .exam-card 同尺寸同圆角） */
+.exam-grid-loading .exam-sk-card {
+  display: block;
+  min-height: 132px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ink) 5%, transparent) 25%,
+    color-mix(in srgb, var(--ink) 10%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 5%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+
+/* 详情：标题区占位（面包屑 / 标题 / meta 三行） */
+.exam-sk-head .skeleton-line {
+  height: 0.95em;
+}
+
+.exam-sk-head .exam-sk-tag {
+  width: 9em;
+  font-size: 12px;
+}
+
+.exam-sk-head .exam-sk-title {
+  width: 62%;
+  font-size: 30px;
+  margin: 14px 0 10px;
+}
+
+.exam-sk-head .exam-sk-meta {
+  width: 30%;
+  font-size: 12px;
+}

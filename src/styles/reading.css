@@ -271,7 +271,7 @@
   /* PC：absolute 相对正文容器，滚动跟随选区；窄屏由 media 覆盖为底部面板 */
   position: absolute;
   display: none;
-  z-index: 50;
+  z-index: var(--z-popover);
   gap: 3px;
   padding: 4px;
   background: var(--dark);
@@ -355,25 +355,25 @@
   outline-offset: 1.5px;
 }
 
-/* 色板固定使用品牌色（选择器在深色弹出条上，不随主题透明度变化） */
+/* 色点用固定品牌色 --hl-dot-*（在深色弹出条上，不随主题的 --hl-* 透明度变化） */
 .selection-popover .hl-dot.yellow {
-  background: #e9dc66;
+  background: var(--hl-dot-yellow);
 }
 
 .selection-popover .hl-dot.blue {
-  background: #9db9ea;
+  background: var(--hl-dot-blue);
 }
 
 .selection-popover .hl-dot.green {
-  background: #93d8a8;
+  background: var(--hl-dot-green);
 }
 
 .selection-popover .hl-dot.pink {
-  background: #f2aec4;
+  background: var(--hl-dot-pink);
 }
 
 .selection-popover .hl-dot.violet {
-  background: #c6aaf5;
+  background: var(--hl-dot-violet);
 }
 
 /* 下划线样式选择点 */
@@ -389,7 +389,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 1px solid rgba(244, 240, 233, 0.35);
+  border: 1px solid color-mix(in srgb, var(--dark-ink) 35%, transparent);
   padding: 0;
   margin: 0;
   flex-shrink: 0;
@@ -416,25 +416,25 @@
   right: 2px;
   bottom: 4px;
   height: 1.5px;
-  background: #f4f0e9;
+  background: var(--dark-ink);
 }
 
 .selection-popover .ul-dot.double::after {
   height: 1.5px;
-  background: #f4f0e9;
-  box-shadow: 0 -2.5px 0 0 #f4f0e9;
+  background: var(--dark-ink);
+  box-shadow: 0 -2.5px 0 0 var(--dark-ink);
 }
 
 .selection-popover .ul-dot.wavy::after {
   background: none;
-  border-bottom: 1.5px solid #f4f0e9;
+  border-bottom: 1.5px solid var(--dark-ink);
   border-radius: 0 0 100% 100%;
   height: 2.5px;
 }
 
 .selection-popover .ul-dot.dotted::after {
   background: none;
-  border-bottom: 1.5px dotted #f4f0e9;
+  border-bottom: 1.5px dotted var(--dark-ink);
 }
 
 /* 下划线颜色选择点（实心圆） */
@@ -512,6 +512,18 @@
 
 .note-form textarea:focus {
   border-color: var(--accent-text);
+}
+
+/* 行内笔记编辑框（ReadingPage .note-edit） */
+.note-edit {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 8px;
+  font: 12px/1.7 var(--serif);
+  color: var(--ink);
 }
 
 .note-form .note-form-actions {
@@ -608,10 +620,6 @@
   .article-tools {
     display: none;
   }
-  /* 汉堡包菜单（阅读辅助）显示 */
-  .article-tools-menu {
-    display: block !important;
-  }
   .article-head h1 {
     font-size: 46px;
   }
@@ -678,7 +686,8 @@
 
 /* ---------- 正文加载骨架：淡墨纸面 ----------
    用 --ink 低透明度代替中性灰（五主题自动适配）；直角、行高对齐正文节奏；
-   每段 = 首行缩进两格 + 2~3 行 + 末行收窄，段间距与正文一致 */
+   每段 = 首行缩进两格 + 2~3 行 + 末行收窄，段间距与正文一致；
+   shimmer 动画定义在 base.css（library/exam-preview/terms 共用） */
 .reading-loading {
   padding-top: 38px;
 }
@@ -710,22 +719,20 @@
   width: 72%;
 }
 
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
 /* ---------- 移动端阅读辅助菜单（右上角汉堡包） ---------- */
 .article-tools-menu {
   position: fixed;
   top: 18px;
   right: 14px;
-  z-index: 90;
+  z-index: var(--z-toolbar);
   display: none;
+}
+
+/* ≤900px 显示（本规则须位于上方 display:none 之后，同特异性按源序取胜） */
+@media (max-width: 900px) {
+  .article-tools-menu {
+    display: block;
+  }
 }
 
 .tools-hamburger {
@@ -750,7 +757,7 @@
   position: absolute;
   top: 48px;
   right: 0;
-  z-index: 80;
+  z-index: var(--z-toolbar-pop);
   width: 264px;
   background: var(--dark);
   border-radius: 10px;
@@ -892,24 +899,9 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* ---------- 移动端：选择工具栏紧凑（放不进窄屏时） ---------- */
+/* ---------- 移动端（≤900px，与 TS 侧 NARROW_BREAKPOINT 一致）：选择工具栏固定为底部面板 ---------- */
 @media (max-width: 900px) {
   /* 移动端：选中文字后只显示笔记工具，不显示高亮管理菜单 */
-  .selection-popover.show {
-    position: fixed;
-    left: 50%; right: auto; top: auto;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%); margin: 0;
-    max-width: calc(100vw - 24px); width: max-content;
-    flex-wrap: wrap; justify-content: center; gap: 3px 2px;
-    padding: 8px 10px; white-space: normal; z-index: 100;
-    border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.3);
-  }
-  .ann-popover.show { display: none; }
-}
-
-@media (max-width: 500px) {
-  /* 窄屏：选择工具栏固定在屏幕底部 */
   .selection-popover.show {
     position: fixed;
     left: 50%;
@@ -919,15 +911,17 @@
     transform: translateX(-50%);
     margin: 0;
     max-width: calc(100vw - 24px);
+    width: max-content;
     flex-wrap: wrap;
     justify-content: center;
     gap: 3px 2px;
     padding: 8px 10px;
     white-space: normal;
-    z-index: 100;
+    z-index: var(--z-mobile-popover);
     border-radius: 8px;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
   }
+  .ann-popover.show { display: none; }
 
   /* 底部面板不需要箭头 */
   .selection-popover.show::after,

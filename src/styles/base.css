@@ -120,7 +120,7 @@ a {
   top: 0;
   background: color-mix(in srgb, var(--paper) 93%, transparent);
   backdrop-filter: blur(12px);
-  z-index: 40;
+  z-index: var(--z-nav);
 }
 
 .nav-left {
@@ -211,7 +211,7 @@ a {
 .nav-mobile-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 45;
+  z-index: var(--z-nav-backdrop);
   background: rgba(0, 0, 0, 0.32);
 }
 
@@ -220,7 +220,7 @@ a {
   top: 68px;
   left: 0;
   right: 0;
-  z-index: 46;
+  z-index: var(--z-nav-panel);
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -287,7 +287,7 @@ a {
 
 .cursor {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-cursor);
   left: 0;
   top: 0;
   width: 15px;
@@ -553,7 +553,7 @@ a {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 60;
+  z-index: var(--z-dropdown);
   min-width: 138px;
   padding: 4px;
   background: var(--soft);
@@ -601,6 +601,11 @@ a {
   text-align: left;
 }
 
+/* 次要操作的文字按钮（表单「取消」等） */
+.text-btn.muted {
+  color: var(--muted);
+}
+
 .text-btn:hover {
   color: var(--accent-text);
 }
@@ -613,7 +618,7 @@ a {
   height: 3px;
   background: var(--accent);
   width: 0;
-  z-index: 60;
+  z-index: var(--z-progress);
   transition: width 0.1s linear;
 }
 
@@ -665,7 +670,7 @@ a {
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3000;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -710,38 +715,17 @@ a {
   border-bottom: 1px dashed var(--line);
 }
 
-/* MenuSelect：表单内模式（录入页元信息，替代原生 select 外观） */
-.menu-select.form .menu-select-trigger {
-  width: 100%;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  color: var(--ink);
-  font: 13px var(--sans);
-  justify-content: space-between;
-}
-
-.menu-select.form .menu-select-trigger:hover {
-  color: var(--ink);
-  border-color: var(--accent-text);
-}
-
-.menu-select.form .menu-select-pop {
-  top: calc(100% + 2px);
-  right: 0;
-  left: 0;
-  min-width: 0;
-  width: 100%;
-}
-
-/* 设置页的下拉也统一为表单样式 */
+/* MenuSelect：表单内模式（录入页元信息 + 设置页下拉，替代原生 select 外观） */
+.menu-select.form,
 .setting-control .menu-select {
   width: 100%;
+}
+
+.setting-control .menu-select {
   max-width: 240px;
 }
 
+.menu-select.form .menu-select-trigger,
 .setting-control .menu-select .menu-select-trigger {
   width: 100%;
   height: 36px;
@@ -754,11 +738,13 @@ a {
   justify-content: space-between;
 }
 
+.menu-select.form .menu-select-trigger:hover,
 .setting-control .menu-select .menu-select-trigger:hover {
   color: var(--ink);
   border-color: var(--accent-text);
 }
 
+.menu-select.form .menu-select-pop,
 .setting-control .menu-select .menu-select-pop {
   top: calc(100% + 2px);
   right: 0;
@@ -772,7 +758,7 @@ a {
 .loading-screen {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-loading);
   display: grid;
   place-items: center;
   background: var(--paper);
@@ -938,5 +924,55 @@ a {
   .pagination {
     gap: 8px;
     padding: 24px 10px 8px;
+  }
+}
+
+/* ---------- 全站确认/提示弹窗（ConfirmDialog；原真题页 .exam-modal，跨页面可用） ---------- */
+.exam-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.exam-modal {
+  width: min(400px, calc(100vw - 48px));
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 7px 8px 0 var(--ink);
+  padding: 26px 26px 22px;
+}
+
+.exam-modal-msg {
+  margin: 0 0 22px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.exam-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.exam-btn-danger {
+  color: var(--paper);
+  background: var(--accent-text);
+  border-color: var(--accent-text);
+}
+
+/* ---------- 共享骨架屏动画（reading/library/exam-preview/terms 四页引用） ---------- */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

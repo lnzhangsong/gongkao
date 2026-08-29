@@ -11,10 +11,34 @@ interface MetaListResponse {
   total: number
 }
 
-async function getJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`API ${res.status}: ${url}`)
-  return res.json() as Promise<T>
+const DEFAULT_TIMEOUT_MS = 20000
+
+/**
+ * 统一请求封装：
+ * - 超时中断（AbortController），避免离线时请求悬挂
+ * - 错误响应先读 text 再尝试 JSON：网关返回非 JSON（如 502 HTML 页）时
+ *   不会因 res.json() 抛 SyntaxError 而掩盖真实状态码
+ * - label：错误信息前缀（如「保存失败」）
+ */
+async function request<T>(url: string, init?: RequestInit, label?: string): Promise<T> {
+  const ctrl = new AbortController()
+  const timer = window.setTimeout(() => ctrl.abort(), DEFAULT_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { ...init, signal: init?.signal ?? ctrl.signal })
+    const body = await res.text()
+    if (!res.ok) {
+      let detail = String(res.status)
+      try {
+        detail = (JSON.parse(body) as { error?: string }).error ?? detail
+      } catch {
+        /* 非 JSON 响应体（网关错误页等），直接用状态码 */
+      }
+      throw new Error(label ? `${label} ${detail}` : `API ${detail}: ${url}`)
+    }
+    return (body ? JSON.parse(body) : undefined) as T
+  } finally {
+    window.clearTimeout(timer)
+  }
 }
 
 /** 全部文章 meta（不含正文） */
@@ -26,12 +50,12 @@ export function fetchMetaList(params?: { q?: string; topic?: string; source?: st
   if (params?.sort) sp.set('sort', params.sort)
   if (params?.limit) sp.set('limit', String(params.limit))
   const qs = sp.toString()
-  return getJSON<MetaListResponse>(`/api/articles${qs ? `?${qs}` : ''}`)
+  return request<MetaListResponse>(`/api/articles${qs ? `?${qs}` : ''}`)
 }
 
 /** 单篇全文 */
 export function fetchArticle(id: string): Promise<Article> {
-  return getJSON<Article>(`/api/articles?id=${encodeURIComponent(id)}`)
+  return request<Article>(`/api/articles?id=${encodeURIComponent(id)}`)
 }
 
 // —— 申论真题（data/articles.db）——
@@ -74,15 +98,12 @@ export function fetchExamList(params?: { year?: number; level?: string }): Promi
   if (params?.year) sp.set('year', String(params.year))
   if (params?.level) sp.set('level', params.level)
   const qs = sp.toString()
-  return fetch(`/api/exams${qs ? `?${qs}` : ''}`, { cache: 'reload' }).then(async (res) => {
-    if (!res.ok) throw new Error(`API ${res.status}`)
-    return res.json() as Promise<{ papers: ExamPaperMeta[]; total: number }>
-  })
+  return request(`/api/exams${qs ? `?${qs}` : ''}`, { cache: 'reload' })
 }
 
 /** 申论真题试卷详情（材料 + 题目 + 答案）；用 ?id= 查询参数，与线上 Function 路由行为一致 */
 export function fetchExam(id: string): Promise<ExamDetail> {
-  return getJSON(`/api/exams?id=${encodeURIComponent(id)}`)
+  return request(`/api/exams?id=${encodeURIComponent(id)}`)
 }
 
 /** 申论规范词条目 */
@@ -99,69 +120,41 @@ export function fetchTerms(params?: { theme?: string; q?: string }): Promise<{ t
   if (params?.theme) sp.set('theme', params.theme)
   if (params?.q) sp.set('q', params.q)
   const qs = sp.toString()
-  return getJSON(`/api/terms${qs ? `?${qs}` : ''}`) as Promise<{ terms: GuiFanTerm[]; total: number }>
+  return request(`/api/terms${qs ? `?${qs}` : ''}`)
 }
 
 /** 新增规范词（仅本地 api-server 提供写入） */
-export async function addTerm(data: { theme: string; term: string; example?: string }): Promise<{ ok: boolean; id: number }> {
-  const res = await fetch('/api/terms', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) throw new Error(`API ${res.status}`)
-  return res.json()
+export function addTerm(data: { theme: string; term: string; example?: string }): Promise<{ ok: boolean; id: number }> {
+  return request('/api/terms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
 }
 
 /** 修改规范词（部分更新；仅本地 api-server 提供写入） */
-export async function updateTerm(id: number, data: { theme?: string; term?: string; example?: string }): Promise<{ ok: boolean }> {
-  const res = await fetch(`/api/terms/${id}`, {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) throw new Error(`API ${res.status}`)
-  return res.json()
+export function updateTerm(id: number, data: { theme?: string; term?: string; example?: string }): Promise<{ ok: boolean }> {
+  return request(`/api/terms/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
 }
 
 /** 删除规范词（仅本地 api-server 提供写入） */
-export async function deleteTerm(id: number): Promise<{ ok: boolean }> {
-  const res = await fetch(`/api/terms/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`API ${res.status}`)
-  return res.json()
+export function deleteTerm(id: number): Promise<{ ok: boolean }> {
+  return request(`/api/terms/${id}`, { method: 'DELETE' }, '删除失败')
 }
 
 /** 保存试卷编辑（仅本地 api-server 提供写入） */
-export async function saveExam(
+export function saveExam(
   id: string,
   data: Pick<ExamDetail, 'year' | 'level' | 'title'> & {
     materials: { idx: number; content: string }[]
     questions: { idx: number; type: string | null; stem: string; requirement: string; wordLimit: number | null; points: number | null; answer: string | null }[]
   },
 ): Promise<{ ok: boolean; id: string }> {
-  const res = await fetch(`/api/exams/${encodeURIComponent(id)}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) throw new Error(`保存失败 ${(await res.json()).error ?? res.status}`)
-  return res.json() as Promise<{ ok: boolean; id: string }>
+  return request(`/api/exams/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
 }
 
 /** 新增空白试卷（仅本地 api-server） */
-export async function createExam(paper: { year: number; level: string; title: string }): Promise<{ ok: boolean; id: string }> {
-  const res = await fetch('/api/exams', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(paper),
-  })
-  if (!res.ok) throw new Error(`创建失败 ${(await res.json()).error ?? res.status}`)
-  return res.json() as Promise<{ ok: boolean; id: string }>
+export function createExam(paper: { year: number; level: string; title: string }): Promise<{ ok: boolean; id: string }> {
+  return request('/api/exams', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(paper) }, '创建失败')
 }
 
 /** 删除试卷（连同材料与题目，仅本地 api-server） */
-export async function deleteExam(id: string): Promise<{ ok: boolean }> {
-  const res = await fetch(`/api/exams/${encodeURIComponent(id)}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`删除失败 ${(await res.json()).error ?? res.status}`)
-  return res.json() as Promise<{ ok: boolean }>
+export function deleteExam(id: string): Promise<{ ok: boolean }> {
+  return request(`/api/exams/${encodeURIComponent(id)}`, { method: 'DELETE' }, '删除失败')
 }

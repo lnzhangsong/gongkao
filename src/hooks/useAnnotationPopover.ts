@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { computeSelectionRange, flatText } from '../lib/offsets'
+import { NARROW_BREAKPOINT } from '../lib/breakpoints'
 import type { Annotation, AnnotationKind, HighlightColor, UnderlineStyle } from '../types'
 
 export interface PopoverState {
@@ -79,7 +80,7 @@ export function useAnnotationPopover(
       const exactText = flatText(article?.content ?? []).slice(range.start, range.end)
       const bodyRect = el.getBoundingClientRect()
       // PC（宽屏）：absolute 定位相对正文容器，滚动时工具栏跟随选区
-      const isNarrow = window.innerWidth <= 500
+      const isNarrow = window.innerWidth <= NARROW_BREAKPOINT
       // 上方放不下（选区贴近视口顶部）时翻到选区下方
       const below = selRect.top - bodyRect.top < 140
       const GAP = 6

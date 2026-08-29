@@ -11,6 +11,7 @@ import { MenuSelect } from '../components/ui/MenuSelect'
 import { downloadJSON } from '../lib/export'
 import { parseImportData } from '../lib/import'
 import { idbStorage } from '../lib/idbStorage'
+import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 
 const SECTIONS = [
   { id: 'reading', label: '阅读偏好' },
@@ -102,24 +103,25 @@ export function SettingsPage() {
     reader.onload = () => {
       const parsed = parseImportData(String(reader.result ?? ''))
       if ('error' in parsed) {
-        window.alert(`导入失败：${parsed.error}`)
+        void alertDialog(`导入失败：${parsed.error}`)
         return
       }
       const nAnn = parsed.annotations.length
       const nProg = Object.keys(parsed.progress ?? {}).length
-      const ok = window.confirm(
+      void confirmDialog(
         `将导入：${parsed.theme ? '主题 1 项，' : ''}${parsed.readerSettings ? '阅读设置 1 项，' : ''}${nProg} 篇文章进度，${nAnn} 条摘录。` +
           '\n阅读进度按文章合并覆盖，摘录按 id 去重合并。确定导入？',
-      )
-      if (!ok) return
-      if (parsed.theme) setTheme(parsed.theme)
-      if (parsed.readerSettings) applySettings(parsed.readerSettings)
-      if (parsed.articles) upsertArticles(parsed.articles)
-      if (parsed.progress) importProgress(parsed.progress)
-      if (nAnn > 0) importAnnotations(parsed.annotations)
-      window.alert(
-        `导入完成：${parsed.articles?.length ?? 0} 篇文章、${nProg} 篇进度、${nAnn} 条摘录已合并到本地数据。`,
-      )
+      ).then((ok) => {
+        if (!ok) return
+        if (parsed.theme) setTheme(parsed.theme)
+        if (parsed.readerSettings) applySettings(parsed.readerSettings)
+        if (parsed.articles) upsertArticles(parsed.articles)
+        if (parsed.progress) importProgress(parsed.progress)
+        if (nAnn > 0) importAnnotations(parsed.annotations)
+        void alertDialog(
+          `导入完成：${parsed.articles?.length ?? 0} 篇文章、${nProg} 篇进度、${nAnn} 条摘录已合并到本地数据。`,
+        )
+      })
     }
     reader.readAsText(file)
     // 允许重复选择同一文件
@@ -127,8 +129,9 @@ export function SettingsPage() {
   }
 
   const clearAllData = async () => {
-    const ok = window.confirm(
+    const ok = await confirmDialog(
       '确定要清空本地数据吗？将删除所有文章、阅读进度、收藏、高亮、划线与笔记，且无法恢复。',
+      { danger: true },
     )
     if (!ok) return
     clearArticleData()

@@ -88,8 +88,10 @@ async function cacheGet<T>(key: string): Promise<T | undefined> {
   }
 }
 
-/** 用 API meta + localEdits/deletedIds 重建合并视图 */
-function buildArticles(
+/** 并发去重：同一篇文章的 ensureContent 只发一次请求（阅读页 + 预取等同时调用时） */
+const ensureInflight = new Map<string, Promise<Article | undefined>>()
+
+/** 用 API meta + localEdits/deletedIds 重建合并视图 */function buildArticles(
   apiMeta: Article[],
   localEdits: Record<string, Article>,
   deletedIds: string[],
@@ -156,28 +158,36 @@ export const useArticleStore = create<ArticleState>()(
           set((s) => ({ contentCache: { ...s.contentCache, [id]: local } }))
           return local
         }
-        try {
-          const full = await fetchArticle(id)
-          void cachePut(contentCacheKey(id), full)
-          set((s) => ({
-            contentCache: { ...s.contentCache, [id]: full },
-            articles: s.articles.map((a) => (a.id === id ? full : a)),
-          }))
-          return full
-        } catch {
-          /* 拉取失败（离线等）：回退离线缓存的全文 */
-          const offline = await cacheGet<Article>(contentCacheKey(id))
-          if (offline?.content?.length) {
+        const inflight = ensureInflight.get(id)
+        if (inflight) return inflight
+        const task = (async () => {
+          try {
+            const full = await fetchArticle(id)
+            void cachePut(contentCacheKey(id), full)
             set((s) => ({
-              contentCache: { ...s.contentCache, [id]: offline },
-              articles: s.articles.some((a) => a.id === id)
-                ? s.articles.map((a) => (a.id === id ? offline : a))
-                : s.articles,
+              contentCache: { ...s.contentCache, [id]: full },
+              articles: s.articles.map((a) => (a.id === id ? full : a)),
             }))
-            return offline
+            return full
+          } catch {
+            /* 拉取失败（离线等）：回退离线缓存的全文 */
+            const offline = await cacheGet<Article>(contentCacheKey(id))
+            if (offline?.content?.length) {
+              set((s) => ({
+                contentCache: { ...s.contentCache, [id]: offline },
+                articles: s.articles.some((a) => a.id === id)
+                  ? s.articles.map((a) => (a.id === id ? offline : a))
+                  : s.articles,
+              }))
+              return offline
+            }
+            return undefined
+          } finally {
+            ensureInflight.delete(id)
           }
-          return undefined
-        }
+        })()
+        ensureInflight.set(id, task)
+        return task
       },
 
       startReading: (id) =>

@@ -16,6 +16,7 @@ import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
 import { usePrefersDark } from './lib/prefersDark'
 import { LoadingScreen } from './components/LoadingScreen'
+import { ConfirmHost } from './components/ui/ConfirmDialog'
 
 const LOADING_MIN_MS = 1400
 /** 收尾阶段：进度冲到 100% 后的停留时长 */
@@ -110,6 +111,8 @@ function App() {
           </Route>
         </Routes>
       </Suspense>
+      {/* 全站确认/提示弹窗宿主（confirmDialog / alertDialog） */}
+      <ConfirmHost />
     </BrowserRouter>
   )
 }

@@ -34,7 +34,7 @@ export function fetchArticle(id: string): Promise<Article> {
   return getJSON<Article>(`/api/articles?id=${encodeURIComponent(id)}`)
 }
 
-// —— 申论真题（预览，data/exams.db）——
+// —— 申论真题（data/articles.db）——
 
 export interface ExamPaperMeta {
   id: string

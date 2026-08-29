@@ -11,9 +11,9 @@
   color: var(--ink);
 }
 
-.exam-hero {
+/* 页头：复用 subpage-header 左右结构（标题左、说明右下） */
+.exam-page .subpage-header {
   padding: 55px 0 42px;
-  border-bottom: 1px solid var(--ink);
 }
 
 .exam-hero .eyebrow {
@@ -31,26 +31,19 @@
   color: var(--accent);
 }
 
+.exam-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 18px;
+  padding-bottom: 6px;
+}
+
 .exam-hero .subpage-copy {
-  max-width: 420px;
+  max-width: 340px;
   font: 14px/1.9 var(--serif);
   color: color-mix(in srgb, var(--ink) 62%, var(--paper));
-  margin: 14px 0 0;
-}
-
-.exam-hero-meta {
-  font: 12px var(--mono);
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  margin-top: 18px;
-}
-
-.exam-hero-meta a {
-  color: var(--accent-text);
-  text-decoration: none;
-}
-.exam-hero-meta a:hover {
-  text-decoration: underline;
+  margin: 0;
 }
 
 .exam-year-head {

@@ -3,7 +3,7 @@
  * 申论国考真题结构化入库
  *
  * 数据源：《01】国考真题资料_AI解析》下的镜像 md（AI 解析产物，带 YAML 元数据）
- * 产出：data/exams.db（papers / materials / questions 三表）
+ * 产出：data/articles.db（与文章同库，papers / materials / questions 三表）
  *
  * 用法：node scripts/import-exams.mjs [--src <解析目录>] [--db <输出db>] [--dry]
  *
@@ -24,7 +24,7 @@ const SRC = process.argv.includes('--src')
   : '/Users/nif/Documents/人民时评/【01】国考真题资料_AI解析'
 const DB = process.argv.includes('--db')
   ? path.resolve(process.argv[process.argv.indexOf('--db') + 1])
-  : path.join(ROOT, 'data/exams.db')
+  : path.join(ROOT, 'data/articles.db')
 const DRY = process.argv.includes('--dry')
 
 // ---------- md 解析 ----------
@@ -448,11 +448,13 @@ if (DRY) {
 
 // ---------- 入库 ----------
 fs.mkdirSync(path.dirname(DB), { recursive: true })
-if (fs.existsSync(DB)) fs.unlinkSync(DB)
 const db = new DatabaseSync(DB)
 db.exec(`
   PRAGMA journal_mode = WAL;
-  CREATE TABLE papers (
+  DELETE FROM questions;
+  DELETE FROM materials;
+  DELETE FROM papers;
+  CREATE TABLE IF NOT EXISTS papers (
     id TEXT PRIMARY KEY,
     year INTEGER NOT NULL,
     level TEXT NOT NULL,

@@ -386,11 +386,8 @@ export function ReadingPage() {
               <h1>{article?.title ?? '加载文章…'}</h1>
               {article?.summary && <p className="dek">{article.summary}</p>}
             </header>
-            <div className="route-loading" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </div>
+            {/* 等待期不放占位动画：文章头先行呈现，正文就绪后随 .fade-in 浮现 */}
+            <div className="article-body article-body-pending" aria-hidden="true" />
           </article>
         </main>
       </section>

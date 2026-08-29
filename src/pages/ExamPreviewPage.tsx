@@ -260,25 +260,38 @@ export default function ExamPreviewPage() {
     return [...g.entries()].sort((a, b) => b[0] - a[0])
   }, [papers])
 
-  // ---------- 详情：详情骨架（复用阅读页段落式骨架，样式见 reading.css） ----------
+  // ---------- 详情：详情骨架（阅读页段落排版 + 材料标签气口，样式见 exam-preview.css） ----------
   if (!draft && loadingDetail) {
     return (
       <section className="reading-page">
         <main className="reading-layout">
           <article>
             <header className="article-head exam-sk-head" aria-hidden="true">
-              <span className="skeleton-line exam-sk-tag" />
-              <span className="skeleton-line exam-sk-title" />
-              <span className="skeleton-line exam-sk-meta" />
+              <span className="exam-sk-line exam-sk-tag" />
+              <span className="exam-sk-line exam-sk-title" />
+              <span className="exam-sk-line exam-sk-meta" />
             </header>
-            <div className="article-body reading-loading" aria-hidden="true">
-              {[3, 2, 3, 2].map((lines, gi) => (
-                <div className="skeleton-para" key={gi}>
-                  {Array.from({ length: lines }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`skeleton-line${i === 0 ? ' first' : ''}${i === lines - 1 ? ' last' : ''}`}
-                    />
+            <span className="exam-sk-line exam-sk-secbar" aria-hidden="true" />
+            <div className="article-body exam-sk-body" aria-hidden="true">
+              {/* 段落组之间穿插「材料N」标签占位，模拟真实详情的节奏 */}
+              {[
+                { paras: [3, 2, 3] },
+                { paras: [3, 2] },
+                { paras: [2, 3, 2] },
+              ].map((mat, gi) => (
+                <div key={gi}>
+                  <span className="exam-sk-line exam-sk-matlabel" />
+                  {mat.paras.map((lines, pi) => (
+                    <div className="reading-loading" key={pi}>
+                      <div className="skeleton-para">
+                        {Array.from({ length: lines }).map((_, i) => (
+                          <span
+                            key={i}
+                            className={`skeleton-line${i === 0 ? ' first' : ''}${i === lines - 1 ? ' last' : ''}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               ))}
@@ -744,11 +757,18 @@ export default function ExamPreviewPage() {
           )}
         </div>
       </header>
-      {/* 首次加载：试卷卡骨架，避免空白（与 LibraryPage 骨架同源的 shimmer） */}
+      {/* 首次加载：试卷卡骨架（与 .exam-card 同构，内部细线 shimmer，样式见 exam-preview.css） */}
       {papers === null && (
         <div className="exam-grid exam-grid-loading" aria-hidden="true">
           {Array.from({ length: 8 }).map((_, i) => (
-            <span key={i} className="exam-sk-card" style={{ ['--d' as string]: `${i * 0.1}s` }} />
+            <span key={i} className="exam-sk-card" style={{ ['--d' as string]: `${i * 0.12}s` }}>
+              <span className="exam-sk-line sk-tag" style={{ ['--d' as string]: `${i * 0.12}s` }} />
+              <span>
+                <span className="exam-sk-line sk-title" style={{ ['--d' as string]: `${i * 0.12 + 0.05}s` }} />
+                <span className="exam-sk-line sk-title w2" style={{ ['--d' as string]: `${i * 0.12 + 0.1}s`, marginTop: 10 }} />
+              </span>
+              <span className="exam-sk-line sk-meta" style={{ ['--d' as string]: `${i * 0.12 + 0.15}s` }} />
+            </span>
           ))}
         </div>
       )}

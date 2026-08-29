@@ -4,6 +4,8 @@
  * 路由：
  *   GET /api/articles
  *   GET /api/articles/:id
+ *   GET /api/exams            申论真题试卷列表（?year=&level= 过滤）
+ *   GET /api/exams/:id        试卷详情（材料 + 题目 + 答案）
  */
 import { createServer } from 'node:http'
 import { DatabaseSync } from 'node:sqlite'
@@ -56,6 +58,46 @@ function queryArticle(id) {
   }
 }
 
+// —— 申论真题（data/exams.db）——
+let _examDb = null
+function openExamDb(opts) {
+  const readOnly = !opts?.write
+  if (_examDb && _examReadOnly === readOnly) return _examDb
+  if (_examDb) _examDb.close()
+  _examReadOnly = readOnly
+  _examDb = new DatabaseSync(path.join(PROJECT_ROOT, 'data', 'exams.db'), { readOnly })
+  return _examDb
+}
+let _examReadOnly = true
+function queryExamList() {
+  const d = openExamDb()
+  return d
+    .prepare(`SELECT p.id, p.year, p.level, p.title, p.has_answer,
+                     (SELECT COUNT(*) FROM questions q WHERE q.paper_id = p.id) AS question_count,
+                     (SELECT COUNT(*) FROM materials m WHERE m.paper_id = p.id) AS material_count
+              FROM papers p ORDER BY p.year DESC, p.level`)
+    .all()
+    .map((r) => ({ id: r.id, year: r.year, level: r.level, title: r.title, hasAnswer: Boolean(r.has_answer), questionCount: r.question_count, materialCount: r.material_count }))
+}
+function queryExam(id) {
+  const d = openExamDb()
+  const p = d.prepare('SELECT id, year, level, title, has_answer, answers_raw, warnings FROM papers WHERE id = ?').get(id)
+  if (!p) return null
+  const materials = d.prepare('SELECT idx, label, content FROM materials WHERE paper_id = ? ORDER BY idx').all(id)
+  const questions = d.prepare('SELECT idx, type, stem, requirement, word_limit, word_limit_json, points, answer, answer_matched FROM questions WHERE paper_id = ? ORDER BY idx').all(id)
+  return {
+    id: p.id, year: p.year, level: p.level, title: p.title,
+    ...(p.warnings ? { warnings: p.warnings } : {}),
+    materials: materials.map((m) => ({ idx: m.idx, label: m.label, content: m.content })),
+    questions: questions.map((q) => ({
+      idx: q.idx, type: q.type, stem: q.stem, requirement: q.requirement,
+      wordLimit: q.word_limit, points: q.points,
+      answer: q.answer, answerMatched: Boolean(q.answer_matched),
+    })),
+    ...(p.answers_raw ? { answersRaw: p.answers_raw } : {}),
+  }
+}
+
 const PORT = Number(process.argv[2] ?? 8787)
 
 const json = (data, status = 200, extra = {}) =>
@@ -99,6 +141,68 @@ const server = createServer((req, res) => {
     if (sort === 'title') list = [...list].sort((a, b) => a.title.localeCompare(b.title, 'zh'))
     if (limit > 0) list = list.slice(0, limit)
     void respond(json({ articles: list, total: list.length }))
+    return
+  }
+
+  if (url.pathname === '/api/exams' && req.method === 'GET') {
+    let list = queryExamList()
+    const year = url.searchParams.get('year')
+    const level = url.searchParams.get('level')
+    if (year) list = list.filter((x) => String(x.year) === year)
+    if (level) list = list.filter((x) => x.level === level)
+    void respond(json({ papers: list, total: list.length }))
+    return
+  }
+
+  if (url.pathname.startsWith('/api/exams/') && req.method === 'GET') {
+    const exam = queryExam(decodeURIComponent(url.pathname.slice('/api/exams/'.length)))
+    if (!exam) {
+      void respond(json({ error: 'not found' }, 404))
+      return
+    }
+    void respond(json(exam))
+    return
+  }
+
+  // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
+  if (url.pathname.startsWith('/api/exams/') && req.method === 'POST') {
+    const id = decodeURIComponent(url.pathname.slice('/api/exams/'.length))
+    const d = openExamDb({ write: true })
+    const exists = d.prepare('SELECT id FROM papers WHERE id = ?').get(id)
+    if (!exists) {
+      void respond(json({ error: 'not found' }, 404))
+      return
+    }
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const updPaper = d.prepare('UPDATE papers SET title = ?, warnings = ? WHERE id = ?')
+        const updMat = d.prepare('UPDATE materials SET content = ? WHERE paper_id = ? AND idx = ?')
+        const updQ = d.prepare(
+          'UPDATE questions SET type = ?, stem = ?, requirement = ?, word_limit = ?, word_limit_json = ?, points = ?, answer = ? WHERE paper_id = ? AND idx = ?',
+        )
+        d.exec('BEGIN')
+        if (typeof data.title === 'string') updPaper.run(data.title, typeof data.warnings === 'string' ? data.warnings : null, id)
+        for (const m of data.materials ?? [])
+          if (typeof m.content === 'string') updMat.run(m.content, id, m.idx)
+        for (const q of data.questions ?? []) {
+          if (typeof q.stem !== 'string') continue
+          const wl = q.wordLimit ?? null
+          updQ.run(
+            q.type || null, q.stem, q.requirement || '', wl,
+            wl ? JSON.stringify({ max: wl }) : null,
+            q.points ?? null, q.answer ?? null, id, q.idx,
+          )
+        }
+        d.exec('COMMIT')
+        void respond(json({ ok: true }))
+      } catch (err) {
+        try { d.exec('ROLLBACK') } catch {}
+        void respond(json({ error: String(err) }, 400))
+      }
+    })
     return
   }
 

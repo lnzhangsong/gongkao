@@ -569,7 +569,15 @@
 
 .tool .tool-btns {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool .tool-val {
+  font: 12px var(--mono);
+  color: var(--muted);
+  min-width: 20px;
+  text-align: center;
 }
 
 .tool button {

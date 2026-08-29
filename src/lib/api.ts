@@ -33,3 +33,68 @@ export function fetchMetaList(params?: { q?: string; topic?: string; source?: st
 export function fetchArticle(id: string): Promise<Article> {
   return getJSON<Article>(`/api/articles?id=${encodeURIComponent(id)}`)
 }
+
+// —— 申论真题（预览，data/exams.db）——
+
+export interface ExamPaperMeta {
+  id: string
+  year: number
+  level: string
+  title: string
+  hasAnswer: boolean
+  questionCount: number
+  materialCount: number
+}
+
+export interface ExamQuestion {
+  idx: number
+  type: string | null
+  stem: string
+  requirement: string
+  wordLimit: number | null
+  points: number | null
+  answer: string | null
+  answerMatched: boolean
+}
+
+export interface ExamDetail {
+  id: string
+  year: number
+  level: string
+  title: string
+  warnings?: string
+  materials: { idx: number; label: string; content: string }[]
+  questions: ExamQuestion[]
+  answersRaw?: string
+}
+
+/** 申论真题试卷列表（按年份倒序） */
+export function fetchExamList(params?: { year?: number; level?: string }): Promise<{ papers: ExamPaperMeta[]; total: number }> {
+  const sp = new URLSearchParams()
+  if (params?.year) sp.set('year', String(params.year))
+  if (params?.level) sp.set('level', params.level)
+  const qs = sp.toString()
+  return getJSON(`/api/exams${qs ? `?${qs}` : ''}`)
+}
+
+/** 申论真题试卷详情（材料 + 题目 + 答案） */
+export function fetchExam(id: string): Promise<ExamDetail> {
+  return getJSON(`/api/exams/${encodeURIComponent(id)}`)
+}
+
+/** 保存试卷编辑（仅本地 api-server 提供写入） */
+export async function saveExam(
+  id: string,
+  data: Pick<ExamDetail, 'title'> & {
+    materials: { idx: number; content: string }[]
+    questions: { idx: number; type: string | null; stem: string; requirement: string; wordLimit: number | null; points: number | null; answer: string | null }[]
+  },
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/exams/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`保存失败 API ${res.status}`)
+  return res.json() as Promise<{ ok: boolean }>
+}

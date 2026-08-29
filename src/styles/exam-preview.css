@@ -1,0 +1,497 @@
+/* ============================================================
+   读本 READBOOK · 申论真题（/exams）
+   详情正文复用阅读页排版（reading.css 的 article-head / article-body +
+   --reader-* 变量），本文件只补申论特有部分：列表卡片、题目、答案面板。
+   ============================================================ */
+
+/* ===================== 列表 ===================== */
+
+.exam-page {
+  padding: 0 38px 120px;
+  color: var(--ink);
+}
+
+.exam-hero {
+  padding: 55px 0 42px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.exam-hero .eyebrow {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.exam-hero h1 {
+  font: 400 clamp(46px, 6vw, 78px) / 1.25 var(--display);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.exam-hero h1 span {
+  color: var(--accent);
+}
+
+.exam-hero .subpage-copy {
+  max-width: 420px;
+  font: 14px/1.9 var(--serif);
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  margin: 14px 0 0;
+}
+
+.exam-hero-meta {
+  font: 12px var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  margin-top: 18px;
+}
+
+.exam-hero-meta a {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.exam-hero-meta a:hover {
+  text-decoration: underline;
+}
+
+.exam-year-head {
+  margin-top: 44px;
+}
+
+/* 试卷卡：与首页 .item 同语言（1px 墨框直角卡，hover 位移 + 硬阴影 + ↗） */
+.exam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.exam-card {
+  position: relative;
+  min-height: 132px;
+  padding: 18px 20px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  overflow: hidden;
+  transition: transform 0.35s, box-shadow 0.35s;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+}
+
+.exam-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 7px 8px 0 var(--ink);
+}
+
+.exam-card::after {
+  content: '↗';
+  position: absolute;
+  right: 15px;
+  top: 12px;
+  font-size: 18px;
+  opacity: 0.55;
+}
+
+.exam-card small {
+  font: 12px var(--mono);
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--ink) 80%, var(--paper));
+}
+
+.exam-card h4 {
+  font: 500 16px/1.6 var(--serif);
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.exam-card-meta {
+  font: 11px var(--mono);
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* ===================== 详情：完全复用 reading-layout ===================== */
+
+.exam-warn {
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.exam-title-input {
+  font: 500 clamp(24px, 3vw, 34px) / 1.4 var(--serif);
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--ink);
+  margin: 10px 0;
+}
+.exam-title-input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.exam-saved {
+  color: color-mix(in srgb, var(--hl-green) 40%, var(--ink));
+  font-size: 12px;
+}
+
+/* meta 行均匀分布（同阅读页），编辑按钮自然靠右 */
+.exam-reading .article-meta {
+  font-size: 13px;
+  align-items: center;
+}
+
+.exam-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 申论页 mono 标签：字号跟随「标签字号」设置（右栏可调） */
+.exam-mat-label,
+.exam-q-idx,
+.exam-q-type,
+.exam-answer summary,
+.exam-select {
+  font-size: var(--label-size, 13px);
+}
+
+.exam-q-chips,
+.exam-q-req-label,
+.exam-num {
+  font-size: calc(var(--label-size, 13px) - 1px);
+}
+
+/* 材料标签：mono 编号 + 细线延伸，给每段材料一个清晰的气口 */
+.exam-mat-label {
+  font-family: var(--mono);
+  font-size: var(--label-size, 13px);
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin: 44px 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.exam-mat-label::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+
+.article-body .exam-mat-label + p,
+.article-body div > p {
+  /* article-body p 已有 29px 段距与段首缩进，这里只收首段上边距 */
+}
+
+.exam-mat-label:first-child {
+  margin-top: 38px;
+}
+
+/* ===================== 题目与答案 ===================== */
+
+.exam-questions {
+  margin-top: 72px;
+}
+
+.exam-q {
+  margin-top: 52px;
+}
+
+/* 题头：两端对齐（题号+题型 | 字数/分值），底部细线定出每题的起始 */
+.exam-q-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+
+.exam-q-id {
+  display: inline-flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.exam-q-idx {
+  font-family: var(--mono);
+  font-size: var(--label-size, 13px);
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+/* 题型：同日报 .tag 的 mono accent 文本 */
+.exam-q-type {
+  font-family: var(--mono);
+  font-size: var(--label-size, 13px);
+  letter-spacing: 0.1em;
+  color: var(--accent-text);
+}
+
+.exam-q-type.major {
+  color: var(--accent);
+}
+
+/* 字数/分值：mono 弱化，集中在右端 */
+.exam-q-chips {
+  font-family: var(--mono);
+  font-size: calc(var(--label-size, 13px) - 1px);
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+/* 题干：跟随阅读设置的正文字号/行距/字体 */
+.exam-q-stem {
+  margin: 0 0 16px;
+  font-size: var(--reader-font-size, 17px);
+  line-height: var(--reader-line-height, 2.15);
+  font-family: var(--reader-font-family, var(--serif));
+  letter-spacing: 0.01em;
+  text-align: justify;
+  color: var(--ink);
+}
+
+/* 要求卡：浅墨底面板，mono「要求」标签 + sans 小字 */
+.exam-q-req {
+  margin: 18px 0 0;
+  font: 13px/1.9 var(--sans);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+  border-radius: 2px;
+  padding: 10px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.exam-q-req-label {
+  font-family: var(--mono);
+  font-size: calc(var(--label-size, 13px) - 1px);
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+  flex-shrink: 0;
+}
+
+/* 答案：折叠头 + 答题纸面板（soft 底、细线框、正文排版） */
+.exam-answer {
+  margin-top: 16px;
+}
+
+.exam-answer summary {
+  font-family: var(--mono);
+  font-size: var(--label-size, 13px);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exam-answer summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 折叠指示：▸ 展开时转向 ▾ */
+.exam-answer summary::before {
+  content: '▸';
+  font-size: 11px;
+  transition: transform 0.2s;
+  color: var(--accent-text);
+}
+
+.exam-answer[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.exam-answer summary:hover {
+  color: var(--ink);
+}
+
+.exam-answer[open] summary {
+  margin-bottom: 14px;
+}
+
+.exam-ans-warn {
+  color: var(--accent-text);
+  opacity: 0.75;
+}
+
+.exam-answer-sheet {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--ink);
+  border-radius: 2px;
+  padding: 22px 26px;
+}
+
+.exam-answer-sheet p {
+  margin: 0 0 20px;
+  font-size: var(--reader-font-size, 17px);
+  line-height: var(--reader-line-height, 2.15);
+  font-family: var(--reader-font-family, var(--serif));
+  letter-spacing: 0.01em;
+  text-align: justify;
+  text-indent: 2em;
+  color: var(--ink);
+}
+
+.exam-answer-sheet p:last-child {
+  margin-bottom: 0;
+}
+
+.exam-answer-sheet.no-indent p,
+.exam-questions.no-indent .exam-q-stem {
+  text-indent: 0;
+}
+
+.exam-raw {
+  margin-top: 24px;
+}
+
+.exam-raw > button {
+  margin-bottom: 16px;
+}
+
+.exam-raw p {
+  margin: 0 0 20px;
+  font-size: var(--reader-font-size, 17px);
+  line-height: var(--reader-line-height, 2.15);
+  font-family: var(--reader-font-family, var(--serif));
+  text-align: justify;
+  text-indent: 2em;
+  color: color-mix(in srgb, var(--ink) 82%, var(--paper));
+}
+
+/* ===================== 编辑态 ===================== */
+
+.exam-edit-block {
+  margin-bottom: 26px;
+}
+
+.exam-ta {
+  display: block;
+  width: 100%;
+  font: 15px/1.9 var(--serif);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 12px 14px;
+  margin: 8px 0 0;
+  resize: vertical;
+}
+
+.exam-ta:focus {
+  outline: none;
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.exam-select {
+  font-family: var(--mono);
+  font-size: var(--label-size, 13px);
+  letter-spacing: 0.05em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.exam-num {
+  font-family: var(--mono);
+  font-size: calc(var(--label-size, 13px) - 1px);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.exam-num input {
+  width: 52px;
+  font: 12px var(--mono);
+  border: 1px dashed var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  padding: 3px 6px;
+}
+
+.exam-num input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+/* ===================== 窄屏 ===================== */
+
+@media (max-width: 640px) {
+  .exam-page {
+    padding: 0 20px 80px;
+  }
+
+  .exam-hero {
+    padding: 40px 0 32px;
+  }
+
+  .exam-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-actions {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+}
+
+/* 页头 tag 可点击返回列表（与阅读页 tag 同样式，hover 提示可点） */
+.exam-tag-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.exam-tag-link:hover {
+  color: var(--accent-text);
+}
+
+
+/* 编辑入口：安静的 mono 文字按钮（hover 提亮），不再用边框盒子 */
+.exam-edit-btn {
+  font: var(--label-size, 13px) var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.exam-edit-btn:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

@@ -144,6 +144,17 @@ const server = createServer((req, res) => {
   }
 
   if (url.pathname === '/api/exams' && req.method === 'GET') {
+    // 与线上 api/exams.ts 相同的 ?id= 查询参数取详情（避免子路径路由差异）
+    const singleId = url.searchParams.get('id')
+    if (singleId) {
+      const exam = queryExam(singleId)
+      if (!exam) {
+        void respond(json({ error: 'not found' }, 404))
+        return
+      }
+      void respond(json(exam))
+      return
+    }
     let list = queryExamList()
     const year = url.searchParams.get('year')
     const level = url.searchParams.get('level')
@@ -152,17 +163,6 @@ const server = createServer((req, res) => {
     void respond(json({ papers: list, total: list.length }))
     return
   }
-
-  if (url.pathname.startsWith('/api/exams/') && req.method === 'GET') {
-    const exam = queryExam(decodeURIComponent(url.pathname.slice('/api/exams/'.length)))
-    if (!exam) {
-      void respond(json({ error: 'not found' }, 404))
-      return
-    }
-    void respond(json(exam))
-    return
-  }
-
   // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
   // 新增试卷（body: { year, level, title }）
   if (url.pathname === '/api/exams' && req.method === 'POST') {

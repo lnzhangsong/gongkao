@@ -80,9 +80,9 @@ export function fetchExamList(params?: { year?: number; level?: string }): Promi
   })
 }
 
-/** 申论真题试卷详情（材料 + 题目 + 答案） */
+/** 申论真题试卷详情（材料 + 题目 + 答案）；用 ?id= 查询参数，与线上 Function 路由行为一致 */
 export function fetchExam(id: string): Promise<ExamDetail> {
-  return getJSON(`/api/exams/${encodeURIComponent(id)}`)
+  return getJSON(`/api/exams?id=${encodeURIComponent(id)}`)
 }
 
 /** 保存试卷编辑（仅本地 api-server 提供写入） */

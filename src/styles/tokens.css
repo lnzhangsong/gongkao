@@ -161,6 +161,10 @@
   --reader-font-size: 17px;
   --reader-line-height: 2.15;
   --reader-font-family: var(--serif);
+
+  /* 暗面板（--dark：划词工具栏/工具菜单）上的固定亮色文字：
+     夜读绿/墨夜主题的 --paper 本身是深色，不能用 --paper 当暗底文字 */
+  --dark-ink: #f2efe6;
 }
 
 /* 减少动效 */

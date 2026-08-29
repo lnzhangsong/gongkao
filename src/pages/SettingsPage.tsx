@@ -97,10 +97,17 @@ export function SettingsPage() {
 
   /** 导入数据（支持设置页整包导出 + 摘录页导出两种格式） */
   const importFileRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
   const onImportFile = (file: File | undefined) => {
     if (!file) return
+    setImporting(true)
     const reader = new FileReader()
+    reader.onerror = () => {
+      setImporting(false)
+      void alertDialog('读取文件失败，请重试或换一个文件。')
+    }
     reader.onload = () => {
+      setImporting(false)
       const parsed = parseImportData(String(reader.result ?? ''))
       if ('error' in parsed) {
         void alertDialog(`导入失败：${parsed.error}`)
@@ -388,8 +395,8 @@ export function SettingsPage() {
                 <div className="setting-desc">恢复本应用导出的 JSON，或合并另一设备上的文章与摘录</div>
               </div>
               <div className="setting-control">
-                <button className="ghost" onClick={() => importFileRef.current?.click()}>
-                  <Upload size={12} /> 导入
+                <button className="ghost" onClick={() => importFileRef.current?.click()} disabled={importing}>
+                  <Upload size={12} /> {importing ? '导入中…' : '导入'}
                 </button>
                 <input
                   ref={importFileRef}

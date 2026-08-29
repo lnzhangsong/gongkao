@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { Highlighter, StickyNote, Underline as UnderlineIcon, BookPlus } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
@@ -43,6 +43,9 @@ function fmtDuration(totalSec: number): string {
 
 export function ReadingPage() {
   const { articleId = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  /** 从摘录页「打开原文」跳入：?ann=<标注id>，就绪后滚动到所在段落并短暂闪烁 */
+  const annAnchorId = searchParams.get('ann')
 
   const getArticle = useArticleStore((s) => s.getArticle)
   const ensureContent = useArticleStore((s) => s.ensureContent)
@@ -161,9 +164,9 @@ export function ReadingPage() {
     noteParaIndex,
   } = useAnnotationPopover(articleId, article, starts, bodyRef)
   /* 划词存入规范词库（成功后按钮短暂变 ✓） */
-  const [termSaved, setTermSaved] = useState<'idle' | 'ok' | 'dup'>('idle')
+  const [termSaved, setTermSaved] = useState<'idle' | 'ok' | 'dup' | 'busy'>('idle')
   const saveSelectionAsTerm = async () => {
-    if (!popover) return
+    if (!popover || termSaved === 'busy') return
     const term = popover.text.trim().replace(/\s+/g, '')
     if (!term || term.length > 20) {
       void alertDialog('请选中 20 字以内的词语')
@@ -174,12 +177,15 @@ export function ReadingPage() {
       window.setTimeout(() => setTermSaved('idle'), 1500)
       return
     }
+    setTermSaved('busy')
     try {
       await addTerm({ theme: '综合其他', term })
       setTermSaved('ok')
       window.setTimeout(() => setTermSaved('idle'), 1500)
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : String(e))
+    } finally {
+      window.setTimeout(() => setTermSaved('idle'), 1500)
     }
   }
   const displayAnnotations = annotationsVisible ? articleAnnotations : []
@@ -237,17 +243,25 @@ export function ReadingPage() {
     const pct = Math.min(100, Math.max(0, (window.scrollY / max) * 100))
     // 进度条直接写 DOM：避免每帧 setState 触发整篇正文重渲染
     if (progressBarRef.current) progressBarRef.current.style.width = `${pct}%`
+    // 记录视口顶部附近（贴顶 100px 内）最后出现的段落：恢复时按段锚点定位
+    let lastPara: number | undefined
+    const paras = bodyRef.current?.querySelectorAll<HTMLElement>('[data-para]')
+    if (paras) {
+      paras.forEach((el) => {
+        if (el.getBoundingClientRect().top <= 100) lastPara = Number(el.dataset.para)
+      })
+    }
     const now = Date.now()
     // 节流：至少每 1.5s 保存一次
     if (now - lastSavedRef.current > 1500) {
       lastSavedRef.current = now
-      saveProgress(articleId, pct, window.scrollY)
+      saveProgress(articleId, pct, window.scrollY, lastPara)
     }
     // 尾部保存：滚动停止 400ms 后补一次，确保最后位置落盘
     window.clearTimeout(saveTimerRef.current)
     saveTimerRef.current = window.setTimeout(() => {
       lastSavedRef.current = Date.now()
-      saveProgress(articleId, pct, window.scrollY)
+      saveProgress(articleId, pct, window.scrollY, lastPara)
     }, 400)
   }, [articleId, saveProgress])
 
@@ -272,13 +286,19 @@ export function ReadingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId, computePercent])
 
-  // 打开文章记录 + 恢复阅读位置：等文章数据与水合就绪
+  /* 待执行的阅读位置恢复（等正文 + 字体就绪后执行，见下方 effect） */
+  const pendingRestoreRef = useRef<{ para?: number; y: number } | null>(null)
+
+  // 打开文章记录：记录进度，实际滚动推迟到正文渲染后（否则骨架期滚不到目标）
   useEffect(() => {
     if (!article || !storeHydrated) return
     startReading(article.id)
     const p = getProgress(article.id)
-    if (p && p.lastPosition > 0) {
-      requestAnimationFrame(() => window.scrollTo({ top: p.lastPosition, behavior: 'instant' }))
+    if (annAnchorId && articleAnnotations.some((a) => a.id === annAnchorId)) {
+      /* 摘录定位优先于进度恢复 */
+      pendingRestoreRef.current = null
+    } else if (p && (p.lastPara != null || p.lastPosition > 0)) {
+      pendingRestoreRef.current = { para: p.lastPara, y: p.lastPosition }
     } else {
       /* 新文章（如「下一篇」进入）：回到顶部 */
       window.scrollTo(0, 0)
@@ -286,7 +306,43 @@ export function ReadingPage() {
     percentRef.current = p?.percent ?? 0
     if (progressBarRef.current) progressBarRef.current.style.width = `${percentRef.current}%`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articleId, article, storeHydrated])
+  }, [articleId, article, storeHydrated, annAnchorId])
+
+  /* 正文 + 字体就绪后执行位置恢复 / 摘录定位。
+     按段落锚点恢复：字号、行距、设备不同导致的布局差异不会让位置跑偏 */
+  useEffect(() => {
+    if (!contentReady || !fontReady || !article) return
+    if (annAnchorId) {
+      const ann = articleAnnotations.find((a) => a.id === annAnchorId)
+      if (ann && ann.start >= 0) {
+        const idx = starts.findIndex((s, i) => ann.start >= s && ann.start < s + article.content![i].length)
+        const paraEl = idx >= 0 ? bodyRef.current?.querySelector<HTMLElement>(`[data-para="${idx}"]`) : undefined
+        if (paraEl) {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: paraEl.getBoundingClientRect().top + window.scrollY - 16, behavior: 'instant' })
+            const mark = bodyRef.current?.querySelector(`[data-ann-ids*="${annAnchorId}"]`)
+            mark?.classList.add('ann-flash')
+            window.setTimeout(() => mark?.classList.remove('ann-flash'), 2200)
+          })
+          return
+        }
+      }
+    }
+    const pr = pendingRestoreRef.current
+    if (!pr) return
+    pendingRestoreRef.current = null
+    requestAnimationFrame(() => {
+      if (pr.para != null) {
+        const el = bodyRef.current?.querySelector<HTMLElement>(`[data-para="${pr.para}"]`)
+        if (el) {
+          window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: 'instant' })
+          return
+        }
+      }
+      if (pr.y > 0) window.scrollTo({ top: pr.y, behavior: 'instant' })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentReady, fontReady, annAnchorId])
 
   const percentRef = useRef(0)
 
@@ -458,9 +514,10 @@ export function ReadingPage() {
                   {hasPending && (
                     <div className="note-form show">
                       <textarea
-                        placeholder="写下你的想法…"
+                        placeholder="写下你的想法…（Esc 取消）"
                         value={noteDraft}
                         onChange={(e) => setNoteDraft(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Escape' && setPendingNote(null)}
                         autoFocus
                       />
                       <div className="note-form-actions">
@@ -495,6 +552,7 @@ export function ReadingPage() {
                           className="note-edit"
                           value={noteDraft}
                           onChange={(e) => setNoteDraft(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Escape' && setEditingNoteId(null)}
                           autoFocus
                         />
                       ) : (
@@ -554,7 +612,7 @@ export function ReadingPage() {
                 title="把选中词存入规范词库"
               >
                 <BookPlus size={12} />
-                {termSaved === 'ok' ? '已入词库' : termSaved === 'dup' ? '已在词库' : '存规范词'}
+                {termSaved === 'ok' ? '已入词库' : termSaved === 'dup' ? '已在词库' : termSaved === 'busy' ? '存入中…' : '存规范词'}
               </button>
             </div>
 

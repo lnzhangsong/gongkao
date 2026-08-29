@@ -1028,6 +1028,21 @@
   }
 }
 
+/* 摘录页「打开原文」定位到标注后的短暂闪烁提示 */
+.ann-flash {
+  animation: ann-flash-bg 2s ease-out;
+}
+
+@keyframes ann-flash-bg {
+  0%,
+  40% {
+    background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 /* 规范词方框标注（阅读设置「规范词框」开时，正文里的申论规范词以细框圈出） */
 .article-body .term-box {
   border: 1px solid color-mix(in srgb, var(--accent-text) 55%, transparent);

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta, type ExamQuestion } from '../lib/api'
 import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
@@ -26,9 +27,15 @@ import '../styles/exam-preview.css'
  */
 
 export default function ExamPreviewPage() {
+  const { examId: routeExamId } = useParams()
+  const navigate = useNavigate()
   const [papers, setPapers] = useState<ExamPaperMeta[] | null>(null)
+  /** 列表拉取失败（服务不可用）：显示错误条 + 重试，而不是静默空列表 */
+  const [listError, setListError] = useState(false)
+  const [detailError, setDetailError] = useState(false)
   const [draft, setDraft] = useState<ExamDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [creatingBusy, setCreatingBusy] = useState(false)
   const [editing, setEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -36,6 +43,25 @@ export default function ExamPreviewPage() {
   const [showRaw, setShowRaw] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newForm, setNewForm] = useState({ year: String(new Date().getFullYear() + 1), level: '地市级', title: '' })
+  /* 年份输入的临时字符串：清空重输时数字不再跳变，失焦时校验回写 */
+  const [yearDraft, setYearDraft] = useState(newForm.year)
+  const submitCreate = async () => {
+    if (creatingBusy) return
+    const year = parseInt(newForm.year, 10)
+    const title = newForm.title.trim() || `${year}年国家公务员考试《申论》题（${newForm.level}）`
+    setCreatingBusy(true)
+    try {
+      const { id } = await createExam({ year, level: newForm.level, title })
+      setCreating(false)
+      open(id)
+      setEditing(true)
+    } catch (e) {
+      void alertDialog(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCreatingBusy(false)
+    }
+  }
+
   /* 折叠的材料（阅读态点击材料标签收起/展开） */
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const toggleCollapsed = (idx: number) =>
@@ -70,38 +96,80 @@ export default function ExamPreviewPage() {
     void loadFontFamily(settings.fontFamily)
   }, [settings.fontFamily])
 
-  useEffect(() => {
-    fetchExamList().then((r) => setPapers(r.papers)).catch(() => setPapers([]))
-  }, [])
-
-  /* 返回列表时恢复进入前的滚动位置 */
+  /* 列表 ↔ 详情由路由驱动（/exams 与 /exams/:examId）：浏览器后退可回列表，前进可回详情 */
   const listScrollRef = useRef(0)
-  const [inList, setInList] = useState(true)
+  const inList = !routeExamId
+  /* 详情加载：进入 /exams/:examId 或试卷 id 变化时拉取（retryTick 供错误态重试） */
+  const [retryTick, setRetryTick] = useState(0)
+  useEffect(() => {
+    if (!routeExamId) return
+    let alive = true
+    setDraft(null)
+    setDetailError(false)
+    setLoadingDetail(true)
+    setEditing(false)
+    setDirty(false)
+    setSavedAt(null)
+    window.scrollTo({ top: 0 })
+    fetchExam(routeExamId)
+      .then((d) => {
+        if (alive) setDraft(cloneDraft(d))
+      })
+      .catch(() => {
+        if (alive) setDetailError(true)
+      })
+      .finally(() => {
+        if (alive) setLoadingDetail(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [routeExamId, retryTick])
+
+  /* 返回列表时恢复进入前的滚动位置（晚于 App 的 ScrollToTop 执行，覆盖其回顶） */
   useEffect(() => {
     if (inList) window.scrollTo({ top: listScrollRef.current })
   }, [inList])
 
   const open = (id: string) => {
     listScrollRef.current = window.scrollY
-    setInList(false)
-    setDraft(null)
-    setLoadingDetail(true)
-    setEditing(false)
-    setDirty(false)
-    setSavedAt(null)
-    window.scrollTo({ top: 0 })
-    fetchExam(id)
-      .then((d) => setDraft(cloneDraft(d)))
-      .catch(() => setDraft(null))
-      .finally(() => setLoadingDetail(false))
+    navigate(`/exams/${encodeURIComponent(id)}`)
   }
 
   const backToList = () => {
-    setDraft(null)
-    setEditing(false)
-    setDirty(false)
-    setInList(true)
+    navigate('/exams')
   }
+
+  /* 编辑态有未保存修改时拦截刷新/关闭，避免长卷丢稿 */
+  useEffect(() => {
+    if (!editing || !dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [editing, dirty])
+
+  /* 列表拉取失败重试 */
+  const reloadList = () => {
+    setListError(false)
+    fetchExamList()
+      .then((r) => setPapers(r.papers))
+      .catch(() => {
+        setPapers([])
+        setListError(true)
+      })
+  }
+
+  useEffect(() => {
+    fetchExamList()
+      .then((r) => setPapers(r.papers))
+      .catch(() => {
+        setPapers([])
+        setListError(true)
+      })
+  }, [])
 
   /* 浅层不可变更新：只拷贝对象外壳（数组 + 单项），字符串不可变无需拷贝。
      原实现 structuredClone 整卷，编辑长卷时每次键入都深拷贝数万字 */
@@ -247,6 +315,33 @@ export default function ExamPreviewPage() {
     )
   }
 
+  // ---------- 详情：加载失败（服务不可用 / 试卷不存在） ----------
+  if (routeExamId && !draft && !loadingDetail && detailError) {
+    return (
+      <section className="reading-page">
+        <main className="reading-layout">
+          <article>
+            <header className="article-head">
+              <div className="tag">EXAM / ERROR</div>
+              <h1>试卷暂时无法加载</h1>
+              <p className="dek">本地 API 服务可能没有启动，或该试卷不存在。服务恢复后可重试。</p>
+            </header>
+            <div className="empty-state">
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button className="ghost" onClick={() => setRetryTick((t) => t + 1)}>
+                  重试
+                </button>
+                <button className="ghost" onClick={backToList}>
+                  返回列表
+                </button>
+              </div>
+            </div>
+          </article>
+        </main>
+      </section>
+    )
+  }
+
   // ---------- 详情：复用阅读页排版 ----------
   if (draft) {
     const answered = draft.questions.filter((q) => q.answer).length
@@ -285,13 +380,9 @@ export default function ExamPreviewPage() {
               <div className="exam-edit-bar">
                 <span className="exam-edit-field">
                   <label>年份</label>
-                  <input
-                    type="number"
-                    className="exam-select exam-year-input"
+                  <YearInput
                     value={draft.year}
-                    min={2000}
-                    max={2100}
-                    onChange={(e) => patchDraft((d) => void (d.year = parseInt(e.target.value, 10) || d.year))}
+                    onCommit={(n) => patchDraft((d) => void (d.year = n))}
                   />
                 </span>
                 <span className="exam-edit-field">
@@ -313,7 +404,15 @@ export default function ExamPreviewPage() {
                   <button className="ghost exam-btn-primary" onClick={save} disabled={saving || !dirty}>
                     {saving ? '保存中…' : '保存'}
                   </button>
-                  <button className="ghost" onClick={() => setEditing(false)}>退出编辑</button>
+                  <button
+                    className="ghost"
+                    onClick={async () => {
+                      if (dirty && !(await confirmDialog('有未保存修改，退出编辑将丢失这些修改，确定退出？', { danger: true }))) return
+                      setEditing(false)
+                    }}
+                  >
+                    退出编辑
+                  </button>
                   <button
                     className="text-btn exam-del-btn"
                     onClick={async () => {
@@ -521,10 +620,16 @@ export default function ExamPreviewPage() {
               <input
                 className="exam-new-input"
                 type="number"
-                value={newForm.year}
-                onChange={(e) => setNewForm((f) => ({ ...f, year: e.target.value }))}
+                value={yearDraft}
+                onChange={(e) => setYearDraft(e.target.value)}
+                onBlur={() => {
+                  const n = parseInt(yearDraft, 10)
+                  if (n >= 2000 && n <= 2100) setNewForm((f) => ({ ...f, year: String(n) }))
+                  else setYearDraft(newForm.year)
+                }}
                 aria-label="年份"
               />
+
               <select
                 className="exam-new-select"
                 value={newForm.level}
@@ -540,23 +645,12 @@ export default function ExamPreviewPage() {
                 placeholder="试卷标题"
                 value={newForm.title}
                 onChange={(e) => setNewForm((f) => ({ ...f, title: e.target.value }))}
-              />
-              <button
-                className="ghost"
-                onClick={async () => {
-                  const year = parseInt(newForm.year, 10)
-                  const title = newForm.title.trim() || `${year}年国家公务员考试《申论》题（${newForm.level}）`
-                  try {
-                    const { id } = await createExam({ year, level: newForm.level, title })
-                    setCreating(false)
-                    open(id)
-                    setEditing(true)
-                  } catch (e) {
-                    void alertDialog(e instanceof Error ? e.message : String(e))
-                  }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void submitCreate()
                 }}
-              >
-                创建
+              />
+              <button className="ghost" disabled={creatingBusy} onClick={submitCreate}>
+                {creatingBusy ? '创建中…' : '创建'}
               </button>
               <button className="text-btn muted" onClick={() => setCreating(false)}>
                 取消
@@ -569,6 +663,15 @@ export default function ExamPreviewPage() {
           )}
         </div>
       </header>
+      {listError && (
+        <div className="empty-state">
+          <strong>试卷列表暂时无法加载</strong>
+          本地 API 服务可能没有启动，服务恢复后可重试。
+          <div style={{ marginTop: 12 }}>
+            <button className="ghost" onClick={reloadList}>重试</button>
+          </div>
+        </div>
+      )}
       {/* 首次加载：试卷卡骨架（与 .exam-card 同构，内部细线 shimmer，样式见 exam-preview.css） */}
       {papers === null && (
         <div className="exam-grid exam-grid-loading" aria-hidden="true">
@@ -622,4 +725,25 @@ function cloneDraft(d: ExamDetail): ExamDetail {
     materials: d.materials.map((m) => ({ ...m })),
     questions: d.questions.map((q) => ({ ...q })),
   }
+}
+
+/** 年份输入：输入过程中允许自由编辑（含清空），失焦时校验 2000-2100 并回写 */
+function YearInput({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
+  const [raw, setRaw] = useState(String(value))
+  useEffect(() => setRaw(String(value)), [value])
+  return (
+    <input
+      type="number"
+      className="exam-select exam-year-input"
+      value={raw}
+      min={2000}
+      max={2100}
+      onChange={(e) => setRaw(e.target.value)}
+      onBlur={() => {
+        const n = parseInt(raw, 10)
+        if (n >= 2000 && n <= 2100) onCommit(n)
+        else setRaw(String(value))
+      }}
+    />
+  )
 }

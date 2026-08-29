@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, PencilLine, Save } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
+import { confirmDialog, alertDialog } from '../components/ui/ConfirmDialog'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { TOPICS, computeReadTime } from '../data'
 import type { ArticleInput, ArticleSource, ArticleTopic } from '../types'
@@ -27,6 +28,7 @@ export function AdminEditPage() {
     contentText: '',
   })
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
   /** 正文区模式：edit 编辑 / preview 预览 */
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
@@ -54,8 +56,18 @@ export function AdminEditPage() {
       finishNote: form.finishNote?.trim() || undefined,
     }
     addArticle(input)
+    setSaved(true)
+    void alertDialog('文章已保存，可在文章库中查看。')
     navigate('/admin')
   }
+
+  /** 有已填内容时离开需确认，避免误触丢稿 */
+  const guardLeave = async (): Promise<boolean> => {
+    const hasContent = form.title.trim() || form.contentText.trim() || form.summary.trim()
+    if (!hasContent || saved) return true
+    return confirmDialog('还未保存，离开将丢弃已填写的内容，确定离开？', { danger: true })
+  }
+
 
   return (
     <section className="admin-edit-page page-section">
@@ -72,7 +84,18 @@ export function AdminEditPage() {
       </header>
 
       <div className="admin-edit-back">
-        <Link to="/admin" className="back">
+        <Link
+          to="/admin"
+          className="back"
+          onClick={async (e) => {
+            const hasContent = form.title.trim() || form.contentText.trim() || form.summary.trim()
+            if (!hasContent || saved) return
+            e.preventDefault()
+            if (await confirmDialog('还未保存，离开将丢弃已填写的内容，确定离开？', { danger: true })) {
+              navigate('/admin')
+            }
+          }}
+        >
           ← 返回文章列表
         </Link>
       </div>
@@ -202,7 +225,12 @@ export function AdminEditPage() {
           <button className="ghost" onClick={save}>
             <Save size={12} /> 保存文章
           </button>
-          <button className="ghost" onClick={() => navigate('/admin')}>
+          <button
+            className="ghost"
+            onClick={async () => {
+              if (await guardLeave()) navigate('/admin')
+            }}
+          >
             取消
           </button>
         </div>

@@ -19,18 +19,32 @@ const orderedThemes = (terms: GuiFanTerm[]) => {
 
 export default function TermsPage() {
   const [terms, setTerms] = useState<GuiFanTerm[] | null>(null)
+  /** 列表拉取失败（服务不可用）：显示错误态 + 重试，而不是误导性的「没有匹配」 */
+  const [loadError, setLoadError] = useState(false)
   const [theme, setTheme] = useState<string>('')
   const [q, setQ] = useState('')
   /* 新增表单（与真题页「新增试卷」同交互） */
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ theme: '', term: '', example: '' })
+  /* 提交 busy：防双击重复提交 + 慢网络下给「处理中」反馈 */
+  const [busy, setBusy] = useState(false)
   /* 行内编辑（一次只编一张卡） */
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ theme: '', term: '', example: '' })
 
-  const load = () => fetchTerms().then((r) => setTerms(r.terms)).catch(() => setTerms([]))
+  const load = () =>
+    fetchTerms()
+      .then((r) => {
+        setTerms(r.terms)
+        setLoadError(false)
+      })
+      .catch(() => {
+        setTerms([])
+        setLoadError(true)
+      })
   useEffect(() => {
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const themes = useMemo(() => (terms ? orderedThemes(terms) : []), [terms])
@@ -60,6 +74,7 @@ export default function TermsPage() {
       void alertDialog('规范词必填')
       return
     }
+    setBusy(true)
     try {
       await addTerm({ theme: form.theme.trim() || '综合其他', term, example: form.example.trim() })
       setAdding(false)
@@ -67,6 +82,8 @@ export default function TermsPage() {
       await load()
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -82,12 +99,15 @@ export default function TermsPage() {
       void alertDialog('规范词必填')
       return
     }
+    setBusy(true)
     try {
       await updateTerm(editingId, { theme: editForm.theme.trim(), term, example: editForm.example.trim() })
       setTerms((prev) => prev?.map((x) => (x.id === editingId ? { ...x, theme: editForm.theme.trim(), term, example: editForm.example.trim() } : x)) ?? prev)
       setEditingId(null)
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -104,7 +124,7 @@ export default function TermsPage() {
     <div className="exam-page terms-page">
       <header className="subpage-header exam-hero">
         <div>
-          <div className="eyebrow">SHENLUN GUIFANCI　/　3039 词</div>
+          <div className="eyebrow">SHENLUN GUIFANCI　/　{terms ? `${terms.length} 词` : "…"}</div>
           <h1>
             规范表达，
             <br />
@@ -135,6 +155,10 @@ export default function TermsPage() {
                 placeholder="规范词 *"
                 value={form.term}
                 onChange={(e) => setForm((f) => ({ ...f, term: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !busy) void submitAdd()
+                  if (e.key === 'Escape') setAdding(false)
+                }}
               />
               <input
                 className="terms-new-example"
@@ -142,7 +166,9 @@ export default function TermsPage() {
                 value={form.example}
                 onChange={(e) => setForm((f) => ({ ...f, example: e.target.value }))}
               />
-              <button className="ghost" onClick={submitAdd}>添加</button>
+              <button className="ghost" onClick={submitAdd} disabled={busy}>
+                {busy ? '添加中…' : '添加'}
+              </button>
               <button className="text-btn muted" onClick={() => setAdding(false)}>取消</button>
             </div>
           ) : (
@@ -178,7 +204,17 @@ export default function TermsPage() {
         </div>
       )}
 
-      {terms !== null && filtered.length === 0 && (
+      {loadError && terms !== null && (
+        <div className="empty-state">
+          <strong>规范词库暂时无法加载</strong>
+          本地 API 服务可能没有启动，服务恢复后可重试。
+          <div style={{ marginTop: 12 }}>
+            <button className="ghost" onClick={() => void load()}>重试</button>
+          </div>
+        </div>
+      )}
+
+      {!loadError && terms !== null && filtered.length === 0 && (
         <p className="terms-empty">没有匹配「{q}」的规范词，换个说法试试。</p>
       )}
 
@@ -204,7 +240,10 @@ export default function TermsPage() {
                     placeholder="规范词 *"
                     autoFocus
                     onChange={(e) => setEditForm((f) => ({ ...f, term: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && submitEdit()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !busy) void submitEdit()
+                      if (e.key === 'Escape') setEditingId(null)
+                    }}
                   />
                   <textarea
                     className="terms-edit-input terms-edit-example"
@@ -214,7 +253,9 @@ export default function TermsPage() {
                     onChange={(e) => setEditForm((f) => ({ ...f, example: e.target.value }))}
                   />
                   <div className="terms-edit-actions">
-                    <button className="ghost" onClick={submitEdit}>保存</button>
+                    <button className="ghost" onClick={submitEdit} disabled={busy}>
+                      {busy ? '保存中…' : '保存'}
+                    </button>
                     <button className="text-btn muted" onClick={() => setEditingId(null)}>取消</button>
                   </div>
                 </article>

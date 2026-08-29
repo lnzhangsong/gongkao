@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Download, Search, Trash2, X } from 'lucide-react'
 
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
-import { formatDate } from '../data'
+import { confirmDialog } from '../components/ui/ConfirmDialog'
+import { formatLocalDate } from '../data'
 import { downloadJSON, downloadText, formatDateTime, monthOf } from '../lib/export'
 import { Pagination } from '../components/ui/Pagination'
 import type { Annotation, AnnotationKind } from '../types'
@@ -54,10 +55,25 @@ export function NotesPage() {
   const update = useAnnotationStore((s) => s.update)
   const getArticle = useArticleStore((s) => s.getArticle)
 
-  const [quick, setQuick] = useState<QuickKey>('all')
-  const [topic, setTopic] = useState('')
-  const [q, setQ] = useState('')
-  const [page, setPage] = useState(1)
+  /* 筛选/搜索/页码进 URL：从阅读页返回时保留筛选，浏览器后退可回上一筛选态 */
+  const [params, setParams] = useSearchParams()
+  const quick = (params.get('quick') ?? 'all') as QuickKey
+  const topic = params.get('topic') ?? ''
+  const q = params.get('q') ?? ''
+  const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+
+  const applyParams = (mut: (n: URLSearchParams) => void, replace = false) => {
+    const next = new URLSearchParams(params)
+    mut(next)
+    setParams(next, { replace })
+  }
+  const setParam = (key: string, value: string) =>
+    applyParams((n) => {
+      if (value) n.set(key, value)
+      else n.delete(key)
+      if (key !== 'page') n.delete('page')
+    })
+
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [editNoteId, setEditNoteId] = useState<string | null>(null)
@@ -121,7 +137,9 @@ export function NotesPage() {
   }, [rows, quick, topic, q])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  /* 筛选后结果变少时钳到最后一页，避免出现「页内无内容」的假空态 */
+  const curPage = Math.min(page, totalPages)
+  const pageItems = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE)
 
   const selectedRow = rows.find((r) => r.key === selectedKey) ?? pageItems[0] ?? null
 
@@ -195,15 +213,27 @@ export function NotesPage() {
     downloadText(`readbook-notes-${new Date().toISOString().slice(0, 10)}.md`, md)
   }
 
-  const deleteSelected = () => {
+  const deleteSelected = async () => {
     if (checked.size === 0) return
+    const n = checked.size
+    const ok = await confirmDialog(
+      n > 1
+        ? `删除选中的 ${n} 段摘录？其中的高亮、划线与笔记会一并删除，不可恢复。`
+        : '删除这段摘录？其中的高亮、划线与笔记会一并删除，不可恢复。',
+      { danger: true },
+    )
+    if (!ok) return
     removeMany(selectedAnns(checked).map((a) => a.id))
     setChecked(new Set())
+    setSelectedKey(null)
   }
 
-  const deleteOne = (key: string) => {
+  const deleteOne = async (key: string) => {
     const row = rows.find((r) => r.key === key)
-    if (row) removeMany(row.anns.map((a) => a.id))
+    if (!row) return
+    const ok = await confirmDialog('删除这段摘录？其中的高亮、划线与笔记会一并删除，不可恢复。', { danger: true })
+    if (!ok) return
+    removeMany(row.anns.map((a) => a.id))
     if (selectedKey === key) setSelectedKey(null)
   }
 
@@ -256,11 +286,14 @@ export function NotesPage() {
                 <button
                   key={item.key}
                   className={quick === item.key && !topic ? 'active' : ''}
-                  onClick={() => {
-                    setQuick(item.key)
-                    setTopic('')
-                    setPage(1)
-                  }}
+                  onClick={() =>
+                    applyParams((n) => {
+                      if (item.key === 'all') n.delete('quick')
+                      else n.set('quick', item.key)
+                      n.delete('topic')
+                      n.delete('page')
+                    })
+                  }
                 >
                   {item.label} <small>{count}</small>
                 </button>
@@ -273,11 +306,14 @@ export function NotesPage() {
               <button
                 key={t}
                 className={topic === t ? 'active' : ''}
-                onClick={() => {
-                  setTopic(t === topic ? '' : t)
-                  setQuick('all')
-                  setPage(1)
-                }}
+                onClick={() =>
+                  applyParams((n) => {
+                    if (t === topic) n.delete('topic')
+                    else n.set('topic', t)
+                    n.delete('quick')
+                    n.delete('page')
+                  })
+                }
               >
                 {t} <small>{c}</small>
               </button>
@@ -290,12 +326,22 @@ export function NotesPage() {
             <span className="result-count">{filtered.length} 条摘录　/　按时间分组</span>
             <label className="note-search">
               <Search size={13} style={{ color: 'var(--muted)' }} />
-              <input placeholder="搜索摘录、主题或来源" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input
+                placeholder="搜索摘录、主题或来源"
+                value={q}
+                onChange={(e) =>
+                  applyParams((n) => {
+                    if (e.target.value) n.set('q', e.target.value)
+                    else n.delete('q')
+                    n.delete('page')
+                  }, true)
+                }
+              />
               {q && (
                 <button
                   className="text-btn"
                   style={{ color: 'var(--muted)', display: 'inline-flex' }}
-                  onClick={() => setQ('')}
+                  onClick={() => applyParams((n) => { n.delete('q'); n.delete('page') })}
                   aria-label="清除搜索"
                 >
                   <X size={12} />
@@ -342,9 +388,18 @@ export function NotesPage() {
                   <div
                     className={`note-row${selectedKey === r.key ? ' selected' : ''}`}
                     key={r.key}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       setSelectedKey(r.key)
                       setMobileDetailOpen(true)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedKey(r.key)
+                        setMobileDetailOpen(true)
+                      }
                     }}
                   >
                     <span className="note-check" onClick={(e) => e.stopPropagation()}>
@@ -369,14 +424,14 @@ export function NotesPage() {
                       {r.topic}
                       {kinds.size > 1 && <em className="note-kinds">+{kinds.size - 1}</em>}
                     </span>
-                    <span className="note-date">{formatDate(new Date(r.date).toISOString().slice(0, 10))}</span>
+                    <span className="note-date">{formatLocalDate(r.date)}</span>
                   </div>
                 )
               })}
             </div>
           ))}
 
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          <Pagination page={curPage} totalPages={totalPages} onChange={(p) => setParam('page', String(p))} />
         </section>
 
         {/* 移动端：详情收进底部抽屉，需要先点列表行打开；桌面端此遮罩不渲染交互层 */}
@@ -477,7 +532,7 @@ export function NotesPage() {
                 <div className="detail-source">
                   来源：{selectedRow.source} · {selectedRow.title}
                   <br />
-                  <Link to={`/reading/${selectedRow.anns[0].articleId}`}>打开原文　↗</Link>
+                  <Link to={`/reading/${selectedRow.anns[0].articleId}?ann=${selectedRow.anns[0].id}`}>打开原文　↗</Link>
                   <br />
                   保存时间：{formatDateTime(selectedRow.date)}
                 </div>

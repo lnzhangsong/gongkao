@@ -38,8 +38,8 @@ interface ArticleState {
   ensureContent: (id: string) => Promise<Article | undefined>
   /** 打开文章：记录开始时间与阅读次数 */
   startReading: (id: string) => void
-  /** 保存滚动进度 */
-  saveProgress: (id: string, percent: number, lastPosition: number) => void
+  /** 保存滚动进度（lastPara：视口顶部附近的段落 index，恢复时按段锚点定位） */
+  saveProgress: (id: string, percent: number, lastPosition: number, lastPara?: number) => void
   /** 累计实测阅读时长（秒） */
   addReadingTime: (id: string, seconds: number) => void
   /** 导入进度（按 articleId 合并覆盖） */
@@ -205,7 +205,7 @@ export const useArticleStore = create<ArticleState>()(
           }
         }),
 
-      saveProgress: (id, percent, lastPosition) =>
+      saveProgress: (id, percent, lastPosition, lastPara) =>
         set((s) => {
           const prev = s.progress[id] ?? empty(id)
           const clamped = Math.max(0, Math.min(100, Math.round(percent)))
@@ -217,6 +217,7 @@ export const useArticleStore = create<ArticleState>()(
                 ...prev,
                 percent: Math.max(prev.percent, clamped),
                 lastPosition,
+                lastPara,
                 lastReadAt: new Date().toISOString(),
                 completed,
               },

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useArticleStore } from '../stores/articleStore'
 import { loadDisplayFont } from '../lib/fonts'
+import { formatArticleNo } from '../data'
 import { useEffect } from 'react'
 import { Ticker } from '../components/ui/Ticker'
 import type { Article } from '../types'
@@ -77,7 +78,7 @@ export function HomePage() {
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
   /** 入场卡角标编号（真实文章编号） */
-  const entryNo = entry ? String(Number(entry.article.id.slice(1))).padStart(3, '0') : '000'
+  const entryNo = entry ? formatArticleNo(entry.article.id) : '000'
   /* eyebrow 展示当日日期 */
   const today = new Date().toISOString().slice(0, 10)
   const entryFooter = entry?.mode === 'continue' ? 'CONTINUE READING' : entry?.mode === 'review' ? 'REVIEW TODAY' : "TODAY'S ENTRY"
@@ -109,7 +110,7 @@ export function HomePage() {
         </div>
         <div className="stage">
           <div className="halo" />
-          <button className="entry" onClick={() => entry && open(entry.article)}>
+          <button className="entry" onClick={() => entry && open(entry.article)} disabled={!entry} aria-disabled={!entry}>
             <small>READBOOK / NO. {entryNo}</small>
             <strong>
               开始

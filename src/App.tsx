@@ -22,6 +22,17 @@ const LOADING_MIN_MS = 1400
 /** 收尾阶段：进度冲到 100% 后的停留时长 */
 const LOADING_FINISH_MS = 450
 
+/** 懒加载 chunk 间隙的轻量占位：避免整页闪白（正文骨架由各页面自行渲染） */
+function RouteLoading() {
+  return (
+    <div className="route-loading" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <span key={i} className="route-loading-line" style={{ width: `${88 - i * 12}%` }} />
+      ))}
+    </div>
+  )
+}
+
 /** 路由切换时回到页顶：SPA 不会自动重置滚动位置，浏览器会把上次的滚动带进新页面。
  *  阅读页不受影响——它在文章数据就绪后自行恢复上次阅读位置（晚于本组件执行） */
 function ScrollToTop() {
@@ -93,7 +104,7 @@ function App() {
       {/* 浏览器原生的 popstate 滚动恢复与 SPA 异步渲染不合拍，统一由 ScrollToTop 接管 */}
       <ScrollToTop />
       {/* chunk 加载间隙不渲染任何内容（页面级骨架已由各页面/启动 loading 覆盖） */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<RouteLoading />}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<HomePage />} />
@@ -103,8 +114,9 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/new" element={<AdminEditPage />} />
-            {/* 申论真题预览（临时路由，未入导航） */}
+            {/* 申论真题预览（临时路由，未入导航）；详情走子路由，浏览器后退可回列表 */}
             <Route path="/exams" element={<ExamPreviewPage />} />
+            <Route path="/exams/:examId" element={<ExamPreviewPage />} />
             {/* 申论规范词 */}
             <Route path="/terms" element={<TermsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

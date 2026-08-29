@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, PenLine, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { fetchMetaList } from '../lib/api'
-import { TOPICS, formatDate } from '../data'
+import { TOPICS, formatArticleNo, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { Ticker } from '../components/ui/Ticker'
@@ -58,7 +58,8 @@ export function LibraryPage() {
     if (value) next.set(key, value)
     else next.delete(key)
     if (key !== 'page') next.delete('page')
-    setParams(next, { replace: false })
+    /* 搜索逐字输入不推历史（否则按「后退」要逐字回退）；筛选/分页保留 push */
+    setParams(next, { replace: key === 'q' })
   }
 
   /* 全文搜索：API /api/articles?q= 支持服务端检索正文。
@@ -239,13 +240,23 @@ export function LibraryPage() {
 
       <main className="library-content">
         <section className="featured">
-          <article className="featured-main" onClick={() => open(articles[0])}>
-            <span className="tag">TODAY'S FEATURED　/　{articles[0]?.source}</span>
-            <h2>{articles[0]?.title}</h2>
+          <article
+            className={`featured-main${articles[0] ? '' : ' is-loading'}`}
+            onClick={() => articles[0] && open(articles[0])}
+            aria-disabled={!articles[0]}
+          >
+            <span className="tag">TODAY'S FEATURED　/　{articles[0]?.source ?? '…'}</span>
+            <h2>{articles[0]?.title ?? '正在加载…'}</h2>
             <div className="meta">
-              <span>{formatDate(articles[0]?.date ?? '')}　/　{articles[0]?.readTime} MIN</span>
+              <span>{articles[0] ? `${formatDate(articles[0].date)}　/　${articles[0].readTime} MIN` : ''}</span>
               <span>
-                <button className="open-reading text-btn" onClick={() => open(articles[0])}>
+                <button
+                  className="open-reading text-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (articles[0]) open(articles[0])
+                  }}
+                >
                   继续阅读　↗
                 </button>
               </span>
@@ -304,7 +315,7 @@ export function LibraryPage() {
           const isRead = p?.completed === true
           return (
             <button className="article-row" key={a.id} onClick={() => open(a)}>
-              <span className="article-no">{a.id.slice(1).padStart(3, '0')}</span>
+              <span className="article-no">{formatArticleNo(a.id)}</span>
               <h3 className={`article-title${isRead ? ' is-read' : ''}`}>{a.title}</h3>
               <span className="article-topic">
                 {a.topic} · {a.source}

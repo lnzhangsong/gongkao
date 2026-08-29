@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
+import { formatArticleNo } from '../data'
 import { formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
 
@@ -42,10 +43,11 @@ export function AdminPage() {
 
       <div className="toolbar">
         <div className="filters">
-          <button className="filter-pill active">{filtered.length} 篇文章</button>
-          <button className="filter-pill">
+          {/* 计数展示，非交互（原为假按钮，点击无反应） */}
+          <span className="filter-pill active">{filtered.length} 篇文章</span>
+          <span className="filter-pill">
             {filtered.filter((a) => a.id.startsWith('u')).length} 本地录入
-          </button>
+          </span>
         </div>
         <div className="toolbar-tools">
           <label className="search-box">
@@ -69,7 +71,7 @@ export function AdminPage() {
         <div className="admin-list">
           {pageItems.map((a) => (
             <div className="admin-row" key={a.id}>
-              <span className="article-no">{a.id.slice(1).padStart(3, '0')}</span>
+              <span className="article-no">{formatArticleNo(a.id)}</span>
               <div className="admin-row-main">
                 <h3 className="article-title">{a.title}</h3>
                 <span className="admin-row-meta">

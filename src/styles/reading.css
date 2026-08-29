@@ -1033,3 +1033,15 @@
     break-inside: avoid;
   }
 }
+
+/* 规范词方框标注（阅读设置「规范词框」开时，正文里的申论规范词以细框圈出） */
+.article-body .term-box {
+  border: 1px solid color-mix(in srgb, var(--accent-text) 55%, transparent);
+  border-radius: 2px;
+  padding: 0 3px;
+  margin: 0 1px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  cursor: help;
+  /* 行高较紧时不让方框撑乱行距 */
+  box-decoration-break: clone;
+}

@@ -16,6 +16,7 @@ import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
 import { usePrefersDark } from '../lib/prefersDark'
 import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
+import { TermText } from '../components/reading/TermHighlight'
 import { useFocusMode } from '../lib/useFocusMode'
 import { useReadingTimer } from '../hooks/useReadingTimer'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
@@ -89,6 +90,7 @@ export function ReadingPage() {
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setFocusMode = useReaderStore((s) => s.setFocusMode)
+  const setTermBox = useReaderStore((s) => s.setTermBox)
 
   /* 进入阅读页或切换字体时，按需加载正文字体（其余字体不下载）。
      字体就绪前保持骨架，避免刷新后先系统字体后 swap 跳变 */
@@ -379,7 +381,7 @@ export function ReadingPage() {
                 <Fragment key={i}>
                   <p data-para={i}>
                     {segments.map((seg, j) => {
-                      if (seg.annotations.length === 0) return <Fragment key={j}>{seg.text}</Fragment>
+                      if (seg.annotations.length === 0) return <TermText key={j} text={seg.text} />
                       const note = seg.annotations.find((a) => a.kind === 'note')
                       const anns = seg.annotations.filter((a) => a.kind !== 'note')
                       const cls = [
@@ -621,6 +623,7 @@ export function ReadingPage() {
           annotationsVisible={annotationsVisible}
           onToggleAnnotations={() => setAnnotationsVisible(!annotationsVisible)}
           onToggleFocus={() => setFocusMode(!settings.focusMode)}
+          onToggleTermBox={() => setTermBox(!settings.termBox)}
         />
       </main>
     </section>

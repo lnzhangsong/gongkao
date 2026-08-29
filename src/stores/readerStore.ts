@@ -33,6 +33,7 @@ interface ReaderState {
   setFocusMode: (v: boolean) => void
   setMeasure: (v: ReaderSettings['measure']) => void
   setIndent: (v: boolean) => void
+  setTermBox: (v: boolean) => void
   /** 应用导入的阅读器设置（缺省字段保持默认） */
   applySettings: (patch: Partial<ReaderSettings>) => void
   resetSettings: () => void
@@ -49,6 +50,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   focusMode: false,
   measure: 'normal',
   indent: true,
+  termBox: true,
 }
 
 export const useReaderStore = create<ReaderState>()(
@@ -70,6 +72,7 @@ export const useReaderStore = create<ReaderState>()(
       setFocusMode: (v) => set((s) => ({ settings: { ...s.settings, focusMode: v } })),
       setMeasure: (v) => set((s) => ({ settings: { ...s.settings, measure: v } })),
       setIndent: (v) => set((s) => ({ settings: { ...s.settings, indent: v } })),
+  setTermBox: (v) => set((s) => ({ settings: { ...s.settings, termBox: v } })),
       applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),

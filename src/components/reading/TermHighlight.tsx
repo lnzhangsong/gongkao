@@ -32,10 +32,14 @@ export function useGuifanTerms(): GuiFanTerm[] | null {
   return terms && terms.length > 0 ? terms : null
 }
 
-/* 泛词停用：字面太通用、在正文里几乎必然出现，圈出来全是噪音。
-   2 字词整体不参与阅读标注（企业/规范/创新…），3 字以上的泛词在此点名排除 */
+/* 阅读标注只收 3 字以上：企业/规范/创新这类 2 字泛词字面太通用，圈出来全是噪音 */
 const MIN_TERM_LEN = 3
-const STOP_TERMS = new Set(['生产力', '消费者', '经营者', '参与者', '管理者', '劳动力', '获得感', '幸福感', '安全感'])
+
+/** 划词查重：该文本是否已在词库（缓存未就绪时返回 null = 未知） */
+export function hasTermCached(text: string): boolean | null {
+  if (!cache) return null
+  return cache.some((t) => t.term === text)
+}
 
 export interface TermSegment {
   text: string
@@ -48,7 +52,7 @@ function buildIndex(terms: GuiFanTerm[]): Map<string, GuiFanTerm[]> {
   const idx = new Map<string, GuiFanTerm[]>()
   for (const t of terms) {
     const c = t.term[0]
-    if (!c || t.term.length < MIN_TERM_LEN || STOP_TERMS.has(t.term)) continue
+    if (!c || t.term.length < MIN_TERM_LEN) continue
     const list = idx.get(c)
     if (list) list.push(t)
     else idx.set(c, [t])

@@ -488,3 +488,84 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+
+/* ===================== 新增试卷与行编辑 ===================== */
+
+.exam-new-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.exam-new-input,
+.exam-new-select {
+  font: 13px var(--mono);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 7px 10px;
+}
+
+.exam-new-input:focus,
+.exam-new-select:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.exam-new-input {
+  width: 88px;
+}
+
+.exam-new-title {
+  width: 260px;
+  font-family: var(--serif);
+}
+
+.exam-sec-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font: 12px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin: 44px 0 0;
+}
+
+.exam-add-btn {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--accent-text);
+}
+
+.exam-add-btn:hover {
+  color: var(--accent);
+}
+
+.exam-del-btn {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.exam-del-btn:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 编辑态材料标签：细线在删除按钮之后 */
+.exam-mat-label {
+  gap: 14px;
+}
+
+.exam-q-edit-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font: 12px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}

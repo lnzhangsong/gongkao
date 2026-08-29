@@ -17,6 +17,8 @@ import { useReaderStore } from './stores/readerStore'
 import { usePrefersDark } from './lib/prefersDark'
 import { LoadingScreen } from './components/LoadingScreen'
 import { ConfirmHost } from './components/ui/ConfirmDialog'
+import { ToastHost } from './components/ui/Toast'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const LOADING_MIN_MS = 1400
 /** 收尾阶段：进度冲到 100% 后的停留时长 */
@@ -100,6 +102,7 @@ function App() {
   }
 
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       {/* 浏览器原生的 popstate 滚动恢复与 SPA 异步渲染不合拍，统一由 ScrollToTop 接管 */}
       <ScrollToTop />
@@ -125,7 +128,9 @@ function App() {
       </Suspense>
       {/* 全站确认/提示弹窗宿主（confirmDialog / alertDialog） */}
       <ConfirmHost />
+      <ToastHost />
     </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

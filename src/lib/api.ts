@@ -11,6 +11,17 @@ interface MetaListResponse {
   total: number
 }
 
+/** 写接口令牌（可选）：本地 api-server 设置 WRITE_TOKEN 后，
+ *  在浏览器 localStorage 写入同值 key 即可继续使用增删改 */
+function writeToken(): Record<string, string> {
+  try {
+    const t = localStorage.getItem('readbook:write-token')
+    return t ? { 'x-write-token': t } : {}
+  } catch {
+    return {}
+  }
+}
+
 const DEFAULT_TIMEOUT_MS = 20000
 
 /**
@@ -24,7 +35,9 @@ async function request<T>(url: string, init?: RequestInit, label?: string): Prom
   const ctrl = new AbortController()
   const timer = window.setTimeout(() => ctrl.abort(), DEFAULT_TIMEOUT_MS)
   try {
-    const res = await fetch(url, { ...init, signal: init?.signal ?? ctrl.signal })
+    const method = (init?.method ?? 'GET').toUpperCase()
+    const extra = method === 'GET' ? {} : { headers: { ...writeToken(), ...(init?.headers ?? {}) } }
+    const res = await fetch(url, { ...init, ...extra, signal: init?.signal ?? ctrl.signal })
     const body = await res.text()
     if (!res.ok) {
       let detail = String(res.status)

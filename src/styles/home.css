@@ -257,11 +257,11 @@
 
 .item:nth-child(1) {
   /* 暗色主题由 --pick-a/-b 提供低饱和暗面板；浅色主题回退到 blue/yellow */
-  --item-bg: var(--pick-a, var(--blue));
+  --item-bg: var(--pick-a, var(--surface-b));
 }
 
 .item:nth-child(2) {
-  --item-bg: var(--pick-b, var(--yellow));
+  --item-bg: var(--pick-b, var(--surface-a));
 }
 
 .item:hover {

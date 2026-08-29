@@ -9,7 +9,9 @@
     "dev:api": "node scripts/api-server.mjs",
     "dev:all": "node scripts/kill-port.mjs 8787 5173 && concurrently -n api,web -c blue,green --kill-others \"node scripts/api-server.mjs\" \"vite\"",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",
@@ -25,6 +27,7 @@
     "concurrently": "^10.0.5",
     "playwright-core": "^1.62.1",
     "typescript": "^5.9.3",
-    "vite": "^8.2.1"
+    "vite": "^8.2.1",
+    "vitest": "^4.1.11"
   }
 }

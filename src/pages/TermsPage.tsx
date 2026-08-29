@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addTerm, deleteTerm, fetchTerms, updateTerm, type GuiFanTerm } from '../lib/api'
-import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
+import { toast } from '../components/ui/Toast'
+import { alertDialog } from '../components/ui/ConfirmDialog'
+import { Pagination } from '../components/ui/Pagination'
 /* .exam-page/.exam-hero 容器版式定义在 exam-preview.css（真题页组件私有的，这里复用需显式引入） */
 import '../styles/exam-preview.css'
 import '../styles/terms.css'
@@ -23,6 +25,9 @@ export default function TermsPage() {
   const [loadError, setLoadError] = useState(false)
   const [theme, setTheme] = useState<string>('')
   const [q, setQ] = useState('')
+  /* 分页：3000+ 卡全量渲染滚动/过滤会卡 */
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 60
   /* 新增表单（与真题页「新增试卷」同交互） */
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ theme: '', term: '', example: '' })
@@ -59,14 +64,22 @@ export default function TermsPage() {
     )
   }, [terms, theme, q])
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const curPage = Math.min(page, totalPages)
+  const pageItems = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE)
+  const changeFilter = (apply: () => void) => {
+    apply()
+    setPage(1)
+  }
+
   const grouped = useMemo(() => {
     const g = new Map<string, GuiFanTerm[]>()
-    for (const t of filtered) {
+    for (const t of pageItems) {
       if (!g.has(t.theme)) g.set(t.theme, [])
       g.get(t.theme)!.push(t)
     }
     return [...g.entries()]
-  }, [filtered])
+  }, [pageItems])
 
   const submitAdd = async () => {
     const term = form.term.trim()
@@ -115,6 +128,15 @@ export default function TermsPage() {
     try {
       await deleteTerm(t.id)
       setTerms((prev) => prev?.filter((x) => x.id !== t.id) ?? prev)
+      /* 服务端删除：撤销 = 按原内容重新添加（新 id，内容不变） */
+      toast(`已删除「${t.term}」`, {
+        actionLabel: '撤销',
+        onAction: () => {
+          void addTerm({ theme: t.theme, term: t.term, example: t.example })
+            .then(() => load())
+            .catch(() => {})
+        },
+      })
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : String(e))
     }
@@ -184,7 +206,7 @@ export default function TermsPage() {
             全部　{terms.length}
           </button>
           {themes.map(([name, count]) => (
-            <button key={name} className={`terms-chip${theme === name ? ' active' : ''}`} onClick={() => setTheme(theme === name ? '' : name)}>
+            <button key={name} className={`terms-chip${theme === name ? ' active' : ''}`} onClick={() => changeFilter(() => setTheme(theme === name ? '' : name))}>
               {name}　{count}
             </button>
           ))}
@@ -258,11 +280,7 @@ export default function TermsPage() {
                     <button
                       className="text-btn terms-del-btn"
                       title="删除此词"
-                      onClick={() =>
-                        void confirmDialog(`确定删除「${t.term}」？`, { danger: true }).then((ok) => {
-                          if (ok) void remove(t)
-                        })
-                      }
+                      onClick={() => void remove(t)}
                     >
                       删除
                     </button>
@@ -274,6 +292,7 @@ export default function TermsPage() {
         </section>
       ))}
       </div>
+      <Pagination page={curPage} totalPages={totalPages} onChange={setPage} />
     </div>
   )
 }

@@ -146,6 +146,11 @@
   letter-spacing: -0.01em;
 }
 
+/* 正文等待期：给一个稳定的版面高度（首屏 60vh），内容就绪后淡入替换 */
+.article-body-pending {
+  min-height: 60vh;
+}
+
 /* 标注 */
 .highlighted {
   background: var(--highlight-bg);

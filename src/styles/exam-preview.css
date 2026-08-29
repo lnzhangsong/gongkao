@@ -569,3 +569,305 @@
   color: var(--muted);
   margin-bottom: 8px;
 }
+
+/* ---------- 站内确认弹窗 ---------- */
+.exam-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.exam-modal {
+  width: min(400px, calc(100vw - 48px));
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 7px 8px 0 var(--ink);
+  padding: 26px 26px 22px;
+}
+
+.exam-modal-msg {
+  margin: 0 0 22px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.exam-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.exam-btn-danger {
+  color: var(--paper);
+  background: var(--accent-text);
+  border-color: var(--accent-text);
+}
+
+/* ---------- 材料快速跳转锚点 ---------- */
+.exam-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.exam-jump-chip {
+  font-family: var(--mono);
+  font-size: calc(var(--label-size, 13px) - 2px);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.exam-jump-chip:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.exam-jump-chip.exam-jump-qs {
+  margin-left: auto;
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent-text) 45%, transparent);
+}
+
+.exam-mat-label,
+.exam-questions {
+  /* 锚点跳转时给顶部导航留出呼吸空间 */
+  scroll-margin-top: 24px;
+}
+
+/* 题目下方的关联材料跳转 */
+.exam-q-mats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+
+/* ---------- 材料折叠（阅读态点击标签） ---------- */
+.exam-mat-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+.exam-mat-toggle:hover span:first-child,
+.exam-mat-toggle:focus-visible span:first-child {
+  color: var(--ink);
+}
+
+/* 细线夹在标签与字数之间（::after 默认排最后，用 order 调到中间） */
+.exam-mat-toggle::after {
+  order: 2;
+}
+
+.exam-mat-meta {
+  order: 3;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--muted) 75%, var(--paper));
+  white-space: nowrap;
+}
+
+.exam-mat-toggle.collapsed .exam-mat-meta {
+  color: var(--accent-text);
+}
+
+/* 编辑条：题号 + 题型下拉 */
+.exam-q-edit-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 编辑态：年份/级别调整 */
+.exam-meta-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exam-year-input {
+  width: 76px;
+}
+
+/* 编辑态 meta 行：年份/级别控件与统计文字同行对齐 */
+.exam-page .article-meta {
+  align-items: center;
+  gap: 14px;
+}
+
+.exam-meta-edit .exam-select {
+  padding: 2px 6px;
+}
+
+.exam-year-input {
+  height: 26px;
+}
+
+/* ---------- 编辑工具条：字段在左、操作在右，与统计行分离 ---------- */
+.exam-edit-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 12px;
+  margin-top: 14px;
+  background: color-mix(in srgb, var(--muted) 6%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.exam-edit-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exam-edit-field label {
+  font-family: var(--mono);
+  font-size: calc(var(--label-size, 13px) - 1px);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.exam-edit-field .exam-select {
+  padding: 3px 8px;
+}
+
+.exam-year-input {
+  width: 78px;
+}
+
+.exam-saved,
+.exam-edit-bar .exam-warn {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.exam-edit-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 上移/下移按钮 */
+.exam-move-btn {
+  font-size: calc(var(--label-size, 13px) - 2px);
+  color: var(--muted);
+  padding: 0 2px;
+}
+
+.exam-move-btn:hover {
+  color: var(--ink);
+}
+
+/* 题目编辑：字数/分值字段行 */
+.exam-q-fields {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.exam-num-input {
+  width: 64px;
+}
+
+.exam-q-fields-hint {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--muted) 70%, var(--paper));
+}
+
+/* 上移/下移：成对小方块按钮组，首末禁用对应方向 */
+.exam-move-group {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.exam-move-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.exam-move-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.exam-move-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ---------- 层级卡片底色（副省级=蓝 / 地市级=黄 / 行政执法=橙，随主题取 --pick 混色） ---------- */
+.exam-card.exam-lv-a {
+  background: var(--pick-a, color-mix(in srgb, var(--blue) 45%, var(--paper)));
+}
+
+.exam-card.exam-lv-b {
+  background: var(--pick-b, color-mix(in srgb, var(--yellow) 14%, var(--paper)));
+}
+
+.exam-card.exam-lv-c {
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper));
+}
+
+/* 彩底上小字与统计用中性深灰，任何卡色上 ≥4.5（与首页 .item 同策略） */
+.exam-card[class*='exam-lv-'] small {
+  color: color-mix(in srgb, var(--ink) 80%, var(--paper));
+}
+
+.exam-card[class*='exam-lv-'] .exam-card-meta {
+  color: color-mix(in srgb, var(--ink) 65%, var(--paper));
+}
+
+/* 层级水印单字：右下角，display 字体低透明度（同首页 .index 的存在感逻辑） */
+.exam-card-mark {
+  position: absolute;
+  right: 12px;
+  bottom: -6px;
+  font: 400 56px/1 var(--display);
+  color: var(--ink);
+  opacity: 0.13;
+  pointer-events: none;
+}
+
+/* 年份标题：无衬线粗数字，直接做成大号水印（低透明度） */
+.exam-year-head h2 {
+  font: 800 64px/1 var(--sans);
+  letter-spacing: -0.06em;
+  color: var(--ink);
+  opacity: 0.14;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-year-head {
+  align-items: center;
+}

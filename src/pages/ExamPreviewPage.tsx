@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta } from '../lib/api'
+import { createExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta } from '../lib/api'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
 import { usePrefersDark } from '../lib/prefersDark'
@@ -52,6 +52,8 @@ export default function ExamPreviewPage() {
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newForm, setNewForm] = useState({ year: String(new Date().getFullYear() + 1), level: '地市级', title: '' })
   /* 与阅读页同源的排版设置与工具面板（字体/字号/行距/主题），正文渲染完全一致 */
   const settings = useReaderStore((s) => s.settings)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -201,6 +203,19 @@ export default function ExamPreviewPage() {
           </header>
 
           {draft.materials.length > 0 && (
+            <div className="exam-sec-bar">
+              <span>给定资料 · {draft.materials.length} 段</span>
+              {editing && (
+                <button
+                  className="text-btn exam-add-btn"
+                  onClick={() => patchDraft((d) => void d.materials.push({ idx: (d.materials.at(-1)?.idx ?? 0) + 1, label: `材料${d.materials.length + 1}`, content: '' }))}
+                >
+                  ＋ 添加材料
+                </button>
+              )}
+            </div>
+          )}
+          {draft.materials.length > 0 && (
             <div
               ref={bodyRef}
               className={`article-body${settings.focusMode ? ' focus-mode' : ''}${settings.indent ? '' : ' no-indent'}`}
@@ -209,7 +224,15 @@ export default function ExamPreviewPage() {
               {editing
                 ? draft.materials.map((m) => (
                     <Fragment key={m.idx}>
-                      <h3 className="exam-mat-label">{m.label}</h3>
+                      <h3 className="exam-mat-label">
+                        <span>{m.label}</span>
+                        <button
+                          className="text-btn exam-del-btn"
+                          onClick={() => patchDraft((d) => void (d.materials = d.materials.filter((x) => x.idx !== m.idx)))}
+                        >
+                          删除此段
+                        </button>
+                      </h3>
                       <textarea
                         className="exam-ta"
                         rows={Math.min(20, Math.max(4, Math.ceil(m.content.length / 40)))}
@@ -232,7 +255,17 @@ export default function ExamPreviewPage() {
           <section className="exam-questions" style={readerVars}>
             <div className="content-head">
               <h2>作答要求</h2>
-              <span>{draft.questions.length} 题</span>
+              <span>
+                {draft.questions.length} 题
+                {editing && (
+                  <button
+                    className="text-btn exam-add-btn"
+                    onClick={() => patchDraft((d) => void d.questions.push({ idx: (d.questions.at(-1)?.idx ?? 0) + 1, type: null, stem: '', requirement: '', wordLimit: null, points: null, answer: null, answerMatched: false }))}
+                  >
+                    　＋ 添加题目
+                  </button>
+                )}
+              </span>
             </div>
             {draft.questions.map((q) => (
               <article key={q.idx} className="exam-q">
@@ -252,6 +285,15 @@ export default function ExamPreviewPage() {
                 </header>
                 {editing ? (
                   <>
+                    <div className="exam-q-edit-bar">
+                      <span>第 {q.idx} 题</span>
+                      <button
+                        className="text-btn exam-del-btn"
+                        onClick={() => patchDraft((d) => void (d.questions = d.questions.filter((x) => x.idx !== q.idx)))}
+                      >
+                        删除此题
+                      </button>
+                    </div>
                     <textarea
                       className="exam-ta"
                       rows={Math.min(8, Math.max(3, Math.ceil(q.stem.length / 40)))}
@@ -349,6 +391,57 @@ export default function ExamPreviewPage() {
         </div>
         <div className="exam-hero-side">
           <p className="subpage-copy">历年国考申论真题与参考答案，按年份、层级整理，和人民日报时评对照着读。</p>
+          {creating ? (
+            <div className="exam-new-form">
+              <input
+                className="exam-new-input"
+                type="number"
+                value={newForm.year}
+                onChange={(e) => setNewForm((f) => ({ ...f, year: e.target.value }))}
+                aria-label="年份"
+              />
+              <select
+                className="exam-new-select"
+                value={newForm.level}
+                onChange={(e) => setNewForm((f) => ({ ...f, level: e.target.value }))}
+                aria-label="层级"
+              >
+                {['副省级', '地市级', '行政执法', '未分级'].map((l) => (
+                  <option key={l}>{l}</option>
+                ))}
+              </select>
+              <input
+                className="exam-new-input exam-new-title"
+                placeholder="试卷标题"
+                value={newForm.title}
+                onChange={(e) => setNewForm((f) => ({ ...f, title: e.target.value }))}
+              />
+              <button
+                className="ghost"
+                onClick={async () => {
+                  const year = parseInt(newForm.year, 10)
+                  const title = newForm.title.trim() || `${year}年国家公务员考试《申论》题（${newForm.level}）`
+                  try {
+                    const { id } = await createExam({ year, level: newForm.level, title })
+                    setCreating(false)
+                    open(id)
+                    setEditing(true)
+                  } catch (e) {
+                    alert(String(e))
+                  }
+                }}
+              >
+                创建
+              </button>
+              <button className="text-btn" onClick={() => setCreating(false)} style={{ color: 'var(--muted)' }}>
+                取消
+              </button>
+            </div>
+          ) : (
+            <button className="ghost" onClick={() => setCreating(true)}>
+              ＋ 新增试卷
+            </button>
+          )}
         </div>
       </header>
       {grouped.map(([year, list]) => (

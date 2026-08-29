@@ -98,3 +98,14 @@ export async function saveExam(
   if (!res.ok) throw new Error(`保存失败 API ${res.status}`)
   return res.json() as Promise<{ ok: boolean }>
 }
+
+/** 新增空白试卷（仅本地 api-server） */
+export async function createExam(paper: { year: number; level: string; title: string }): Promise<{ ok: boolean; id: string }> {
+  const res = await fetch('/api/exams', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(paper),
+  })
+  if (!res.ok) throw new Error(`创建失败 ${(await res.json()).error ?? res.status}`)
+  return res.json() as Promise<{ ok: boolean; id: string }>
+}

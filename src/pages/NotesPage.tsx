@@ -4,7 +4,7 @@ import { Download, Search, Trash2, X } from 'lucide-react'
 
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
-import { confirmDialog } from '../components/ui/ConfirmDialog'
+import { toast } from '../components/ui/Toast'
 import { formatLocalDate } from '../data'
 import { downloadJSON, downloadText, formatDateTime, monthOf } from '../lib/export'
 import { Pagination } from '../components/ui/Pagination'
@@ -51,6 +51,7 @@ function kindLabel(kinds: Set<AnnotationKind>): string {
 
 export function NotesPage() {
   const annotations = useAnnotationStore((s) => s.annotations)
+  const addAnnotation = useAnnotationStore((s) => s.add)
   const removeMany = useAnnotationStore((s) => s.removeMany)
   const update = useAnnotationStore((s) => s.update)
   const getArticle = useArticleStore((s) => s.getArticle)
@@ -213,27 +214,31 @@ export function NotesPage() {
     downloadText(`readbook-notes-${new Date().toISOString().slice(0, 10)}.md`, md)
   }
 
-  const deleteSelected = async () => {
+  /** 删除摘录：不弹确认，5 秒内可撤销（误触一键恢复整段标注与笔记） */
+  const undoableRemove = (removed: Annotation[]) => {
+    removeMany(removed.map((a) => a.id))
+    toast(`已删除${removed.length > 1 ? ` ${removed.length} 条摘录` : '摘录'}`, {
+      actionLabel: '撤销',
+      onAction: () => {
+        for (const a of removed) {
+          const { id: _omit, ...rest } = a
+          addAnnotation(rest)
+        }
+      },
+    })
+  }
+
+  const deleteSelected = () => {
     if (checked.size === 0) return
-    const n = checked.size
-    const ok = await confirmDialog(
-      n > 1
-        ? `删除选中的 ${n} 段摘录？其中的高亮、划线与笔记会一并删除，不可恢复。`
-        : '删除这段摘录？其中的高亮、划线与笔记会一并删除，不可恢复。',
-      { danger: true },
-    )
-    if (!ok) return
-    removeMany(selectedAnns(checked).map((a) => a.id))
+    undoableRemove(selectedAnns(checked))
     setChecked(new Set())
     setSelectedKey(null)
   }
 
-  const deleteOne = async (key: string) => {
+  const deleteOne = (key: string) => {
     const row = rows.find((r) => r.key === key)
     if (!row) return
-    const ok = await confirmDialog('删除这段摘录？其中的高亮、划线与笔记会一并删除，不可恢复。', { danger: true })
-    if (!ok) return
-    removeMany(row.anns.map((a) => a.id))
+    undoableRemove(row.anns)
     if (selectedKey === key) setSelectedKey(null)
   }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { confirmDialog } from '../components/ui/ConfirmDialog'
+import { toast } from '../components/ui/Toast'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { computeSelectionRange, flatText } from '../lib/offsets'
 import { NARROW_BREAKPOINT } from '../lib/breakpoints'
@@ -210,6 +210,29 @@ export function useAnnotationPopover(
     if (created) openAnnPopover([created.id], created.x, created.y)
   }
 
+  /* 划词工具栏打开时的键盘替代：H=高亮 / U=下划线 / N=笔记（Esc 关闭已另有监听） */
+  useEffect(() => {
+    if (!popover) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) return
+      const k = e.key.toLowerCase()
+      if (k === 'h') {
+        e.preventDefault()
+        applyHighlight(hlColor)
+      } else if (k === 'u') {
+        e.preventDefault()
+        applyUnderline(ulStyle)
+      } else if (k === 'n') {
+        e.preventDefault()
+        startNote()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  })
+
   /** 删除正在编辑且内容为空的笔记（没填就不保留） */
   const removeEmptyDraftNote = () => {
     if (!editingNoteId) return
@@ -254,18 +277,14 @@ export function useAnnotationPopover(
     openAnnPopover(ids, rect.left + rect.width / 2 - bodyRect.left, rect.top - bodyRect.top)
   }
 
-  /** 按类型删除该段标注（高亮/下划线/笔记单独删）；
-   *  笔记是手工长文本，删除前确认防误触丢稿 */
-  const deleteAnnKind = async (kind: AnnotationKind) => {
+  /** 按类型删除该段标注（高亮/下划线/笔记单独删）。
+   *  删除不弹确认，改为 5 秒内可撤销的 toast：误触一键恢复，顺手删除少一步 */
+  const deleteAnnKind = (kind: AnnotationKind) => {
     if (!annPopover) return
     const targets = annPopover.ids
       .map((id) => articleAnnotations.find((a) => a.id === id))
       .filter((a): a is Annotation => a !== undefined && a.kind === kind)
-    if (kind === 'note') {
-      const n = targets.length
-      const ok = await confirmDialog(n > 1 ? `删除这 ${n} 条笔记？删除后不可恢复。` : '删除这条笔记？删除后不可恢复。', { danger: true })
-      if (!ok) return
-    }
+    if (targets.length === 0) return
     removeMany(targets.map((a) => a.id))
     setAnnPopover(null)
     // 只关闭被删除的笔记，其他笔记保持展开
@@ -275,6 +294,16 @@ export function useAnnotationPopover(
         if (a.kind === 'note') next.delete(a.id)
       })
       return next
+    })
+    const label = kind === 'note' ? '笔记' : kind === 'highlight' ? '高亮' : '下划线'
+    toast(`已删除${label}${targets.length > 1 ? ` ×${targets.length}` : ''}`, {
+      actionLabel: '撤销',
+      onAction: () => {
+        for (const a of targets) {
+          const { id: _omit, ...rest } = a
+          addAnnotation(rest)
+        }
+      },
     })
   }
 

@@ -91,6 +91,22 @@ async function cacheGet<T>(key: string): Promise<T | undefined> {
 /** 并发去重：同一篇文章的 ensureContent 只发一次请求（阅读页 + 预取等同时调用时） */
 const ensureInflight = new Map<string, Promise<Article | undefined>>()
 
+/** 全文运行时缓存上限：超出后按进入顺序淘汰最早的（长年使用下内存不无限膨胀）。
+ *  只影响 contentCache 缓存层，localEdits / articles 本体不受影响 */
+const CONTENT_CACHE_LIMIT = 30
+const contentCacheOrder: string[] = []
+
+function putContentCache(s: ArticleState, id: string, article: Article): Partial<ArticleState> {
+  const i = contentCacheOrder.indexOf(id)
+  if (i >= 0) contentCacheOrder.splice(i, 1)
+  contentCacheOrder.push(id)
+  const cache = { ...s.contentCache, [id]: article }
+  while (contentCacheOrder.length > CONTENT_CACHE_LIMIT) {
+    delete cache[contentCacheOrder.shift()!]
+  }
+  return { contentCache: cache }
+}
+
 /** 用 API meta + localEdits/deletedIds 重建合并视图 */function buildArticles(
   apiMeta: Article[],
   localEdits: Record<string, Article>,
@@ -150,14 +166,15 @@ export const useArticleStore = create<ArticleState>()(
         if (cached?.content?.length) return cached
         const current = get().articles.find((a) => a.id === id)
         if (current?.content?.length) {
-          set((s) => ({ contentCache: { ...s.contentCache, [id]: current } }))
+          set((s) => putContentCache(s, id, current))
           return current
         }
         const local = get().localEdits[id]
         if (local?.content?.length) {
-          set((s) => ({ contentCache: { ...s.contentCache, [id]: local } }))
+          set((s) => putContentCache(s, id, local))
           return local
         }
+
         const inflight = ensureInflight.get(id)
         if (inflight) return inflight
         const task = (async () => {
@@ -165,7 +182,7 @@ export const useArticleStore = create<ArticleState>()(
             const full = await fetchArticle(id)
             void cachePut(contentCacheKey(id), full)
             set((s) => ({
-              contentCache: { ...s.contentCache, [id]: full },
+              ...putContentCache(s, id, full),
               articles: s.articles.map((a) => (a.id === id ? full : a)),
             }))
             return full
@@ -174,7 +191,7 @@ export const useArticleStore = create<ArticleState>()(
             const offline = await cacheGet<Article>(contentCacheKey(id))
             if (offline?.content?.length) {
               set((s) => ({
-                contentCache: { ...s.contentCache, [id]: offline },
+                ...putContentCache(s, id, offline),
                 articles: s.articles.some((a) => a.id === id)
                   ? s.articles.map((a) => (a.id === id ? offline : a))
                   : s.articles,

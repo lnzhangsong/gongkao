@@ -49,7 +49,7 @@ body {
 }
 
 ::selection {
-  background: var(--yellow);
+  background: var(--surface-a);
   /* 暗色主题下 yellow 是亮 lime，文字须用深色（body-bg）而非浅色 ink，
      否则亮底配亮字（≈1:1）；浅色主题 body-bg 本就是近黑，行为不变 */
   color: var(--body-bg);
@@ -1001,6 +1001,41 @@ a {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* ---------- 全局错误兜底 ---------- */
+.error-boundary {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- 轻量 toast（删除撤销等一次性反馈） ---------- */
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 16px;
+  background: var(--dark);
+  color: var(--dark-ink);
+  font: 12px var(--mono);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
+}
+
+.app-toast button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
 }
 
 /* ---------- 内容淡入过渡（数据/字体就绪挂载时轻轻上浮淡入，替代骨架屏） ---------- */

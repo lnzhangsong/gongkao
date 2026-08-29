@@ -209,7 +209,21 @@ const server = createServer((req, res) => {
     req.on('end', () => {
       try {
         const data = JSON.parse(body)
-        const updPaper = d.prepare('UPDATE papers SET title = ?, warnings = ? WHERE id = ?')
+        // 年份/级别可调：变化时同步改 papers.id 并迁移 materials/questions
+        const d = openExamDb({ write: true })
+        const paper = d.prepare('SELECT * FROM papers WHERE id = ?').get(id)
+        if (!paper) {
+          void respond(json({ error: 'not found' }, 404))
+          return
+        }
+        const newYear = data.year ? parseInt(data.year, 10) : paper.year
+        const newLevel = typeof data.level === 'string' && data.level.trim() ? data.level.trim() : paper.level
+        const newId = `guokao-shenlun-${newYear}-${newLevel}`
+        if (newId !== id && d.prepare('SELECT id FROM papers WHERE id = ?').get(newId)) {
+          void respond(json({ error: `已存在同年份同层级的试卷：${newId}` }, 409))
+          return
+        }
+        const updPaper = d.prepare('UPDATE papers SET id = ?, year = ?, level = ?, title = ?, warnings = ? WHERE id = ?')
         const delMats = d.prepare('DELETE FROM materials WHERE paper_id = ?')
         const insMat = d.prepare('INSERT INTO materials (id, paper_id, idx, label, content, chars) VALUES (?, ?, ?, ?, ?, ?)')
         const delQs = d.prepare('DELETE FROM questions WHERE paper_id = ?')
@@ -218,34 +232,65 @@ const server = createServer((req, res) => {
         )
         d.exec('BEGIN')
         updPaper.run(
+          newId, newYear, newLevel,
           typeof data.title === 'string' ? data.title : '',
           typeof data.warnings === 'string' ? data.warnings : null,
           id,
         )
+        if (newId !== id) {
+          d.prepare('UPDATE materials SET paper_id = ? WHERE paper_id = ?').run(newId, id)
+          d.prepare('UPDATE questions SET paper_id = ? WHERE paper_id = ?').run(newId, id)
+        }
         // 整卷替换：materials/questions 按提交顺序重排 idx（支持新增与删除行）
-        delMats.run(id)
+        delMats.run(newId)
         for (const [i, m] of (data.materials ?? []).entries()) {
           if (typeof m.content !== 'string') continue
-          insMat.run(`${id}-m${i + 1}`, id, i + 1, m.label || `材料${i + 1}`, m.content, m.content.length)
+          insMat.run(`${newId}-m${i + 1}`, newId, i + 1, m.label || `材料${i + 1}`, m.content, m.content.length)
         }
-        delQs.run(id)
+        delQs.run(newId)
         for (const [i, q] of (data.questions ?? []).entries()) {
           if (typeof q.stem !== 'string') continue
           const wl = q.wordLimit ?? null
           insQ.run(
-            `${id}-q${i + 1}`, id, i + 1,
+            `${newId}-q${i + 1}`, newId, i + 1,
             q.type || null, q.stem, q.requirement || '', wl,
             wl ? JSON.stringify({ max: wl }) : null,
             q.points ?? null, q.answer ?? null, q.answer ? 1 : 0,
           )
         }
         d.exec('COMMIT')
-        void respond(json({ ok: true }))
+        void respond(json({ ok: true, id: newId }))
       } catch (err) {
         try { d.exec('ROLLBACK') } catch {}
         void respond(json({ error: String(err) }, 400))
       }
     })
+    return
+  }
+
+  // 删除试卷（连同其材料与题目）
+  if (url.pathname.startsWith('/api/exams/') && req.method === 'DELETE') {
+    const id = decodeURIComponent(url.pathname.slice('/api/exams/'.length))
+    const d = openExamDb({ write: true })
+    const delPaper = d.prepare('DELETE FROM papers WHERE id = ?')
+    const delMats = d.prepare('DELETE FROM materials WHERE paper_id = ?')
+    const delQs = d.prepare('DELETE FROM questions WHERE paper_id = ?')
+    d.exec('BEGIN')
+    try {
+      delMats.run(id)
+      delQs.run(id)
+      const info = delPaper.run(id)
+      if (info.changes === 0) {
+        d.exec('ROLLBACK')
+        void respond(json({ error: 'not found' }, 404))
+        return
+      }
+      d.exec('COMMIT')
+      void respond(json({ ok: true }))
+    } catch (err) {
+      try { d.exec('ROLLBACK') } catch {}
+      void respond(json({ error: String(err) }, 400))
+    }
     return
   }
 

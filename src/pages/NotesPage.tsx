@@ -376,8 +376,17 @@ export function NotesPage() {
 
           {filtered.length === 0 && (
             <div className="empty-state">
-              <strong>还没有摘录</strong>
-              在阅读页选中文字，即可高亮、划线或添加笔记
+              {rows.length === 0 ? (
+                <>
+                  <strong>还没有摘录</strong>
+                  在阅读页选中文字，即可高亮、划线或添加笔记
+                </>
+              ) : (
+                <>
+                  <strong>没有匹配的摘录</strong>
+                  换个关键词或筛选条件试试
+                </>
+              )}
             </div>
           )}
 

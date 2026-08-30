@@ -22,6 +22,7 @@ import { useFocusMode } from '../lib/useFocusMode'
 import { useReadingTimer } from '../hooks/useReadingTimer'
 import { useCycleTheme } from '../hooks/useCycleTheme'
 import { useIsNarrow } from '../lib/breakpoints'
+import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
 import { paragraphStarts, splitParagraph } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
@@ -60,6 +61,9 @@ export function ReadingPage() {
       nextArticle: idx >= 0 && idx < allArticles.length - 1 ? allArticles[idx + 1] : undefined,
     }
   }, [allArticles, articleId])
+
+  /** 悬停预取相邻篇正文：读完一篇点「下一篇」时正文多半已在缓存 */
+  const hoverWarm = useHoverPrefetch()
 
   const [contentReady, setContentReady] = useState(false)
   /** 正文拉取失败（服务不可用 / 文章不存在）：显示错误态而不是无限骨架 */
@@ -431,12 +435,12 @@ export function ReadingPage() {
             {(prevArticle || nextArticle) && (
               <nav className="article-pager-top" aria-label="相邻文章">
                 {prevArticle ? (
-                  <Link to={`/reading/${prevArticle.id}`}>←　上一篇</Link>
+                  <Link to={`/reading/${prevArticle.id}`} {...hoverWarm(() => void ensureContent(prevArticle.id))}>←　上一篇</Link>
                 ) : (
                   <span aria-hidden="true" />
                 )}
                 {nextArticle ? (
-                  <Link to={`/reading/${nextArticle.id}`}>下一篇　→</Link>
+                  <Link to={`/reading/${nextArticle.id}`} {...hoverWarm(() => void ensureContent(nextArticle.id))}>下一篇　→</Link>
                 ) : (
                   <span aria-hidden="true" />
                 )}
@@ -675,7 +679,7 @@ export function ReadingPage() {
           {(prevArticle || nextArticle) && (
             <nav className="article-pager" aria-label="相邻文章">
               {prevArticle ? (
-                <Link className="pager-item prev" to={`/reading/${prevArticle.id}`}>
+                <Link className="pager-item prev" to={`/reading/${prevArticle.id}`} {...hoverWarm(() => void ensureContent(prevArticle.id))}>
                   <small>←　上一篇</small>
                   <span>{prevArticle.title}</span>
                 </Link>
@@ -683,7 +687,7 @@ export function ReadingPage() {
                 <span />
               )}
               {nextArticle ? (
-                <Link className="pager-item next" to={`/reading/${nextArticle.id}`}>
+                <Link className="pager-item next" to={`/reading/${nextArticle.id}`} {...hoverWarm(() => void ensureContent(nextArticle.id))}>
                   <small>下一篇　↗</small>
                   <span>{nextArticle.title}</span>
                 </Link>

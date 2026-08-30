@@ -3,6 +3,7 @@ import { addTerm, deleteTerm, fetchTerms, updateTerm, type GuiFanTerm } from '..
 import { toast } from '../components/ui/Toast'
 import { alertDialog } from '../components/ui/ConfirmDialog'
 import { Pagination } from '../components/ui/Pagination'
+import { ApiLoading } from '../components/ui/ApiLoading'
 /* .exam-page/.exam-hero 容器版式定义在 exam-preview.css（真题页组件私有的，这里复用需显式引入） */
 import '../styles/exam-preview.css'
 import '../styles/terms.css'
@@ -213,6 +214,8 @@ export default function TermsPage() {
         </nav>
       )}
 
+      {!loadError && terms === null && <ApiLoading label="正在加载规范词库…" />}
+
       {loadError && terms !== null && (
         <div className="empty-state">
           <strong>规范词库暂时无法加载</strong>
@@ -223,7 +226,14 @@ export default function TermsPage() {
         </div>
       )}
 
-      {!loadError && terms !== null && filtered.length === 0 && (
+      {!loadError && terms !== null && terms.length === 0 && (
+        <div className="empty-state">
+          <strong>词库还是空的</strong>
+          点右上角「新增规范词」，或在阅读页划词存入
+        </div>
+      )}
+
+      {!loadError && terms !== null && terms.length > 0 && filtered.length === 0 && (
         <p className="terms-empty">没有匹配「{q}」的规范词，换个说法试试。</p>
       )}
 

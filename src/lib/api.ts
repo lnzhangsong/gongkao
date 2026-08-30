@@ -57,6 +57,17 @@ export function invalidateCache(prefixes: string[]): void {
   }
 }
 
+/**
+ * 空闲预取：首屏就绪后在浏览器空闲时把真题列表与规范词全量拉进会话缓存，
+ * 用户首次进入这些页面也直接渲染、不见加载态。失败静默（进入页面时再正常请求）。
+ */
+export function prefetchIdle(): void {
+  const warm = (fn: () => Promise<unknown>) => void fn().catch(() => {})
+  warm(() => cachedGet('/api/exams', () => request('/api/exams', { cache: 'reload' })))
+  warm(() => cachedGet('/api/terms', () => request('/api/terms')))
+}
+
+
 
 /**
  * 统一请求封装：

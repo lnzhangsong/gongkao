@@ -133,6 +133,9 @@ export function LibraryPage() {
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
+  /** 悬停预取正文：点进阅读页时全文多半已在缓存 */
+  const warm = (a: Article) => void useArticleStore.getState().ensureContent(a.id)
+
   /* 主题筛选：移动端默认收起为一行，展开后显示全部（桌面端始终展开） */
   const [topicsExpanded, setTopicsExpanded] = useState(false)
 
@@ -310,7 +313,7 @@ export function LibraryPage() {
           const p = progress[a.id]
           const isRead = p?.completed === true
           return (
-            <button className="article-row" key={a.id} onClick={() => open(a)}>
+            <button className="article-row" key={a.id} onClick={() => open(a)} onMouseEnter={() => warm(a)}>
               <span className="article-no">{formatArticleNo(a.id)}</span>
               <h3 className={`article-title${isRead ? ' is-read' : ''}`}>{a.title}</h3>
               <span className="article-topic">

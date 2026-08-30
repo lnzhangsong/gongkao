@@ -9,6 +9,7 @@ import { Pagination } from '../components/ui/Pagination'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { Ticker } from '../components/ui/Ticker'
 import { ApiLoading } from '../components/ui/ApiLoading'
+import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import type { Article, ArticleSource } from '../types'
 
 const PAGE_SIZE = 8
@@ -133,8 +134,9 @@ export function LibraryPage() {
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
-  /** 悬停预取正文：点进阅读页时全文多半已在缓存 */
+  /** 悬停预取正文：点进阅读页时全文多半已在缓存（120ms 防飞掠） */
   const warm = (a: Article) => void useArticleStore.getState().ensureContent(a.id)
+  const hoverWarm = useHoverPrefetch()
 
   /* 主题筛选：移动端默认收起为一行，展开后显示全部（桌面端始终展开） */
   const [topicsExpanded, setTopicsExpanded] = useState(false)
@@ -313,7 +315,7 @@ export function LibraryPage() {
           const p = progress[a.id]
           const isRead = p?.completed === true
           return (
-            <button className="article-row" key={a.id} onClick={() => open(a)} onMouseEnter={() => warm(a)}>
+            <button className="article-row" key={a.id} onClick={() => open(a)} {...hoverWarm(() => warm(a))}>
               <span className="article-no">{formatArticleNo(a.id)}</span>
               <h3 className={`article-title${isRead ? ' is-read' : ''}`}>{a.title}</h3>
               <span className="article-topic">

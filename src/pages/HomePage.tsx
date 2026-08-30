@@ -5,6 +5,7 @@ import { loadDisplayFont } from '../lib/fonts'
 import { formatArticleNo } from '../data'
 import { useEffect } from 'react'
 import { Ticker } from '../components/ui/Ticker'
+import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import type { Article } from '../types'
 
 export function HomePage() {
@@ -77,8 +78,9 @@ export function HomePage() {
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
-  /** 悬停预取正文：点进阅读页时全文多半已在缓存，正文即刻呈现 */
+  /** 悬停预取正文：点进阅读页时全文多半已在缓存，正文即刻呈现（120ms 防飞掠） */
   const warm = (a: Article) => void useArticleStore.getState().ensureContent(a.id)
+  const hoverWarm = useHoverPrefetch()
 
   /** 入场卡角标编号（真实文章编号） */
   const entryNo = entry ? formatArticleNo(entry.article.id) : '000'
@@ -113,7 +115,7 @@ export function HomePage() {
         </div>
         <div className="stage">
           <div className="halo" />
-          <button className="entry" onClick={() => entry && open(entry.article)} onMouseEnter={() => entry && warm(entry.article)} disabled={!entry} aria-disabled={!entry}>
+          <button className="entry" onClick={() => entry && open(entry.article)} {...(entry ? hoverWarm(() => warm(entry.article)) : {})} disabled={!entry} aria-disabled={!entry}>
             <small>READBOOK / NO. {entryNo}</small>
             <strong>
               开始
@@ -140,7 +142,7 @@ export function HomePage() {
                 className="main-card"
                 style={{ cursor: 'pointer' }}
                 onClick={() => open(continueList[0].article)}
-                onMouseEnter={() => warm(continueList[0].article)}
+                {...hoverWarm(() => warm(continueList[0].article))}
               >
                 <span className="tag">
                   {continueList[0].article.source} · {continueList[0].article.topic}
@@ -161,7 +163,7 @@ export function HomePage() {
             </div>
           ) : (
             <div className="reading">
-              <article className="main-card" style={{ cursor: 'pointer' }} onClick={() => open(entry.article)} onMouseEnter={() => warm(entry.article)}>
+              <article className="main-card" style={{ cursor: 'pointer' }} onClick={() => open(entry.article)} {...hoverWarm(() => warm(entry.article))}>
                 <span className="tag">
                   {entry.article.source} · {entry.article.topic}
                 </span>
@@ -193,7 +195,7 @@ export function HomePage() {
                 </div>
               </div>
             </div>
-            <button className="ghost" onClick={() => open(recentList[0].article)} onMouseEnter={() => warm(recentList[0].article)}>
+            <button className="ghost" onClick={() => open(recentList[0].article)} {...hoverWarm(() => warm(recentList[0].article))}>
               继续阅读　↗
             </button>
           </div>
@@ -201,7 +203,7 @@ export function HomePage() {
 
         <div className="list">
           {picks.map((a, i) => (
-            <button className="item" key={a.id} onClick={() => open(a)} onMouseEnter={() => warm(a)}>
+            <button className="item" key={a.id} onClick={() => open(a)} {...hoverWarm(() => warm(a))}>
               <small>
                 {String(i + 1).padStart(2, '0')} / {a.topic}
               </small>

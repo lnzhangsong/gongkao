@@ -10,6 +10,7 @@
  */
 import { createServer } from 'node:http'
 import { DatabaseSync } from 'node:sqlite'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -43,10 +44,22 @@ function mapMetaRow(r) {
     ...(r.finish_note ? { finishNote: r.finish_note } : {}),
   }
 }
-// kw 非空时全文搜索（标题/摘要/正文；instr(content_json, kw)，与 api/articles.ts 同逻辑）
+// kw 非空时全文搜索（标题/摘要/正文）。≥3 字符走 FTS5 trigram 索引（中文子串匹配，
+// 见 scripts/migrate-fts.mjs）；短词 trigram 无法命中，回退 LIKE/instr 全扫
 function queryMetaList(kw) {
   const d = openDb()
   if (kw) {
+    if (kw.length >= 3) {
+      // trigram MATCH：kw 作为整体短语（转义内部双引号）= 精确子串匹配
+      const phrase = `"${kw.replace(/"/g, '""')}"`
+      return d
+        .prepare(`SELECT a.id, a.title, a.summary, a.source, a.topic, a.date, a.read_time, a.featured, a.pullquote, a.finish_note
+                  FROM articles a JOIN articles_fts f ON a.rowid = f.rowid
+                  WHERE articles_fts MATCH ?
+                  ORDER BY a.date DESC, a.id`)
+        .all(phrase)
+        .map(mapMetaRow)
+    }
     const like = `%${kw}%`
     return d
       .prepare(`SELECT id, title, summary, source, topic, date, read_time, featured, pullquote, finish_note
@@ -134,8 +147,23 @@ const json = (data, status = 200, extra = {}) =>
 
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`)
+  // GET 200 响应附带 ETag；浏览器带 If-None-Match 且内容未变时回 304，省掉响应体传输
+  // （规范词全量等大 JSON 刷新页面后依然受益，与会话缓存互补）
   const respond = async (resp) => {
-    res.writeHead(resp.status, Object.fromEntries(resp.headers))
+    const headers = Object.fromEntries(resp.headers)
+    if (req.method === 'GET' && resp.status === 200) {
+      const body = await resp.text()
+      const etag = 'W/"' + createHash('sha1').update(body).digest('base64url') + '"'
+      if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304, { etag })
+        res.end()
+        return
+      }
+      res.writeHead(resp.status, { ...headers, etag })
+      res.end(body)
+      return
+    }
+    res.writeHead(resp.status, headers)
     res.end(await resp.text())
   }
 

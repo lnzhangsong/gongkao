@@ -87,11 +87,21 @@ function App() {
     return () => window.clearTimeout(t)
   }, [phase])
 
-  /* 首屏就绪后空闲预取真题列表与规范词全量（写入会话缓存），
-   * 用户首次进入这些页面也直接渲染，不见加载态 */
+  /* 首屏就绪后空闲预取：① 真题列表与规范词全量（写入会话缓存）；
+   * ② 各懒加载页面的路由 chunk —— 首次进入这些页面零网络等待 */
   useEffect(() => {
     if (phase !== 'done') return
-    const t = window.setTimeout(prefetchIdle, 1500)
+    const t = window.setTimeout(() => {
+      prefetchIdle()
+      void import('./pages/LibraryPage')
+      void import('./pages/ReadingPage')
+      void import('./pages/NotesPage')
+      void import('./pages/SettingsPage')
+      void import('./pages/TermsPage')
+      void import('./pages/ExamPreviewPage')
+      void import('./pages/AdminPage')
+      void import('./pages/AdminEditPage')
+    }, 1500)
     return () => window.clearTimeout(t)
   }, [phase])
 

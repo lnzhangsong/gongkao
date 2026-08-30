@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } fr
 import { useNavigate, useParams } from 'react-router-dom'
 import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta, type ExamQuestion } from '../lib/api'
 import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
+import { ApiLoading } from '../components/ui/ApiLoading'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { useCycleTheme } from '../hooks/useCycleTheme'
 import { loadFontFamily } from '../lib/fonts'
@@ -273,9 +274,13 @@ export default function ExamPreviewPage() {
     return [...g.entries()].sort((a, b) => b[0] - a[0])
   }, [papers])
 
-  // ---------- 详情：加载中（不放占位动画，列表停留原位，内容就绪后整体淡入） ----------
+  // ---------- 详情：加载中（spinner 等接口，内容就绪后整体淡入） ----------
   if (!draft && loadingDetail) {
-    return null
+    return (
+      <section className="reading-page">
+        <ApiLoading label="正在加载试卷…" />
+      </section>
+    )
   }
 
   // ---------- 详情：加载失败（服务不可用 / 试卷不存在） ----------
@@ -635,7 +640,14 @@ export default function ExamPreviewPage() {
           </div>
         </div>
       )}
-      {papers !== null && !listError && (
+      {papers === null && !listError && <ApiLoading label="正在加载试卷列表…" />}
+      {papers !== null && papers.length === 0 && !listError && (
+        <div className="empty-state">
+          <strong>还没有试卷</strong>
+          点右上角「新增试卷」创建第一份真题
+        </div>
+      )}
+      {papers !== null && papers.length > 0 && !listError && (
         <div className="fade-in">
           {grouped.map(([year, list]) => (
             <section key={year}>

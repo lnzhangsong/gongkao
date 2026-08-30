@@ -77,6 +77,9 @@ export function HomePage() {
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
+  /** 悬停预取正文：点进阅读页时全文多半已在缓存，正文即刻呈现 */
+  const warm = (a: Article) => void useArticleStore.getState().ensureContent(a.id)
+
   /** 入场卡角标编号（真实文章编号） */
   const entryNo = entry ? formatArticleNo(entry.article.id) : '000'
   /* eyebrow 展示当日日期 */
@@ -110,7 +113,7 @@ export function HomePage() {
         </div>
         <div className="stage">
           <div className="halo" />
-          <button className="entry" onClick={() => entry && open(entry.article)} disabled={!entry} aria-disabled={!entry}>
+          <button className="entry" onClick={() => entry && open(entry.article)} onMouseEnter={() => entry && warm(entry.article)} disabled={!entry} aria-disabled={!entry}>
             <small>READBOOK / NO. {entryNo}</small>
             <strong>
               开始
@@ -137,6 +140,7 @@ export function HomePage() {
                 className="main-card"
                 style={{ cursor: 'pointer' }}
                 onClick={() => open(continueList[0].article)}
+                onMouseEnter={() => warm(continueList[0].article)}
               >
                 <span className="tag">
                   {continueList[0].article.source} · {continueList[0].article.topic}
@@ -157,7 +161,7 @@ export function HomePage() {
             </div>
           ) : (
             <div className="reading">
-              <article className="main-card" style={{ cursor: 'pointer' }} onClick={() => open(entry.article)}>
+              <article className="main-card" style={{ cursor: 'pointer' }} onClick={() => open(entry.article)} onMouseEnter={() => warm(entry.article)}>
                 <span className="tag">
                   {entry.article.source} · {entry.article.topic}
                 </span>
@@ -189,7 +193,7 @@ export function HomePage() {
                 </div>
               </div>
             </div>
-            <button className="ghost" onClick={() => open(recentList[0].article)}>
+            <button className="ghost" onClick={() => open(recentList[0].article)} onMouseEnter={() => warm(recentList[0].article)}>
               继续阅读　↗
             </button>
           </div>
@@ -197,7 +201,7 @@ export function HomePage() {
 
         <div className="list">
           {picks.map((a, i) => (
-            <button className="item" key={a.id} onClick={() => open(a)}>
+            <button className="item" key={a.id} onClick={() => open(a)} onMouseEnter={() => warm(a)}>
               <small>
                 {String(i + 1).padStart(2, '0')} / {a.topic}
               </small>

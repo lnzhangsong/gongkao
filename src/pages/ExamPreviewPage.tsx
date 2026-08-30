@@ -132,6 +132,9 @@ export default function ExamPreviewPage() {
     if (inList) window.scrollTo({ top: listScrollRef.current })
   }, [inList])
 
+  /** 悬停预取详情：试卷正文较大，点进去时多半已在会话缓存 */
+  const warmExam = (id: string) => void fetchExam(id).catch(() => {})
+
   const open = (id: string) => {
     listScrollRef.current = window.scrollY
     navigate(`/exams/${encodeURIComponent(id)}`)
@@ -662,6 +665,7 @@ export default function ExamPreviewPage() {
                     className={`exam-card${levelClass(p.level)}`}
                     title={`${p.level} · ${p.title}`}
                     onClick={() => open(p.id)}
+                    onMouseEnter={() => warmExam(p.id)}
                   >
                     <small>{p.hasAnswer ? '有答案' : '无答案'}</small>
                     <h4>{p.title}</h4>

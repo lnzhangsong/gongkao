@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta, type ExamQuestion } from '../lib/api'
 import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 import { ApiLoading } from '../components/ui/ApiLoading'
+import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { useCycleTheme } from '../hooks/useCycleTheme'
 import { loadFontFamily } from '../lib/fonts'
@@ -132,8 +133,9 @@ export default function ExamPreviewPage() {
     if (inList) window.scrollTo({ top: listScrollRef.current })
   }, [inList])
 
-  /** 悬停预取详情：试卷正文较大，点进去时多半已在会话缓存 */
+  /** 悬停预取详情：试卷正文较大，点进去时多半已在会话缓存（120ms 防飞掠） */
   const warmExam = (id: string) => void fetchExam(id).catch(() => {})
+  const hoverWarm = useHoverPrefetch()
 
   const open = (id: string) => {
     listScrollRef.current = window.scrollY
@@ -665,7 +667,7 @@ export default function ExamPreviewPage() {
                     className={`exam-card${levelClass(p.level)}`}
                     title={`${p.level} · ${p.title}`}
                     onClick={() => open(p.id)}
-                    onMouseEnter={() => warmExam(p.id)}
+                    {...hoverWarm(() => warmExam(p.id))}
                   >
                     <small>{p.hasAnswer ? '有答案' : '无答案'}</small>
                     <h4>{p.title}</h4>

@@ -8,6 +8,7 @@ import { TOPICS, formatArticleNo, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { Ticker } from '../components/ui/Ticker'
+import { ApiLoading } from '../components/ui/ApiLoading'
 import type { Article, ArticleSource } from '../types'
 
 const PAGE_SIZE = 8
@@ -239,6 +240,8 @@ export function LibraryPage() {
       </div>
 
       <main key={apiReady ? 'ready' : 'loading'} className={`library-content${apiReady ? ' fade-in' : ''}`}>
+        {!apiReady && <ApiLoading label="正在加载文章库…" />}
+
         <section className="featured">
           <article
             className={`featured-main${articles[0] ? '' : ' is-loading'}`}
@@ -289,8 +292,17 @@ export function LibraryPage() {
 
         {pageItems.length === 0 && apiReady && (
           <div className="empty-state">
-            <strong>没有找到匹配的文章</strong>
-            换个关键词或筛选条件试试
+            {articles.length === 0 ? (
+              <>
+                <strong>文章库还是空的</strong>
+                等文章入库后，这里就能看到全部内容
+              </>
+            ) : (
+              <>
+                <strong>没有找到匹配的文章</strong>
+                换个关键词或筛选条件试试
+              </>
+            )}
           </div>
         )}
 

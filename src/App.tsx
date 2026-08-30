@@ -14,15 +14,17 @@ const TermsPage = lazy(() => import('./pages/TermsPage'))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
+import { prefetchIdle } from './lib/api'
 import { usePrefersDark } from './lib/prefersDark'
 import { LoadingScreen } from './components/LoadingScreen'
 import { ConfirmHost } from './components/ui/ConfirmDialog'
 import { ToastHost } from './components/ui/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
-const LOADING_MIN_MS = 1400
+/* 启动动画不再人为等待：数据就绪即收尾（最短时长仅防闪屏） */
+const LOADING_MIN_MS = 600
 /** 收尾阶段：进度冲到 100% 后的停留时长 */
-const LOADING_FINISH_MS = 450
+const LOADING_FINISH_MS = 300
 
 /** 路由切换时回到页顶：SPA 不会自动重置滚动位置，浏览器会把上次的滚动带进新页面。
  *  阅读页不受影响——它在文章数据就绪后自行恢复上次阅读位置（晚于本组件执行） */
@@ -82,6 +84,14 @@ function App() {
   useEffect(() => {
     if (phase !== 'finishing') return
     const t = window.setTimeout(() => setPhase('done'), LOADING_FINISH_MS)
+    return () => window.clearTimeout(t)
+  }, [phase])
+
+  /* 首屏就绪后空闲预取真题列表与规范词全量（写入会话缓存），
+   * 用户首次进入这些页面也直接渲染，不见加载态 */
+  useEffect(() => {
+    if (phase !== 'done') return
+    const t = window.setTimeout(prefetchIdle, 1500)
     return () => window.clearTimeout(t)
   }, [phase])
 

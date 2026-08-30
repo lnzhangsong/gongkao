@@ -25,6 +25,40 @@ function writeToken(): Record<string, string> {
 const DEFAULT_TIMEOUT_MS = 20000
 
 /**
+ * GET 会话缓存 + 并发去重：
+ * - 同一次打开站点内，试卷/规范词等列表与详情二次进入直接复用，不再重复请求转圈
+ * - 同一 URL 的并发请求合并为一次
+ * - 所有写操作（POST/PATCH/DELETE）成功后调 invalidateCache 清掉对应前缀，保证写后读到新数据
+ */
+const sessionCache = new Map<string, unknown>()
+const inflightGets = new Map<string, Promise<unknown>>()
+
+function cachedGet<T>(url: string, fetcher: () => Promise<T>): Promise<T> {
+  const hit = sessionCache.get(url)
+  if (hit !== undefined) return Promise.resolve(hit as T)
+  const pending = inflightGets.get(url)
+  if (pending) return pending as Promise<T>
+  const req = fetcher()
+    .then((data) => {
+      sessionCache.set(url, data)
+      return data
+    })
+    .finally(() => {
+      inflightGets.delete(url)
+    })
+  inflightGets.set(url, req)
+  return req
+}
+
+/** 使会话缓存失效：命中任一前缀（按 URL 开头匹配）的条目被清除 */
+export function invalidateCache(prefixes: string[]): void {
+  for (const key of [...sessionCache.keys()]) {
+    if (prefixes.some((p) => key.startsWith(p))) sessionCache.delete(key)
+  }
+}
+
+
+/**
  * 统一请求封装：
  * - 超时中断（AbortController），避免离线时请求悬挂
  * - 错误响应先读 text 再尝试 JSON：网关返回非 JSON（如 502 HTML 页）时
@@ -105,18 +139,20 @@ export interface ExamDetail {
   answersRaw?: string
 }
 
-/** 申论真题试卷列表（按年份倒序；绕过 HTTP 缓存保证增删改后即时可见） */
+/** 申论真题试卷列表（按年份倒序；cache:'reload' 绕过 HTTP 缓存，会话缓存由 cachedGet 负责） */
 export function fetchExamList(params?: { year?: number; level?: string }): Promise<{ papers: ExamPaperMeta[]; total: number }> {
   const sp = new URLSearchParams()
   if (params?.year) sp.set('year', String(params.year))
   if (params?.level) sp.set('level', params.level)
   const qs = sp.toString()
-  return request(`/api/exams${qs ? `?${qs}` : ''}`, { cache: 'reload' })
+  const url = `/api/exams${qs ? `?${qs}` : ''}`
+  return cachedGet(url, () => request(url, { cache: 'reload' }))
 }
 
 /** 申论真题试卷详情（材料 + 题目 + 答案）；用 ?id= 查询参数，与线上 Function 路由行为一致 */
 export function fetchExam(id: string): Promise<ExamDetail> {
-  return request(`/api/exams?id=${encodeURIComponent(id)}`)
+  const url = `/api/exams?id=${encodeURIComponent(id)}`
+  return cachedGet(url, () => request<ExamDetail>(url))
 }
 
 /** 申论规范词条目 */
@@ -133,21 +169,25 @@ export function fetchTerms(params?: { theme?: string; q?: string }): Promise<{ t
   if (params?.theme) sp.set('theme', params.theme)
   if (params?.q) sp.set('q', params.q)
   const qs = sp.toString()
-  return request(`/api/terms${qs ? `?${qs}` : ''}`)
+  const url = `/api/terms${qs ? `?${qs}` : ''}`
+  return cachedGet(url, () => request(url))
 }
 
 /** 新增规范词（仅本地 api-server 提供写入） */
 export function addTerm(data: { theme: string; term: string; example?: string }): Promise<{ ok: boolean; id: number }> {
+  invalidateCache(['/api/terms'])
   return request('/api/terms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
 }
 
 /** 修改规范词（部分更新；仅本地 api-server 提供写入） */
 export function updateTerm(id: number, data: { theme?: string; term?: string; example?: string }): Promise<{ ok: boolean }> {
+  invalidateCache(['/api/terms'])
   return request(`/api/terms/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
 }
 
 /** 删除规范词（仅本地 api-server 提供写入） */
 export function deleteTerm(id: number): Promise<{ ok: boolean }> {
+  invalidateCache(['/api/terms'])
   return request(`/api/terms/${id}`, { method: 'DELETE' }, '删除失败')
 }
 
@@ -159,15 +199,18 @@ export function saveExam(
     questions: { idx: number; type: string | null; stem: string; requirement: string; wordLimit: number | null; points: number | null; answer: string | null }[]
   },
 ): Promise<{ ok: boolean; id: string }> {
+  invalidateCache(['/api/exams'])
   return request(`/api/exams/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
 }
 
 /** 新增空白试卷（仅本地 api-server） */
 export function createExam(paper: { year: number; level: string; title: string }): Promise<{ ok: boolean; id: string }> {
+  invalidateCache(['/api/exams'])
   return request('/api/exams', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(paper) }, '创建失败')
 }
 
 /** 删除试卷（连同材料与题目，仅本地 api-server） */
 export function deleteExam(id: string): Promise<{ ok: boolean }> {
+  invalidateCache(['/api/exams'])
   return request(`/api/exams/${encodeURIComponent(id)}`, { method: 'DELETE' }, '删除失败')
 }

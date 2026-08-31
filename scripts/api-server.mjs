@@ -462,7 +462,10 @@ const server = createServer((req, res) => {
           void respond(json({ error: 'baseUrl / apiKey / model / messages 必填' }, 400))
           return
         }
-        const upstream = await fetch(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, {
+        // 防呆：baseUrl 填成了完整端点时不再追加 /chat/completions（与 api/ai.ts 同步）
+        let root = String(baseUrl).replace(/\/+$/, '')
+        if (root.endsWith('/chat/completions')) root = root.slice(0, -'/chat/completions'.length)
+        const upstream = await fetch(`${root}/chat/completions`, {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
@@ -479,7 +482,7 @@ const server = createServer((req, res) => {
         const data = await upstream.json().catch(() => null)
         if (!upstream.ok || !data) {
           const msg = data?.error?.message || data?.error || `上游返回 ${upstream.status}`
-          void respond(json({ error: typeof msg === 'string' ? msg : JSON.stringify(msg) }, upstream.status || 502))
+          void respond(json({ error: `[上游 ${upstream.status}] ${typeof msg === 'string' ? msg : JSON.stringify(msg)}` }, 502))
           return
         }
         const content = data.choices?.[0]?.message?.content

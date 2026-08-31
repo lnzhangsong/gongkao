@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bookmark, Library, Minus, Plus, SlidersHorizontal, StickyNote, Settings } from 'lucide-react'
+import { ArrowLeft, BookOpenCheck, Bookmark, Library, Minus, Plus, SlidersHorizontal, StickyNote, Settings } from 'lucide-react'
 import { MenuSelect } from './MenuSelect'
 import { FONT_FAMILIES } from '../../stores/readerStore'
 import type { ReaderSettings } from '../../types'
@@ -18,6 +18,7 @@ interface ArticleToolsMenuProps {
   onToggleAnnotations: () => void
   focusMode: boolean
   onToggleFocus: () => void
+  onOpenShenlun: () => void
 }
 
 /**
@@ -37,6 +38,7 @@ export function ArticleToolsMenu({
   onToggleAnnotations,
   focusMode,
   onToggleFocus,
+  onOpenShenlun,
 }: ArticleToolsMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -158,6 +160,19 @@ export function ArticleToolsMenu({
               }}
             >
               {annotationsVisible ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          <div className="tools-menu-item">
+            <span>申论拆解</span>
+            <button
+              className="tools-menu-action"
+              onClick={() => {
+                onOpenShenlun()
+                setOpen(false)
+              }}
+            >
+              <BookOpenCheck size={12} style={{ verticalAlign: -2 }} /> 打开面板
             </button>
           </div>
 

@@ -179,6 +179,10 @@
   background: var(--hl-violet);
 }
 
+.highlighted.hl-orange {
+  background: var(--hl-orange);
+}
+
 .underlined {
   text-decoration-line: underline;
   text-decoration-style: solid;
@@ -381,6 +385,10 @@
   background: var(--hl-dot-violet);
 }
 
+.selection-popover .hl-dot.orange {
+  background: var(--hl-dot-orange);
+}
+
 /* 下划线样式选择点 */
 .selection-popover .ul-dots {
   display: flex;
@@ -472,6 +480,10 @@
 
 .hl-swatch.violet {
   background: var(--hl-violet);
+}
+
+.hl-swatch.orange {
+  background: var(--hl-orange);
 }
 
 /* 标注操作弹出（点击高亮/划线后出现） */
@@ -1013,6 +1025,108 @@
   }
 }
 
+/* 拆解上屏：全篇拆解卡（正文开头）与心得块（文末），与段意同一套视觉语言 */
+.study-overview,
+.study-note-block {
+  margin: 0 0 28px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+
+.study-note-block {
+  margin-top: 28px;
+}
+
+.study-overview-title {
+  display: block;
+  font: 600 10px/1.4 var(--sans);
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+  margin-bottom: 8px;
+}
+
+.study-overview .study-thesis {
+  margin: 0 0 8px;
+  font: 400 14px/1.8 var(--serif);
+  color: var(--ink);
+}
+
+.study-overview .study-subs {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font: 400 13px/1.8 var(--sans);
+  color: var(--ink);
+}
+
+.study-overview .study-subs li::marker {
+  color: var(--accent-text);
+  font-size: 11px;
+}
+
+.study-overview .study-skeleton {
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 12%, transparent);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.study-overview .study-skeleton p {
+  margin: 0;
+  font: 400 12.5px/1.8 var(--sans);
+  color: var(--muted);
+}
+
+.study-overview .study-skeleton b,
+.study-note-block b {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.1em;
+  color: var(--accent-text);
+  margin-right: 8px;
+}
+
+.study-note-block p {
+  margin: 0;
+  font: 400 13px/1.8 var(--sans);
+  color: var(--ink);
+}
+
+/* 段落聚焦模式下正文逐段点亮，拆解内容随之隐藏避免干扰 */
+.article-body.focus-mode .para-gist,
+.study-overview:has(+ .article-body.focus-mode),
+.article-body.focus-mode ~ .study-note-block {
+  display: none;
+}
+
+/* 段意上屏：拆解抽屉里写的每段大意，内嵌显示在正文段后 */
+.para-gist {
+  margin: -8px 0 22px;
+  padding: 3px 0 3px 12px;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  font: 400 12.5px/1.8 var(--sans);
+  color: var(--muted);
+}
+
+.para-gist-tag {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.1em;
+  color: var(--accent-text);
+  margin-right: 8px;
+}
+
+/* 段落聚焦模式下正文逐段点亮，段意随之隐藏避免干扰 */
+.article-body.focus-mode .para-gist {
+  display: none;
+}
+
+/* 拆解抽屉「定位」到某段后的短暂闪烁提示（含短文无法滚到顶部的情形） */
+.para-flash {
+  animation: ann-flash-bg 2s ease-out;
+}
+
 /* 规范词方框标注（阅读设置「规范词框」开时，正文里的申论规范词以细框圈出） */
 .article-body .term-box {
   border: 1px solid color-mix(in srgb, var(--accent-text) 55%, transparent);
@@ -1023,4 +1137,492 @@
   cursor: help;
   /* 行高较紧时不让方框撑乱行距 */
   box-decoration-break: clone;
+}
+
+/* ---------- 素材标记（申论五类，决策 D15） ---------- */
+
+/* 正文中的素材标注：在类型色上叠类型徽标（悬停显示） */
+.mat-thesis::after,
+.mat-evidence::after,
+.mat-quote::after,
+.mat-measure::after,
+.mat-pattern::after {
+  content: attr(data-mat-label);
+  position: absolute;
+  left: 0;
+  top: -1.45em;
+  font: 600 10px/1.6 var(--sans);
+  letter-spacing: 0.06em;
+  padding: 0 6px;
+  border-radius: 3px;
+  color: var(--soft);
+  background: var(--dark);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.mat-thesis,
+.mat-evidence,
+.mat-quote,
+.mat-measure,
+.mat-pattern {
+  position: relative;
+}
+
+.mat-thesis:hover::after,
+.mat-evidence:hover::after,
+.mat-quote:hover::after,
+.mat-measure:hover::after,
+.mat-pattern:hover::after {
+  opacity: 1;
+}
+
+/* 选词工具栏 / 标注管理弹层里的素材行 */
+.selection-popover .mat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  width: 100%;
+}
+
+.selection-popover .ann-mat-label {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.selection-popover .mat-btn {
+  font: 600 11px/1 var(--sans);
+  padding: 4px 7px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.selection-popover .mat-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.selection-popover .mat-btn.active {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 各素材按钮的类型色点 */
+.mat-btn-thesis { box-shadow: inset 0 -2px 0 var(--hl-dot-blue); }
+.mat-btn-evidence { box-shadow: inset 0 -2px 0 var(--hl-dot-violet); }
+.mat-btn-quote { box-shadow: inset 0 -2px 0 var(--hl-dot-yellow); }
+.mat-btn-measure { box-shadow: inset 0 -2px 0 var(--hl-dot-green); }
+.mat-btn-pattern { box-shadow: inset 0 -2px 0 var(--hl-dot-orange); }
+
+/* 句式模板输入（标注管理弹层内） */
+.selection-popover .pattern-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.selection-popover .pattern-input input {
+  flex: 1;
+  min-width: 0;
+  font: 400 12px/1.5 var(--sans);
+  color: var(--dark);
+  background: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.selection-popover .pattern-input button {
+  font: 600 11px/1 var(--sans);
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ---------- 申论拆解 / 范文精读抽屉 ---------- */
+.shenlun-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  z-index: 60;
+}
+
+.shenlun-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 92vw);
+  background: var(--soft);
+  border-left: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.18);
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  animation: shenlun-in 0.24s cubic-bezier(0.22, 0.8, 0.36, 1);
+}
+
+@keyframes shenlun-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* 抽屉内输入统一聚焦态 */
+.shenlun-panel input:focus,
+.shenlun-panel textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  border-bottom-color: var(--accent);
+}
+
+.shenlun-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.shenlun-eyebrow {
+  display: block;
+  font: 600 10px/1.4 var(--sans);
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+}
+
+.shenlun-head h3 {
+  margin: 4px 0 0;
+  font: 600 16px/1.5 var(--serif);
+  color: var(--ink);
+}
+
+.shenlun-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px;
+}
+
+.shenlun-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 20px 40px;
+}
+
+.shenlun-sec {
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shenlun-sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shenlun-label {
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.shenlun-label small {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.seg button {
+  font: 500 12px/1 var(--sans);
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.seg button.active {
+  background: var(--accent);
+  color: var(--soft);
+}
+
+.stars button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: color-mix(in srgb, var(--ink) 20%, transparent);
+  padding: 0 2px;
+}
+
+.stars button.active {
+  color: var(--accent);
+}
+
+.shenlun-input {
+  width: 100%;
+  font: 400 13px/1.7 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 6px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.sub-thesis {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sub-thesis input {
+  flex: 1;
+  min-width: 0;
+  font: 400 13px/1.6 var(--sans);
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 20%, transparent);
+  padding: 5px 2px;
+}
+
+.sub-thesis.add input {
+  border-bottom-style: solid;
+  border-bottom-color: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.sub-thesis button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 2px;
+}
+
+.para-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.para-go {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  background: none;
+  cursor: pointer;
+  font: 600 10px/1 var(--mono);
+  color: var(--muted);
+}
+
+.para-go:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.para-summary input {
+  flex: 1;
+  min-width: 0;
+  font: 400 13px/1.6 var(--sans);
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent);
+  padding: 5px 2px;
+}
+
+.skeleton-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-label {
+  font: 600 10px/1.4 var(--sans);
+  letter-spacing: 0.1em;
+  color: var(--accent-text);
+}
+
+.skeleton-derive {
+  margin-left: 8px;
+  color: var(--accent);
+}
+
+.skeleton-field textarea {
+  width: 100%;
+  font: 400 13px/1.7 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 6px;
+  padding: 6px 9px;
+  resize: vertical;
+}
+
+.skeleton-field .sub-thesis {
+  margin-left: 2px;
+}
+
+.mat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mat-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.06em;
+}
+
+.mat-group-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot, color-mix(in srgb, var(--ink) 25%, transparent));
+}
+
+.mat-group-title.mat-thesis { --dot: var(--hl-blue); }
+.mat-group-title.mat-evidence { --dot: var(--hl-violet); }
+.mat-group-title.mat-quote { --dot: var(--hl-yellow); }
+.mat-group-title.mat-measure { --dot: var(--hl-green); }
+.mat-group-title.mat-pattern { --dot: var(--hl-orange); }
+
+.mat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  border-left: 2px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  padding: 4px 0 4px 10px;
+  transition: border-color 0.15s ease;
+}
+
+.mat-card:hover {
+  border-left-color: var(--accent);
+}
+
+.mat-card-text {
+  flex: 1;
+  text-align: left;
+  font: 400 13px/1.7 var(--serif);
+  color: var(--ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mat-card-text:hover {
+  color: var(--accent);
+}
+
+.mat-card-pattern {
+  width: 100%;
+  font: 400 12px/1.6 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--ink) 20%, transparent);
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
+.mat-card-star {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--ink) 20%, transparent);
+  padding: 2px;
+}
+
+.mat-card-star.on {
+  color: var(--accent);
+}
+
+.shenlun-empty {
+  font: 400 12px/1.7 var(--sans);
+  color: var(--muted);
+}
+
+.shenlun-note {
+  font: 400 13px/1.8 var(--sans);
+  color: var(--muted);
+  cursor: text;
+  padding: 6px 0;
+  min-height: 1.8em;
+}
+
+.shenlun-save {
+  align-self: flex-start;
+  font: 600 12px/1 var(--sans);
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: var(--soft);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .shenlun-panel {
+    top: auto;
+    left: 0;
+    width: 100%;
+    height: 78vh;
+    border-left: none;
+    border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+    border-radius: 14px 14px 0 0;
+    animation-name: shenlun-in-up;
+  }
+}
+
+@keyframes shenlun-in-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }

@@ -103,6 +103,24 @@ export interface ReaderSettings {
 
 export type AnnotationKind = 'highlight' | 'underline' | 'note'
 
+/** 申论素材类型：论点 / 论据·理论 / 金句 / 对策 / 句式（决策 D15） */
+export type MaterialType = 'thesis' | 'evidence' | 'quote' | 'measure' | 'pattern'
+
+/** 范文精读：逐段大意 */
+export interface ParagraphSummary {
+  /** 对应 article.content[] 段落序号 */
+  paraIndex: number
+  summary: string
+}
+
+/** 范文精读：结构骨架（bodyLayers 缺省可映射 subTheses，避免重复维护） */
+export interface ArticleSkeleton {
+  opening?: string
+  bodyLayers?: string[]
+  transitions?: string[]
+  closing?: string
+}
+
 /** 下划线样式 */
 export const UNDERLINE_STYLES = ['solid', 'double', 'wavy', 'dotted'] as const
 export type UnderlineStyle = (typeof UNDERLINE_STYLES)[number]
@@ -115,7 +133,7 @@ export const UNDERLINE_STYLE_LABELS: Record<UnderlineStyle, string> = {
 }
 
 /** 高亮可选颜色 */
-export const HL_COLORS = ['yellow', 'blue', 'green', 'pink', 'violet'] as const
+export const HL_COLORS = ['yellow', 'blue', 'green', 'pink', 'violet', 'orange'] as const
 export type HighlightColor = (typeof HL_COLORS)[number]
 
 export const HL_COLOR_LABELS: Record<HighlightColor, string> = {
@@ -124,6 +142,7 @@ export const HL_COLOR_LABELS: Record<HighlightColor, string> = {
   green: '松绿',
   pink: '樱粉',
   violet: '柔紫',
+  orange: '暖橙',
 }
 
 /**
@@ -146,4 +165,12 @@ export interface Annotation {
   /** note 类型时：笔记正文 */
   noteText?: string
   tags?: string[]
+  /** 申论素材类型标记（无 = 普通摘录） */
+  materialType?: MaterialType
+  /** 背记：加入背记队列（quote 与 pattern 有意义） */
+  memorized?: boolean
+  /** 背记掌握度：0 未掌握 / 1 模糊 / 2 已掌握 */
+  mastery?: 0 | 1 | 2
+  /** 可迁移句式模板（仅 materialType === 'pattern' 有意义） */
+  pattern?: string
 }

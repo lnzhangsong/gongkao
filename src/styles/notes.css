@@ -482,3 +482,99 @@
     display: block;
   }
 }
+
+/* ---------- 素材类型筛选与徽标（决策 D15） ---------- */
+
+.mat-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.mat-chip {
+  font: 600 11px/1.6 var(--sans);
+  letter-spacing: 0.04em;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.mat-chip.active {
+  border-color: var(--accent);
+  color: var(--accent-text, var(--accent));
+}
+
+.mat-chip-thesis.active { background: var(--hl-blue); border-color: transparent; color: var(--ink); }
+.mat-chip-evidence.active { background: var(--hl-violet); border-color: transparent; color: var(--ink); }
+.mat-chip-quote.active { background: var(--hl-yellow); border-color: transparent; color: var(--ink); }
+.mat-chip-measure.active { background: var(--hl-green); border-color: transparent; color: var(--ink); }
+.mat-chip-pattern.active { background: var(--hl-orange); border-color: transparent; color: var(--ink); }
+
+/* 列表行内徽标（非按钮态） */
+i.mat-chip,
+span.mat-chip {
+  cursor: default;
+}
+
+.note-text .mat-chip {
+  margin-right: 6px;
+}
+
+.note-swatch.memo {
+  color: var(--accent);
+}
+
+/* 详情：背记与句式模板 */
+.detail-material {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.memo-star {
+  border: none;
+  background: none;
+  font: 600 12px/1.4 var(--sans);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.memo-star.on {
+  color: var(--accent);
+}
+
+.mastery-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.mastery-dots button {
+  border: none;
+  background: none;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.mastery-dots button.on {
+  color: var(--accent);
+}
+
+.pattern-edit {
+  flex: 1 1 100%;
+  font: 400 12.5px/1.6 var(--sans);
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px dashed rgba(0, 0, 0, 0.18);
+  border-radius: 6px;
+  padding: 7px 10px;
+}

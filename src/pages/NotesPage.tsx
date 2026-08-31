@@ -8,11 +8,13 @@ import { toast } from '../components/ui/Toast'
 import { formatLocalDate } from '../data'
 import { downloadJSON, downloadText, formatDateTime, monthOf } from '../lib/export'
 import { Pagination } from '../components/ui/Pagination'
-import type { Annotation, AnnotationKind } from '../types'
+import type { Annotation, AnnotationKind, MaterialType } from '../types'
+import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS } from '../data/material'
+import { buildMaterialMarkdown } from '../lib/materialExport'
 
 const PAGE_SIZE = 30
 
-type QuickKey = 'all' | 'recent' | 'highlight' | 'underline' | 'note'
+type QuickKey = 'all' | 'recent' | 'highlight' | 'underline' | 'note' | 'memorize'
 
 const QUICK: { key: QuickKey; label: string }[] = [
   { key: 'all', label: '全部摘录' },
@@ -20,6 +22,7 @@ const QUICK: { key: QuickKey; label: string }[] = [
   { key: 'highlight', label: '我的高亮' },
   { key: 'underline', label: '我的划线' },
   { key: 'note', label: '带笔记' },
+  { key: 'memorize', label: '待背记' },
 ]
 
 const KIND_LABEL: Record<AnnotationKind, string> = {
@@ -39,6 +42,8 @@ interface Row {
   date: string
   /** 组内全部笔记标注（一段话可有多条笔记） */
   notes: Annotation[]
+  /** 素材类型（组内第一个带标记的标注） */
+  materialType?: MaterialType
 }
 
 function groupKey(a: Annotation): string {
@@ -60,6 +65,7 @@ export function NotesPage() {
   const [params, setParams] = useSearchParams()
   const quick = (params.get('quick') ?? 'all') as QuickKey
   const topic = params.get('topic') ?? ''
+  const mat = (params.get('mat') ?? '') as MaterialType | 'none' | ''
   const q = params.get('q') ?? ''
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
 
@@ -104,6 +110,7 @@ export function NotesPage() {
           source: a?.source ?? '',
           date: ann.createdAt,
           notes: ann.kind === 'note' ? [ann] : [],
+          materialType: ann.materialType,
         })
       }
     }
@@ -128,6 +135,9 @@ export function NotesPage() {
       if (quick === 'highlight' && !kinds.has('highlight')) return false
       if (quick === 'underline' && !kinds.has('underline')) return false
       if (quick === 'note' && !kinds.has('note')) return false
+      if (quick === 'memorize' && !r.anns.some((a) => a.memorized === true)) return false
+      if (mat === 'none' && r.materialType) return false
+      if (mat && mat !== 'none' && r.materialType !== mat) return false
       if (topic && r.topic !== topic) return false
       if (kw) {
         const hay = `${r.text} ${r.notes.map((n) => n.noteText ?? '').join(' ')} ${r.title} ${r.topic} ${r.source}`.toLowerCase()
@@ -135,7 +145,7 @@ export function NotesPage() {
       }
       return true
     })
-  }, [rows, quick, topic, q])
+  }, [rows, quick, topic, q, mat])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   /* 筛选后结果变少时钳到最后一页，避免出现「页内无内容」的假空态 */
@@ -190,28 +200,13 @@ export function NotesPage() {
     )
   }
 
-  /** 导出 Markdown：按主题分组的写作素材库格式（比 JSON 直接可用） */
+  /** 导出 Markdown：申论素材合集格式（类型固定顺序 + 句式带模板，可直接当写作参考） */
   const exportMarkdown = () => {
     const data = checked.size > 0 ? filtered.filter((r) => checked.has(r.key)) : filtered
-    const byTopic = new Map<string, Row[]>()
-    for (const r of data) {
-      if (!byTopic.has(r.topic)) byTopic.set(r.topic, [])
-      byTopic.get(r.topic)!.push(r)
-    }
-    let md = `# 申论素材摘录\n\n> 导出自 读本 READBOOK　·　${formatDateTime(new Date().toISOString())}　·　共 ${data.length} 条\n`
-    for (const [topic, list] of byTopic) {
-      md += `\n## ${topic}\n`
-      for (const r of list) {
-        md += `\n### ${r.title}\n\n`
-        md += `> ${r.text.replace(/\n/g, '\n> ')}\n\n`
-        md += `—— ${r.source}\n`
-        for (const n of r.notes) {
-          if (n.noteText) md += `\n**笔记**：${n.noteText}\n`
-          if ((n.tags ?? []).length > 0) md += `\n${(n.tags ?? []).map((t) => `#${t}`).join(' ')}\n`
-        }
-      }
-    }
-    downloadText(`readbook-notes-${new Date().toISOString().slice(0, 10)}.md`, md)
+    downloadText(
+      `readbook-materials-${new Date().toISOString().slice(0, 10)}.md`,
+      buildMaterialMarkdown(data),
+    )
   }
 
   /** 删除摘录：不弹确认，5 秒内可撤销（误触一键恢复整段标注与笔记） */
@@ -285,6 +280,7 @@ export function NotesPage() {
                 const kinds = rowKinds(r)
                 if (item.key === 'all') return true
                 if (item.key === 'recent') return new Date(r.date).getTime() > Date.now() - 7 * 24 * 3600 * 1000
+                if (item.key === 'memorize') return r.anns.some((a) => a.memorized === true)
                 return kinds.has(item.key)
               }).length
               return (
@@ -353,6 +349,31 @@ export function NotesPage() {
                 </button>
               )}
             </label>
+          </div>
+
+          {/* 素材类型筛选（含未标记素材） */}
+          <div className="mat-filter">
+            <button
+              className={`mat-chip${!mat ? ' active' : ''}`}
+              onClick={() => setParam('mat', '')}
+            >
+              全部
+            </button>
+            {MATERIAL_TYPES.map((t) => (
+              <button
+                key={t}
+                className={`mat-chip mat-chip-${t}${mat === t ? ' active' : ''}`}
+                onClick={() => setParam('mat', mat === t ? '' : t)}
+              >
+                {MATERIAL_TYPE_LABELS[t]}
+              </button>
+            ))}
+            <button
+              className={`mat-chip${mat === 'none' ? ' active' : ''}`}
+              onClick={() => setParam('mat', mat === 'none' ? '' : 'none')}
+            >
+              未标记素材
+            </button>
           </div>
 
           <div className="batch-bar">
@@ -432,6 +453,10 @@ export function NotesPage() {
                       {kinds.has('note') && (
                         <i className="note-swatch">{r.notes.length > 1 ? `✦×${r.notes.length}` : '✦'}</i>
                       )}
+                      {r.materialType && (
+                        <i className={`mat-chip mat-chip-${r.materialType}`}>{MATERIAL_TYPE_LABELS[r.materialType]}</i>
+                      )}
+                      {r.anns.some((a) => a.memorized) && <i className="note-swatch memo">★</i>}
                       {r.text}
                     </span>
                     <span className="note-topic">
@@ -480,6 +505,53 @@ export function NotesPage() {
                   {kindLabel(rowKinds(selectedRow))}　·　{selectedRow.topic}
                 </div>
                 <blockquote>“{selectedRow.text}”</blockquote>
+
+                {/* 素材类型 + 背记（金句/句式） + 句式模板 */}
+                {(() => {
+                  const m = selectedRow.anns.find((a) => a.materialType)
+                  if (!m) return null
+                  const canMemo = m.materialType === 'quote' || m.materialType === 'pattern'
+                  return (
+                    <div className="detail-material">
+                      <span className={`mat-chip mat-chip-${m.materialType} active`}>
+                        {MATERIAL_TYPE_LABELS[m.materialType!]}
+                      </span>
+                      {canMemo && (
+                        <>
+                          <button
+                            className={`memo-star${m.memorized ? ' on' : ''}`}
+                            onClick={() =>
+                              update(m.id, { memorized: !m.memorized, mastery: !m.memorized ? 0 : undefined })
+                            }
+                          >
+                            {m.memorized ? '★ 已入背记' : '☆ 加入背记'}
+                          </button>
+                          {m.memorized && (
+                            <span className="mastery-dots">
+                              {[0, 1, 2].map((lv) => (
+                                <button
+                                  key={lv}
+                                  className={(m.mastery ?? 0) >= lv && (m.mastery ?? 0) > 0 ? 'on' : ''}
+                                  onClick={() => update(m.id, { mastery: lv as 0 | 1 | 2 })}
+                                >
+                                  {lv === 0 ? '○' : lv === 1 ? '◐' : '●'}
+                                </button>
+                              ))}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {m.materialType === 'pattern' && (
+                        <input
+                          className="pattern-edit"
+                          placeholder="可迁移模板，如：以……之笔，绘就……画卷"
+                          defaultValue={m.pattern ?? ''}
+                          onBlur={(e) => update(m.id, { pattern: e.target.value.trim() || undefined })}
+                        />
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {selectedRow.notes.length > 0 && (
                   <div className="detail-notes">

@@ -450,6 +450,51 @@ const server = createServer((req, res) => {
     return
   }
 
+  // AI 纯转发（BYOK）：客户端带自己的 baseUrl/apiKey/model，服务端不存任何数据
+  // 与 api/ai.ts（Vercel Function）同逻辑
+  if (url.pathname === '/api/ai' && req.method === 'POST') {
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', async () => {
+      try {
+        const { baseUrl, apiKey, model, messages, temperature, maxTokens, json: wantJson } = JSON.parse(body)
+        if (!baseUrl || !apiKey || !model || !Array.isArray(messages)) {
+          void respond(json({ error: 'baseUrl / apiKey / model / messages 必填' }, 400))
+          return
+        }
+        const upstream = await fetch(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            ...(typeof temperature === 'number' ? { temperature } : {}),
+            ...(Number.isFinite(maxTokens) ? { max_tokens: maxTokens } : {}),
+            ...(wantJson ? { response_format: { type: 'json_object' } } : {}),
+          }),
+        })
+        const data = await upstream.json().catch(() => null)
+        if (!upstream.ok || !data) {
+          const msg = data?.error?.message || data?.error || `上游返回 ${upstream.status}`
+          void respond(json({ error: typeof msg === 'string' ? msg : JSON.stringify(msg) }, upstream.status || 502))
+          return
+        }
+        const content = data.choices?.[0]?.message?.content
+        if (typeof content !== 'string') {
+          void respond(json({ error: '上游响应缺少 choices[0].message.content' }, 502))
+          return
+        }
+        void respond(json({ content }))
+      } catch (err) {
+        void respond(json({ error: String(err) }, 502))
+      }
+    })
+    return
+  }
+
   void respond(json({ error: 'not found' }, 404))
 })
 

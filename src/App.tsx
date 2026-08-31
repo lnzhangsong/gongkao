@@ -11,6 +11,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default:
 const AdminEditPage = lazy(() => import('./pages/AdminEditPage').then((m) => ({ default: m.AdminEditPage })))
 const ExamPreviewPage = lazy(() => import('./pages/ExamPreviewPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
+const AssistPage = lazy(() => import('./pages/AssistPage').then((m) => ({ default: m.AssistPage })))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
@@ -98,6 +99,7 @@ function App() {
       void import('./pages/NotesPage')
       void import('./pages/SettingsPage')
       void import('./pages/TermsPage')
+      void import('./pages/AssistPage')
       void import('./pages/ExamPreviewPage')
       void import('./pages/AdminPage')
       void import('./pages/AdminEditPage')
@@ -131,6 +133,8 @@ function App() {
             <Route path="/exams/:examId" element={<ExamPreviewPage />} />
             {/* 申论规范词 */}
             <Route path="/terms" element={<TermsPage />} />
+            {/* AI 审题 + 作答框架 */}
+            <Route path="/assist" element={<AssistPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

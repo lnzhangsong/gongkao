@@ -1,0 +1,308 @@
+/* AI 审题 + 作答框架（/assist）：容器复用 .exam-page/.exam-hero，这里只写页面私有部分 */
+
+/* ---------- 输入区 ---------- */
+.assist-form {
+  border-top: 1px solid var(--ink);
+  padding-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.assist-question,
+.assist-stance textarea,
+.assist-item textarea,
+.assist-question-view {
+  width: 100%;
+  font: 400 15px/1.9 var(--serif);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 12px 14px;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.assist-question:focus,
+.assist-stance textarea:focus,
+.assist-item textarea:focus,
+.assist-question-view:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--ink));
+}
+.assist-form-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+/* 题型分段（与拆解面板 .seg 同语言） */
+.assist-types {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.assist-types button {
+  border: 0;
+  background: none;
+  font: 400 13px var(--sans);
+  color: var(--muted);
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.assist-types button + button {
+  border-left: 1px solid var(--line);
+}
+.assist-types button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.assist-topic {
+  width: 200px;
+}
+.assist-mat-picker {
+  width: 220px;
+  font: 400 12px var(--sans);
+}
+.assist-mat-picker .menu-select-trigger {
+  min-height: 0;
+  padding: 5px 10px;
+}
+.assist-run {
+  margin-left: auto;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font: 500 14px var(--sans);
+  padding: 9px 22px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.assist-run:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.assist-run:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.assist-material-note {
+  font: 400 12px/1.7 var(--sans);
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ---------- 结果编辑区 ---------- */
+.assist-editor {
+  margin-top: 34px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.assist-editor-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.assist-badge {
+  flex-shrink: 0;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--accent-text);
+  border: 1px solid color-mix(in srgb, var(--accent-text) 45%, transparent);
+  border-radius: 2px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.assist-label {
+  display: block;
+  font: 500 13px var(--sans);
+  margin-bottom: 8px;
+}
+.assist-label small {
+  font: 400 11px var(--sans);
+  color: var(--muted);
+}
+.assist-stance textarea {
+  font-size: 14px;
+}
+.assist-item {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.assist-item textarea {
+  font-size: 14px;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  padding: 4px 2px;
+}
+.assist-item textarea:focus {
+  border-bottom-color: color-mix(in srgb, var(--accent) 60%, var(--ink));
+}
+.assist-item-mats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.assist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 3px 6px 3px 8px;
+  font: 400 12px/1.6 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.assist-chip-link {
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a.assist-chip-link:hover {
+  color: var(--accent-text);
+}
+.assist-chip b {
+  font-weight: 600;
+  color: var(--accent-text);
+  margin-right: 4px;
+}
+.assist-chip button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 1px;
+}
+.assist-chip button:hover {
+  color: var(--ink);
+}
+.assist-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.assist-item-del {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 3px;
+}
+.assist-item-del:hover {
+  color: #c0392b;
+}
+.assist-add-item {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px dashed var(--line);
+  background: none;
+  border-radius: 2px;
+  color: var(--muted);
+  font: 400 13px var(--sans);
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.assist-add-item:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.assist-editor-actions {
+  display: flex;
+  gap: 12px;
+}
+.assist-save {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font: 500 13px var(--sans);
+  padding: 8px 20px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.assist-save:hover {
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  transform: translate(-2px, -2px);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+/* ---------- 历史记录 ---------- */
+.assist-records {
+  margin-top: 44px;
+}
+.assist-records h2 {
+  font: 500 19px var(--serif);
+  margin: 0 0 16px;
+}
+.assist-empty {
+  font: 400 13px/1.8 var(--sans);
+  color: var(--muted);
+}
+.assist-record {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+.assist-record-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.assist-topic-tag {
+  font: 400 11px var(--mono);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+.assist-date {
+  font: 400 11px var(--mono);
+  color: var(--muted);
+}
+.assist-record-q {
+  font: 500 14.5px/1.7 var(--serif);
+  margin: 0 0 4px;
+}
+.assist-record-stance {
+  font: 400 12.5px/1.8 var(--sans);
+  color: color-mix(in srgb, var(--ink) 72%, var(--paper));
+  margin: 0 0 4px;
+}
+.assist-record-count {
+  font: 400 11.5px var(--mono);
+  color: var(--muted);
+  margin: 0;
+}
+.assist-record-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 800px) {
+  .assist-editor {
+    padding: 16px;
+  }
+  .assist-record {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

@@ -22,7 +22,15 @@ interface MenuSelectProps {
 /** 自定义下拉：替代原生 <select>（原生在 Windows 下渲染卡顿且样式不可控） */
 export function MenuSelect({ value, options, onChange, ariaLabel, placeholder, compact, form }: MenuSelectProps) {
   const [open, setOpen] = useState(false)
+  /** 触发器下方空间不足时弹层向上翻（如页面底部的下拉） */
+  const [up, setUp] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const rect = ref.current?.getBoundingClientRect()
+    if (rect) setUp(window.innerHeight - rect.bottom < 260)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -82,7 +90,7 @@ export function MenuSelect({ value, options, onChange, ariaLabel, placeholder, c
         <ChevronDown size={12} className={`menu-select-chevron${open ? ' up' : ''}`} />
       </button>
       {open && (
-        <div className="menu-select-pop" role="listbox">
+        <div className={`menu-select-pop${up ? ' up' : ''}`} role="listbox">
           {placeholder !== undefined && (
             <button
               type="button"

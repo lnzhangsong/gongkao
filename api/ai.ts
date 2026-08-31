@@ -31,7 +31,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const upstream = await fetch(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, {
+    // 防呆：baseUrl 填成了完整端点（以 /chat/completions 结尾）时不再追加路径
+    let root = String(baseUrl).replace(/\/+$/, '')
+    if (root.endsWith('/chat/completions')) root = root.slice(0, -'/chat/completions'.length)
+    const upstream = await fetch(`${root}/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -45,7 +48,7 @@ export async function POST(request: Request) {
     const data = await upstream.json().catch(() => null)
     if (!upstream.ok || !data) {
       const msg = (data as any)?.error?.message ?? (data as any)?.error ?? `上游返回 ${upstream.status}`
-      return json({ error: typeof msg === 'string' ? msg : JSON.stringify(msg) }, upstream.status || 502)
+      return json({ error: `[上游 ${upstream.status}] ${typeof msg === 'string' ? msg : JSON.stringify(msg)}` }, 502)
     }
     const content = (data as any)?.choices?.[0]?.message?.content
     if (typeof content !== 'string') {

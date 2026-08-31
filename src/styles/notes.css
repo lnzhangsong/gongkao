@@ -489,18 +489,26 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 10px;
+  /* 与上方墨线拉开距离（签体变直角后贴线显得挤） */
+  margin: 18px 0 10px;
 }
 
 .mat-chip {
-  font: 600 11px/1.6 var(--sans);
-  letter-spacing: 0.04em;
-  padding: 1px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  font: 12px var(--mono);
+  letter-spacing: 0.02em;
+  padding: 4px 11px;
+  /* 直角签：与全站 .filter-pill 语言一致（原 999px 胶囊为遗留样式） */
+  border-radius: 2px;
+  border: 1px solid var(--line);
   background: none;
   color: var(--muted);
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mat-chip:hover {
+  color: var(--ink);
+  border-color: var(--ink);
 }
 
 .mat-chip.active {

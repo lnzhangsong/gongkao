@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
 import { useAnnotationStore } from '../stores/annotationStore'
+import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { MATERIAL_TYPE_LABELS } from '../data/material'
+import { draftStudy } from '../lib/aiPresplit'
 import type { Article } from '../types'
 
 const STATUS_OPTIONS: { key: StudyStatus; label: string }[] = [
@@ -36,11 +38,59 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   const removeSubThesis = useShenlunStore((s) => s.removeSubThesis)
   const setReviewNote = useShenlunStore((s) => s.setReviewNote)
   const setParagraphSummary = useShenlunStore((s) => s.setParagraphSummary)
+  const setParagraphSummaryDraft = useShenlunStore((s) => s.setParagraphSummaryDraft)
   const setSkeleton = useShenlunStore((s) => s.setSkeleton)
   const updateAnnotation = useAnnotationStore((s) => s.update)
 
   const [subDraft, setSubDraft] = useState('')
   const [noteDraft, setNoteDraft] = useState<string | null>(null)
+
+  /* ---------- AI 预拆解：一键生成并直接填入（只填空缺，不覆盖手填；段意按 AI 草稿） ---------- */
+  const aiConfigured = useAiStore((s) => isAiConfigured(s.settings))
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [aiDone, setAiDone] = useState('')
+
+  const runAiPresplit = async () => {
+    if (aiBusy) return
+    setAiBusy(true)
+    setAiError('')
+    setAiDone('')
+    try {
+      const d = await draftStudy(article)
+      for (const p of d.paragraphSummaries) {
+        setParagraphSummaryDraft(article.id, p.paraIndex, p.summary)
+      }
+      /* 只填空缺：核心观点 / 分论点（追加去重）/ 骨架各字段 */
+      const filled: string[] = []
+      if (!study?.coreThesis.trim() && d.coreThesis) {
+        setCoreThesis(article.id, d.coreThesis)
+        filled.push('核心观点')
+      }
+      const existSubs = study?.subTheses ?? []
+      const newSubs = d.subTheses.filter((t) => !existSubs.includes(t))
+      if (newSubs.length) {
+        for (const t of newSubs) addSubThesis(article.id, t)
+        filled.push('分论点')
+      }
+      const sk = d.skeleton
+      const patch: Parameters<typeof setSkeleton>[1] = {}
+      if (sk.opening && !skeleton?.opening) patch.opening = sk.opening
+      if (sk.bodyLayers.length && !skeleton?.bodyLayers?.length) patch.bodyLayers = sk.bodyLayers
+      if (sk.transitions?.length && !skeleton?.transitions?.length) patch.transitions = sk.transitions
+      if (sk.closing && !skeleton?.closing) patch.closing = sk.closing
+      if (Object.keys(patch).length) {
+        setSkeleton(article.id, patch)
+        filled.push('骨架')
+      }
+      if (d.paragraphSummaries.length) filled.push(`段意 ${d.paragraphSummaries.length} 段`)
+      setAiDone(filled.length ? `已填入：${filled.join(' / ')}；段意为 AI 草稿，可逐条编辑或采纳` : '没有新增内容（相关字段已有手填值）')
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setAiBusy(false)
+    }
+  }
 
   const annotations = useAnnotationStore((s) => s.annotations)
   const materialByType = useMemo(() => {
@@ -146,6 +196,26 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
         </header>
 
         <div className="shenlun-body">
+          {/* AI 预拆解：一键生成直接填入 */}
+          <section className="shenlun-sec ai-presplit">
+            <div className="shenlun-sec-row">
+              <span className="shenlun-label">AI 预拆解</span>
+              <button
+                className="text-btn"
+                disabled={aiBusy || !aiConfigured}
+                title={aiConfigured ? '一键生成并填入：核心观点 / 分论点 / 骨架 / 每段大意（只填空缺，不覆盖手填）' : '先到设置页配置 AI 服务'}
+                onClick={runAiPresplit}
+              >
+                {aiBusy ? '生成中…' : '一键填入 ✦'}
+              </button>
+            </div>
+            {aiError && <p className="ai-presplit-error">{aiError}</p>}
+            {aiDone && !aiError && <p className="ai-presplit-hint">{aiDone}</p>}
+            {!aiConfigured && !aiError && !aiDone && (
+              <p className="ai-presplit-hint">未配置 AI：到 设置 → AI 服务 填入接口地址与 Key 后可用。</p>
+            )}
+          </section>
+
           {/* 学习状态 */}
           <section className="shenlun-sec">
             <div className="shenlun-sec-row">

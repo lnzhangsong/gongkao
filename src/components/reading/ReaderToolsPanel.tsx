@@ -21,7 +21,7 @@ interface ReaderToolsPanelProps {
   shenlunStatus?: string
   shenlunMaterialCount?: number
   onOpenShenlun?: () => void
-  /** 拆解上屏：把拆解成果（全篇卡 + 每段大意 + 心得）内嵌显示在正文（有拆解数据才出现该行） */
+  /** 拆解上屏：把拆解成果（全篇卡 + 每段大意 + 心得）内嵌显示在正文（无拆解数据时按钮置灰） */
   studyInline?: boolean
   hasStudyData?: boolean
   onToggleStudyInline?: () => void
@@ -110,10 +110,15 @@ export function ReaderToolsPanel({
           {shenlunMaterialCount ? ` · ${shenlunMaterialCount}` : ''}
         </button>
       </div>
-      {hasStudyData && onToggleStudyInline && (
+      {onToggleStudyInline && (
         <div className="tool">
           <span>拆解上屏</span>
-          <button className={studyInline ? 'active' : ''} onClick={onToggleStudyInline}>
+          <button
+            className={studyInline ? 'active' : ''}
+            disabled={!hasStudyData}
+            title={hasStudyData ? undefined : '本篇还没有拆解内容，先在「申论拆解」里填写'}
+            onClick={onToggleStudyInline}
+          >
             {studyInline ? 'ON' : 'OFF'}
           </button>
         </div>

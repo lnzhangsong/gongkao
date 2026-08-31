@@ -26,6 +26,8 @@ import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
 import { ShenlunPanel } from '../components/ShenlunPanel'
 import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
+import { useAiStore, isAiConfigured } from '../stores/aiStore'
+import { draftParaGist } from '../lib/aiPresplit'
 import { paragraphStarts, splitParagraph } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
 import { formatDate } from '../data'
@@ -72,6 +74,9 @@ function ParaGist({
   onToggle,
   onSave,
   onConfirm,
+  onAiDraft,
+  aiBusy,
+  aiReady,
 }: {
   paraIndex: number
   entry?: ParagraphSummary
@@ -79,6 +84,10 @@ function ParaGist({
   onToggle: () => void
   onSave: (text: string) => void
   onConfirm: () => void
+  /** AI 起草：返回生成的句子（写入 store 并回填编辑框）；null = 失败/未配置 */
+  onAiDraft?: () => Promise<string | null>
+  aiBusy?: boolean
+  aiReady?: boolean
 }) {
   const [draft, setDraft] = useState('')
   useEffect(() => {
@@ -116,8 +125,16 @@ function ParaGist({
               清除
             </button>
           )}
-          <button className="para-gist-btn" disabled title="AI 起草即将接入">
-            AI 起草
+          <button
+            className="para-gist-btn"
+            disabled={!aiReady || aiBusy}
+            title={aiReady ? '让 AI 起草本段大意（可再编辑）' : '先到设置页配置 AI 服务'}
+            onClick={async () => {
+              const text = await onAiDraft?.()
+              if (text) setDraft(text)
+            }}
+          >
+            {aiBusy ? '起草中…' : 'AI 起草'}
           </button>
           <button
             className="para-gist-btn primary"
@@ -287,9 +304,30 @@ export function ReadingPage() {
     [shenlunStudy],
   )
   const setParagraphSummary = useShenlunStore((s) => s.setParagraphSummary)
+  const setParagraphSummaryDraft = useShenlunStore((s) => s.setParagraphSummaryDraft)
   const confirmParagraphSummary = useShenlunStore((s) => s.confirmParagraphSummary)
   /* 正文里正在就地编辑大意（strip 编辑器）的段落序号 */
   const [editingGistPara, setEditingGistPara] = useState<number | null>(null)
+  /* 「AI 起草」：单段大意生成中 / 未配置 AI 时按钮置灰 */
+  const aiConfigured = useAiStore((s) => isAiConfigured(s.settings))
+  const [aiBusyPara, setAiBusyPara] = useState<number | null>(null)
+  const draftGistWithAi = useCallback(
+    async (paraIndex: number): Promise<string | null> => {
+      if (!article || aiBusyPara !== null) return null
+      setAiBusyPara(paraIndex)
+      try {
+        const text = await draftParaGist(article.title, article.content?.[paraIndex] ?? '')
+        if (text) setParagraphSummaryDraft(articleId, paraIndex, text)
+        return text || null
+      } catch (err) {
+        void alertDialog(err instanceof Error ? err.message : String(err))
+        return null
+      } finally {
+        setAiBusyPara(null)
+      }
+    },
+    [article, articleId, aiBusyPara, setParagraphSummaryDraft],
+  )
   /* 全篇层面的拆解内容（观点/分论点/骨架）有任意一项非空——只有段意时全篇卡不渲染 */
   const hasOverviewData = Boolean(
     (shenlunStudy?.coreThesis ?? '').trim() ||
@@ -804,6 +842,9 @@ export function ReadingPage() {
                       onToggle={() => setEditingGistPara(editingGistPara === i ? null : i)}
                       onSave={(text) => setParagraphSummary(articleId, i, text)}
                       onConfirm={() => confirmParagraphSummary(articleId, i)}
+                      onAiDraft={() => draftGistWithAi(i)}
+                      aiBusy={aiBusyPara === i}
+                      aiReady={aiConfigured}
                     />
                   )}
 

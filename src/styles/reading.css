@@ -1999,3 +1999,36 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
     opacity: 1;
   }
 }
+
+/* —— AI 预拆解（拆解面板）—— */
+.ai-presplit .text-btn { font-size: 12px; white-space: nowrap; }
+.ai-presplit .text-btn:disabled { opacity: 0.45; cursor: default; }
+.ai-presplit-hint,
+.ai-presplit-error {
+  font: 400 12px/1.7 var(--sans);
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.ai-presplit-error { color: #c0392b; }
+.ai-presplit-result {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.ai-presplit-line {
+  font: 400 12.5px/1.8 var(--sans);
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+.ai-presplit-line b {
+  font-weight: 600;
+  color: var(--accent-text);
+  margin-right: 6px;
+}
+.ai-presplit-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+}

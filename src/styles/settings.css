@@ -324,3 +324,51 @@
     margin-top: 6px;
   }
 }
+
+/* —— AI 服务（BYOK）—— */
+.ai-config {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr auto;
+  gap: 12px;
+  align-items: end;
+}
+.ai-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.ai-field label {
+  font: 10px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ai-field input {
+  width: 100%;
+  font: 400 13px/1.5 var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ai-field input:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--ink));
+}
+.ai-field input::placeholder { color: var(--muted); opacity: 0.7; }
+.ai-config .ghost { height: 34px; white-space: nowrap; }
+.ai-status {
+  grid-column: 1 / -1;
+  font: 400 12px/1.6 var(--sans);
+  color: var(--muted);
+}
+.ai-status.ok { color: var(--accent-text); }
+.ai-status.err { color: #c0392b; }
+@media (max-width: 860px) {
+  .ai-config { grid-template-columns: 1fr 1fr; }
+}

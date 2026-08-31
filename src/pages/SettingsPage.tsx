@@ -7,6 +7,8 @@ import { loadFontFamily } from '../lib/fonts'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { useShenlunStore } from '../stores/shenlunStore'
+import { useAiStore } from '../stores/aiStore'
+import { aiChat } from '../lib/ai'
 import { Toggle } from '../components/ui/Toggle'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { downloadJSON } from '../lib/export'
@@ -17,6 +19,7 @@ import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 const SECTIONS = [
   { id: 'reading', label: '阅读偏好' },
   { id: 'display', label: '显示与主题' },
+  { id: 'ai', label: 'AI 服务' },
   { id: 'data', label: '数据与隐私' },
   { id: 'about', label: '关于读本' },
 ]
@@ -465,6 +468,11 @@ export function SettingsPage() {
             </div>
           </div>
 
+          <div className="settings-section" id="ai" ref={(el) => { sectionRefs.current.ai = el }}>
+            <h2>AI 服务</h2>
+            <AiSection />
+          </div>
+
           <div className="settings-section" id="about" ref={(el) => { sectionRefs.current.about = el }}>
             <h2>关于读本</h2>
             <div className="about-line" style={{ paddingBottom: 16 }}>
@@ -485,5 +493,88 @@ export function SettingsPage() {
         </section>
       </main>
     </section>
+  )
+}
+
+/** AI 服务配置（BYOK）：key 只存本地 IndexedDB；「测试」走一次最小补全验证连通性 */
+function AiSection() {
+  const settings = useAiStore((s) => s.settings)
+  const setAiSettings = useAiStore((s) => s.setAiSettings)
+  const [testing, setTesting] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const runTest = async () => {
+    if (!settings.apiKey.trim()) {
+      setResult({ ok: false, text: '请先填写 API Key' })
+      return
+    }
+    setTesting(true)
+    setResult(null)
+    try {
+      const reply = await aiChat({
+        messages: [{ role: 'user', content: '回复「OK」两个字' }],
+        maxTokens: 10,
+      })
+      setResult({ ok: true, text: `连通正常：${reply.trim().slice(0, 40) || '(空响应)'}` })
+    } catch (err) {
+      setResult({ ok: false, text: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="setting-row">
+        <div>
+          <div className="setting-title">AI 功能</div>
+          <div className="setting-desc">
+            AI 预拆解 / 大意起草：填入你自己的 OpenAI 兼容接口（DeepSeek、GLM、OpenAI 等）。
+            Key 只保存在本机浏览器，请求经服务端纯转发，不留存。
+          </div>
+        </div>
+      </div>
+      <div className="setting-row" style={{ borderBottom: 0 }}>
+        <div className="ai-config">
+          <div className="ai-field">
+            <label htmlFor="ai-base-url">接口地址 BASE URL</label>
+            <input
+              id="ai-base-url"
+              value={settings.baseUrl}
+              placeholder="https://api.deepseek.com"
+              spellCheck={false}
+              onChange={(e) => setAiSettings({ baseUrl: e.target.value })}
+            />
+          </div>
+          <div className="ai-field">
+            <label htmlFor="ai-api-key">API KEY</label>
+            <input
+              id="ai-api-key"
+              type="password"
+              value={settings.apiKey}
+              placeholder="sk-…"
+              autoComplete="off"
+              onChange={(e) => setAiSettings({ apiKey: e.target.value })}
+            />
+          </div>
+          <div className="ai-field">
+            <label htmlFor="ai-model">模型 MODEL</label>
+            <input
+              id="ai-model"
+              value={settings.model}
+              placeholder="deepseek-chat"
+              spellCheck={false}
+              onChange={(e) => setAiSettings({ model: e.target.value })}
+            />
+          </div>
+          <button className="ghost" onClick={runTest} disabled={testing}>
+            {testing ? '测试中…' : '测试连通'}
+          </button>
+          {result && (
+            <span className={`ai-status ${result.ok ? 'ok' : 'err'}`}>{result.text}</span>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

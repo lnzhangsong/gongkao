@@ -85,6 +85,10 @@ export interface ReaderSettings {
   lineHeight: number
   /** 正文字体 */
   fontFamily: 'songti' | 'jinkai' | 'kaiti' | 'fangsong' | 'sans' | 'system'
+  /** 段落大意字号 px（拆解上屏的段意条/编辑框） */
+  gistFontSize: number
+  /** 段落大意字体：follow = 跟随正文字体；sans = 黑体 */
+  gistFontFamily: 'follow' | 'sans'
   /** 阅读页主题（空 = 跟随页面主题） */
   readerTheme: ThemeName | ''
   /** 减少动效 */
@@ -111,6 +115,10 @@ export interface ParagraphSummary {
   /** 对应 article.content[] 段落序号 */
   paraIndex: number
   summary: string
+  /** 内容来源：ai 草稿 / 用户撰写（缺省视为 user，兼容旧数据） */
+  origin?: 'ai' | 'user'
+  /** AI 草稿经用户编辑或点「采纳」后置 true；草稿态渲染为弱化样式 */
+  confirmed?: boolean
 }
 
 /** 范文精读：结构骨架（bodyLayers 缺省可映射 subTheses，避免重复维护） */
@@ -164,6 +172,8 @@ export interface Annotation {
   underlineStyle?: UnderlineStyle
   /** note 类型时：笔记正文 */
   noteText?: string
+  /** 富文本笔记（已净化 HTML）；缺省时回退展示 noteText 纯文本 */
+  noteRich?: string
   tags?: string[]
   /** 申论素材类型标记（无 = 普通摘录） */
   materialType?: MaterialType

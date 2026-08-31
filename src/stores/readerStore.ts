@@ -27,6 +27,8 @@ interface ReaderState {
   setLabelFontSize: (px: number) => void
   setLineHeight: (lh: number) => void
   setFontFamily: (key: ReaderSettings['fontFamily']) => void
+  setGistFontSize: (px: number) => void
+  setGistFontFamily: (v: ReaderSettings['gistFontFamily']) => void
   setReaderTheme: (theme: ThemeName | '') => void
   setReducedMotion: (v: boolean) => void
   setShowAnnotations: (v: boolean) => void
@@ -44,6 +46,8 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   labelFontSize: 13,
   lineHeight: 2.15,
   fontFamily: 'songti',
+  gistFontSize: 13.5,
+  gistFontFamily: 'follow',
   readerTheme: '',
   reducedMotion: false,
   showAnnotations: true,
@@ -66,6 +70,9 @@ export const useReaderStore = create<ReaderState>()(
           settings: { ...s.settings, lineHeight: Math.min(2.4, Math.max(1.6, Math.round(lh * 100) / 100)) },
         })),
       setFontFamily: (key) => set((s) => ({ settings: { ...s.settings, fontFamily: key } })),
+      setGistFontSize: (px) =>
+        set((s) => ({ settings: { ...s.settings, gistFontSize: Math.min(20, Math.max(11, px)) } })),
+      setGistFontFamily: (v) => set((s) => ({ settings: { ...s.settings, gistFontFamily: v } })),
       setReaderTheme: (theme) => set((s) => ({ settings: { ...s.settings, readerTheme: theme } })),
       setReducedMotion: (v) => set((s) => ({ settings: { ...s.settings, reducedMotion: v } })),
       setShowAnnotations: (v) => set((s) => ({ settings: { ...s.settings, showAnnotations: v } })),

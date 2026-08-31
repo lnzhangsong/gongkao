@@ -30,7 +30,7 @@ import { paragraphStarts, splitParagraph } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
 import { formatDate } from '../data'
 import { formatTimeOnly } from '../lib/export'
-import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS } from '../types'
+import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS, type ParagraphSummary } from '../types'
 import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS, MATERIAL_TYPE_HINTS } from '../data/material'
 
 /** 段落聚焦带：视口高度的比例上下限（按手感可调） */
@@ -62,6 +62,112 @@ function fmtDuration(totalSec: number): string {
   const sec = s % 60
   const p = (n: number) => String(n).padStart(2, '0')
   return h > 0 ? `${h}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`
+}
+
+/** 段落大意：栏外序号入口点开后就地编辑/展示；AI 草稿（未确认）弱化展示，可一键采纳 */
+function ParaGist({
+  paraIndex,
+  entry,
+  editing,
+  onToggle,
+  onSave,
+  onConfirm,
+}: {
+  paraIndex: number
+  entry?: ParagraphSummary
+  editing: boolean
+  onToggle: () => void
+  onSave: (text: string) => void
+  onConfirm: () => void
+}) {
+  const [draft, setDraft] = useState('')
+  useEffect(() => {
+    if (editing) setDraft(entry?.summary ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing])
+  if (!editing && !entry) return null
+  if (editing) {
+    return (
+      <div className="para-gist para-gist-editor">
+        <textarea
+          rows={2}
+          autoFocus
+          value={draft}
+          placeholder={`第 ${paraIndex + 1} 段大意…`}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onToggle()
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              onSave(draft)
+              onToggle()
+            }
+          }}
+        />
+        <div className="para-gist-actions">
+          <span className="para-gist-hint">Esc 取消 · ⌘↵ 保存</span>
+          {entry && (
+            <button
+              className="para-gist-btn"
+              onClick={() => {
+                onSave('')
+                onToggle()
+              }}
+            >
+              清除
+            </button>
+          )}
+          <button className="para-gist-btn" disabled title="AI 起草即将接入">
+            AI 起草
+          </button>
+          <button
+            className="para-gist-btn primary"
+            onClick={() => {
+              onSave(draft)
+              onToggle()
+            }}
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    )
+  }
+  const isDraft = entry!.confirmed === false
+  return (
+    <div className={`para-gist${isDraft ? ' draft' : ''}`} onClick={onToggle} title="点击编辑本段大意">
+      <span className="para-gist-tag">{isDraft ? 'AI 草稿' : '大意'}</span>
+      <span className="para-gist-text">{entry!.summary}</span>
+      {isDraft && (
+        <button
+          className="para-gist-adopt"
+          onClick={(e) => {
+            e.stopPropagation()
+            onConfirm()
+          }}
+        >
+          采纳
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** 拆解上屏开关（按文章）持久化到 localStorage；存储异常时静默退化为内存态 */
+const STUDY_INLINE_KEY = 'readbook:studyInline'
+function readStudyInline(articleId: string): boolean {
+  try {
+    return localStorage.getItem(`${STUDY_INLINE_KEY}:${articleId}`) === '1'
+  } catch {
+    return false
+  }
+}
+function writeStudyInline(articleId: string, on: boolean) {
+  try {
+    if (on) localStorage.setItem(`${STUDY_INLINE_KEY}:${articleId}`, '1')
+    else localStorage.removeItem(`${STUDY_INLINE_KEY}:${articleId}`)
+  } catch {
+    /* 存储不可用（隐私模式等）：仅当前会话生效 */
+  }
 }
 
 export function ReadingPage() {
@@ -147,17 +253,52 @@ export function ReadingPage() {
 
   /* 申论拆解 / 范文精读抽屉 */
   const [shenlunOpen, setShenlunOpen] = useState(false)
-  /* 拆解上屏：把拆解成果（全篇卡 + 每段大意 + 心得）内嵌到正文（打开抽屉时自动开启，可手动关） */
-  const [studyInline, setStudyInline] = useState(false)
+  /* 拆解上屏：把拆解成果（全篇卡 + 每段大意 + 心得）内嵌到正文（打开抽屉时自动开启，可手动关）。
+     按文章持久化到 localStorage——否则刷新/切回后复位 OFF，用户视角就是"点了 ON 没生效" */
+  const [studyInlineFor, setStudyInlineFor] = useState(articleId)
+  const [studyInline, setStudyInline] = useState(() => readStudyInline(articleId))
+  if (studyInlineFor !== articleId) {
+    /* 切文章：先把旧篇的开关写回，再载入新篇的开关（render 期调整，避免 effect 顺序竞态覆盖存值） */
+    writeStudyInline(studyInlineFor, studyInline)
+    setStudyInlineFor(articleId)
+    setStudyInline(readStudyInline(articleId))
+  }
+  const toggleStudyInline = useCallback(() => {
+    const next = !studyInline
+    writeStudyInline(articleId, next)
+    setStudyInline(next)
+    if (next) {
+      /* 拆解卡渲染在正文最顶部：用户在页面中部点 ON 时视口内毫无变化，像"没反应"，故滚回顶部 */
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+    }
+  }, [articleId, studyInline])
   const openShenlun = useCallback(() => {
     setShenlunOpen(true)
-    setStudyInline(true)
-  }, [])
+    setStudyInline((v) => {
+      if (v) return v
+      writeStudyInline(articleId, true)
+      return true
+    })
+  }, [articleId])
   const shenlunStudy = useShenlunStore((s) => s.study[articleId])
   const shenlunStatus: StudyStatus = shenlunStudy?.status ?? 'new'
   const shenlunSummaryByPara = useMemo(
-    () => new Map((shenlunStudy?.paragraphSummaries ?? []).map((s) => [s.paraIndex, s.summary])),
+    () => new Map((shenlunStudy?.paragraphSummaries ?? []).map((s) => [s.paraIndex, s] as const)),
     [shenlunStudy],
+  )
+  const setParagraphSummary = useShenlunStore((s) => s.setParagraphSummary)
+  const confirmParagraphSummary = useShenlunStore((s) => s.confirmParagraphSummary)
+  /* 正文里正在就地编辑大意（strip 编辑器）的段落序号 */
+  const [editingGistPara, setEditingGistPara] = useState<number | null>(null)
+  /* 全篇层面的拆解内容（观点/分论点/骨架）有任意一项非空——只有段意时全篇卡不渲染 */
+  const hasOverviewData = Boolean(
+    (shenlunStudy?.coreThesis ?? '').trim() ||
+      (shenlunStudy?.subTheses?.length ?? 0) > 0 ||
+      (shenlunStudy?.skeleton &&
+        ((shenlunStudy.skeleton.opening ?? '').trim() ||
+          (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
+          (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
+          (shenlunStudy.skeleton.closing ?? '').trim())),
   )
   const hasStudyData = Boolean(
     shenlunStudy &&
@@ -311,8 +452,13 @@ export function ReadingPage() {
       '--reader-font-size': `${settings.fontSize}px`,
       '--reader-line-height': String(settings.lineHeight),
       '--reader-font-family': fontFamilyCss(settings.fontFamily),
+      '--gist-font-size': `${settings.gistFontSize}px`,
+      '--gist-font-family':
+        settings.gistFontFamily === 'sans'
+          ? "'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif"
+          : fontFamilyCss(settings.fontFamily),
     }) as CSSProperties,
-    [settings.fontSize, settings.lineHeight, settings.fontFamily],
+    [settings.fontSize, settings.lineHeight, settings.fontFamily, settings.gistFontSize, settings.gistFontFamily],
   )
 
   /* ---------- 进度 ---------- */
@@ -497,7 +643,7 @@ export function ReadingPage() {
         onOpenShenlun={openShenlun}
       />
       <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
-        <article>
+        <article data-study-inline={studyInline ? 'on' : undefined}>
           <header className="article-head">
             <div className="tag">
               {article.source} · {article.topic}　/　{formatDate(article.date)}
@@ -525,17 +671,15 @@ export function ReadingPage() {
             )}
           </header>
 
-          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架）——只要有任意拆解数据就展示，避免“段意/心得填了却不显示” */}
-          {studyInline && hasStudyData && (
+          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架）——有全篇层面内容才渲染，纯段意时只显示段意条 */}
+          {studyInline && hasOverviewData && (
             <aside className="study-overview" aria-label="全篇拆解">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <span className="study-overview-title" style={{ marginBottom: 0 }}>拆解 · 全篇</span>
-                <button
-                  className="text-btn"
-                  style={{ font: '600 11px/1 var(--sans)', color: 'var(--muted)' }}
-                  onClick={() => setStudyInline(false)}
-                  aria-label="收起拆解上屏"
-                >
+              <div className="study-overview-head">
+                <span className="study-overview-title">拆解 · 全篇</span>
+                <button className="study-collapse" onClick={() => {
+                  writeStudyInline(articleId, false)
+                  setStudyInline(false)
+                }} aria-label="收起拆解上屏">
                   收起
                 </button>
               </div>
@@ -569,14 +713,10 @@ export function ReadingPage() {
                   </div>
                 </details>
               )}
-              {/* 有段意或心得时给一句提示，避免“只填段意/心得”时卡片看起来像空的 */}
-              {!shenlunStudy?.coreThesis?.trim() && !(shenlunStudy?.subTheses?.length) && !shenlunStudy?.skeleton && (
-                <p style={{ margin: '8px 0 0', font: '400 12px/1.7 var(--sans)', color: 'var(--muted)' }}>
-                  已写入 {shenlunStudy?.paragraphSummaries?.length ?? 0} 段大意 {shenlunStudy?.reviewNote?.trim() ? '· 含心得' : ''}，段意附在各段下方。
-                </p>
-              )}
             </aside>
           )}
+
+          {/* 拆解上屏：没有拆解数据时不渲染任何内容（面板开关在无数据时为置灰，不会误开） */}
 
           <div
             className={`article-body${settings.focusMode ? ' focus-mode' : ''}${settings.indent ? '' : ' no-indent'}`}
@@ -591,6 +731,16 @@ export function ReadingPage() {
               return (
                 <Fragment key={i}>
                   <p data-para={i}>
+                    {studyInline && (
+                      <button
+                        className={`para-num${shenlunSummaryByPara.get(i) ? ' has-gist' : ''}${editingGistPara === i ? ' editing' : ''}`}
+                        title={shenlunSummaryByPara.get(i) ? '查看/编辑本段大意' : '写本段大意'}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => setEditingGistPara(editingGistPara === i ? null : i)}
+                      >
+                        {i + 1}
+                      </button>
+                    )}
                     {segments.map((seg, j) => {
                       if (seg.annotations.length === 0) return <TermText key={j} text={seg.text} />
                       const note = seg.annotations.find((a) => a.kind === 'note')
@@ -646,11 +796,15 @@ export function ReadingPage() {
                     })}
                   </p>
 
-                  {studyInline && shenlunSummaryByPara.get(i) && (
-                    <div className="para-gist">
-                      <span className="para-gist-tag">大意</span>
-                      {shenlunSummaryByPara.get(i)}
-                    </div>
+                  {studyInline && (
+                    <ParaGist
+                      paraIndex={i}
+                      entry={shenlunSummaryByPara.get(i)}
+                      editing={editingGistPara === i}
+                      onToggle={() => setEditingGistPara(editingGistPara === i ? null : i)}
+                      onSave={(text) => setParagraphSummary(articleId, i, text)}
+                      onConfirm={() => confirmParagraphSummary(articleId, i)}
+                    />
                   )}
 
                   {hasPending && (
@@ -911,7 +1065,7 @@ export function ReadingPage() {
           onOpenShenlun={openShenlun}
           studyInline={studyInline}
           hasStudyData={hasStudyData}
-          onToggleStudyInline={() => setStudyInline(!studyInline)}
+          onToggleStudyInline={toggleStudyInline}
         />
       </main>
 

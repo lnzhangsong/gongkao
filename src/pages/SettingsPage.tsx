@@ -29,6 +29,8 @@ export function SettingsPage() {
   const setFontSize = useReaderStore((s) => s.setFontSize)
   const setLineHeight = useReaderStore((s) => s.setLineHeight)
   const setFontFamily = useReaderStore((s) => s.setFontFamily)
+  const setGistFontSize = useReaderStore((s) => s.setGistFontSize)
+  const setGistFontFamily = useReaderStore((s) => s.setGistFontFamily)
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setReducedMotion = useReaderStore((s) => s.setReducedMotion)
   const setFocusMode = useReaderStore((s) => s.setFocusMode)
@@ -225,6 +227,42 @@ export function SettingsPage() {
                   </button>
                   <span className="value">{settings.fontSize}px</span>
                   <button onClick={() => setFontSize(settings.fontSize + 1)} aria-label="增大字号">
+                    <Plus size={12} />
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">大意字体</div>
+                <div className="setting-desc">拆解上屏中段落大意的字体（跟随正文或黑体）</div>
+              </div>
+              <div className="setting-control">
+                <MenuSelect
+                  value={settings.gistFontFamily}
+                  options={[
+                    { key: 'follow', label: '跟随正文' },
+                    { key: 'sans', label: '思源黑体' },
+                  ]}
+                  onChange={(key) => setGistFontFamily(key as typeof settings.gistFontFamily)}
+                  ariaLabel="大意字体"
+                />
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <div className="setting-title">大意大小</div>
+                <div className="setting-desc">段落大意的字号</div>
+              </div>
+              <div className="setting-control">
+                <span className="font-size-ctl">
+                  <button onClick={() => setGistFontSize(settings.gistFontSize - 0.5)} aria-label="减小大意字号">
+                    <Minus size={12} />
+                  </button>
+                  <span className="value">{settings.gistFontSize}px</span>
+                  <button onClick={() => setGistFontSize(settings.gistFontSize + 0.5)} aria-label="增大大意字号">
                     <Plus size={12} />
                   </button>
                 </span>

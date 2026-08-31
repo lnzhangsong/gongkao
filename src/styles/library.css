@@ -400,3 +400,22 @@
   }
 }
 
+
+/* 申论拆解徽标（学习状态 + 素材数） */
+.study-badge {
+  display: inline-block;
+  font: 600 10px/1.5 var(--sans);
+  font-style: normal;
+  letter-spacing: 0.05em;
+  color: var(--accent-text, var(--accent));
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+  padding: 0 8px;
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+
+.study-badge.mastered {
+  color: #fff;
+  background: #4c9d6b;
+}

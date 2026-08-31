@@ -3,7 +3,8 @@ import { toast } from '../components/ui/Toast'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { computeSelectionRange, flatText } from '../lib/offsets'
 import { NARROW_BREAKPOINT } from '../lib/breakpoints'
-import type { Annotation, AnnotationKind, HighlightColor, UnderlineStyle } from '../types'
+import type { Annotation, AnnotationKind, HighlightColor, MaterialType, UnderlineStyle } from '../types'
+import { MATERIAL_TYPE_COLORS } from '../data/material'
 
 export interface PopoverState {
   x: number
@@ -165,21 +166,35 @@ export function useAnnotationPopover(
     }
   }, [starts, article, bodyRef, hidePopover, hideAnnPopover])
 
-  /** 添加标注；与现有同类型标注重叠时合并为并集区间，避免一段文字叠多条 */
+  /** 添加标注；与现有同类型标注重叠时合并为并集区间，避免一段文字叠多条。
+   *  合并时继承被合并标注的素材字段（materialType 等），防止转素材后再高亮丢失标记 */
   const applyMark = (
     kind: 'highlight' | 'underline',
-    opts?: { color?: HighlightColor; underlineStyle?: UnderlineStyle },
+    opts?: { color?: HighlightColor; underlineStyle?: UnderlineStyle; materialType?: MaterialType },
   ): { id: string; x: number; y: number } | null => {
     if (!article || !popover) return null
     const { start, end, x, y } = popover
     const overlapped = articleAnnotations.filter(
       (a) => a.kind === kind && a.start < end && a.end > start,
     )
+    const inherited: Annotation | undefined = opts?.materialType
+      ? undefined
+      : overlapped.find((a) => a.materialType)
     const base = {
       articleId: article.id,
       kind,
       ...(opts?.color ? { color: opts.color } : {}),
       ...(kind === 'underline' ? { underlineStyle: opts?.underlineStyle ?? 'solid' } : {}),
+      ...(opts?.materialType
+        ? { materialType: opts.materialType }
+        : inherited
+          ? {
+              materialType: inherited.materialType,
+              ...(inherited.memorized ? { memorized: inherited.memorized } : {}),
+              ...(inherited.mastery !== undefined ? { mastery: inherited.mastery } : {}),
+              ...(inherited.pattern ? { pattern: inherited.pattern } : {}),
+            }
+          : {}),
     }
     let created
     if (overlapped.length > 0) {
@@ -208,6 +223,24 @@ export function useAnnotationPopover(
     const created = applyMark('underline', { underlineStyle: s })
     // 加完下划线立即弹出管理菜单（含删除下划线）
     if (created) openAnnPopover([created.id], created.x, created.y)
+  }
+
+  /** 选中文字标为素材类型（生成带类型色的高亮 + materialType），随后弹出管理菜单（句式可填模板） */
+  const applyMaterial = (type: MaterialType) => {
+    const created = applyMark('highlight', { color: MATERIAL_TYPE_COLORS[type], materialType: type })
+    if (created) openAnnPopover([created.id], created.x, created.y)
+  }
+
+  /** 已有标注转素材：把管理菜单里的高亮转为指定素材类型（改类型色 + materialType） */
+  const addMaterialToAnn = (type: MaterialType) => {
+    const a = annPopoverFirst('highlight')
+    if (a) updateAnnotation(a.id, { materialType: type, color: MATERIAL_TYPE_COLORS[type] })
+  }
+
+  /** 取消素材标记：恢复为普通高亮（保留当前颜色） */
+  const removeMaterialFromAnn = () => {
+    const a = annPopoverFirst('highlight')
+    if (a) updateAnnotation(a.id, { materialType: undefined })
   }
 
   /* 划词工具栏打开时的键盘替代：H=高亮 / U=下划线 / N=笔记（Esc 关闭已另有监听） */
@@ -482,6 +515,9 @@ export function useAnnotationPopover(
     setNoteDraft,
     applyHighlight,
     applyUnderline,
+    applyMaterial,
+    addMaterialToAnn,
+    removeMaterialFromAnn,
     startNote,
     saveNote,
     showAnnActions,

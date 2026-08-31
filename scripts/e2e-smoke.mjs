@@ -253,7 +253,7 @@ await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 await selectRange(0, 4, 16)
 check('选择后弹出工具栏', (await page.evaluate(() => document.querySelector('.selection-popover')?.classList.contains('show'))) === true)
-check('色板含 5 种颜色', (await page.locator('.hl-dots .hl-dot').count()) === 5)
+check('色板含 6 种颜色', (await page.locator('.hl-dots .hl-dot').count()) === 6)
 const dotRect = await page.evaluate(() => {
   const r = document.querySelector('.hl-dot').getBoundingClientRect()
   return { w: r.width, h: r.height }
@@ -297,6 +297,7 @@ const hlMerged = mergedAnns.filter((a) => a.kind === 'highlight' && a.articleId 
 check('重叠高亮合并为一条', hlMerged.length === 1, `${hlMerged.length} 条`)
 check('合并区间取并集', hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24, `[${hlMerged[0]?.start},${hlMerged[0]?.end})`)
 check('合并后正文单段高亮', (await page.locator('.article-body .highlighted').count()) === 1)
+
 
 // ---------- 点击标注管理：切颜色 / 加下划线 ----------
 await page.evaluate(() => {
@@ -466,7 +467,7 @@ await page.evaluate(() => {
   if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('纯笔记段菜单含高亮色点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .hl-dot').length)) === 5)
+check('纯笔记段菜单含高亮色点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .hl-dot').length)) === 6)
 check('纯笔记段菜单无下划线样式点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0)
 check('纯笔记段无删除下划线', (await page.evaluate(() => [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')))) === false)
 // 点色点给纯笔记段加高亮
@@ -524,6 +525,42 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(500)
 check('删除高亮后消失', (await page.locator('.article-body .highlighted').count()) <= 1)
+
+// ---------- 素材标记（申论五类，D15） ----------
+await selectRange(0, 30, 44)
+await page.evaluate(() => {
+  const btn = document.querySelector('.selection-popover .mat-btn-thesis')
+  if (btn) btn.click()
+})
+await page.waitForTimeout(250)
+check('素材标记渲染类型色与徽标', (await page.locator('.article-body .mat-thesis').count()) >= 1)
+const matAnns = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
+const matAnn = matAnns.find((a) => a.materialType === 'thesis')
+check('素材类型持久化', Boolean(matAnn), `materialType=${matAnn?.materialType ?? 'none'}`)
+
+// 标注管理弹层：取消素材标记 + 句式模板
+await page.evaluate(() => document.querySelector('.article-body .mat-thesis')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+await page.waitForTimeout(200)
+check('管理弹层含素材行', (await page.locator('.ann-popover .mat-row').count()) === 1)
+await page.evaluate(() => {
+  const btn = [...document.querySelectorAll('.ann-popover .mat-btn')].find((b) => b.textContent.includes('句式'))
+  if (btn) btn.click()
+})
+await page.waitForTimeout(200)
+check('句式模板输入出现', (await page.locator('.ann-popover .pattern-input').count()) === 1)
+
+// ---------- 申论拆解 / 范文精读面板 ----------
+await page.evaluate(() => {
+  const btn = [...document.querySelectorAll('.article-tools .tool button')].find((b) => b.textContent.includes('拆解'))
+  if (btn) btn.click()
+})
+await page.waitForTimeout(300)
+check('拆解面板打开', (await page.locator('.shenlun-panel').count()) === 1)
+check('面板含每段大意区', (await page.locator('.shenlun-panel .para-summary').count()) >= 3)
+check('面板含结构骨架区', (await page.locator('.shenlun-panel .skeleton-field').count()) >= 3)
+await page.evaluate(() => document.querySelector('.shenlun-close')?.click())
+await page.waitForTimeout(200)
+check('拆解面板可关闭', (await page.locator('.shenlun-panel').count()) === 0)
 const delAnns1 = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 check('删除高亮持久化', !delAnns1.some((a) => a.kind === 'highlight' && a.start === 4 && a.end === 24))
 // 同段下划线仍在
@@ -636,6 +673,10 @@ await page.setInputFiles('input[type="file"]', {
   mimeType: 'application/json',
   buffer: Buffer.from(JSON.stringify(importPayload)),
 })
+/* 导入走自定义 confirmDialog（非原生 dialog 事件），需点击「确定」 */
+await page.waitForTimeout(300)
+const impConfirm = page.locator('.exam-modal button', { hasText: '确定' })
+if (await impConfirm.count()) await impConfirm.first().click()
 await page.waitForTimeout(900)
 const impTheme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('导入主题生效', impTheme === 'night', impTheme)

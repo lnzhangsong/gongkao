@@ -162,10 +162,14 @@ export function ReadingPage() {
   const hasStudyData = Boolean(
     shenlunStudy &&
       ((shenlunStudy.paragraphSummaries?.length ?? 0) > 0 ||
-        shenlunStudy.coreThesis ||
+        (shenlunStudy.coreThesis ?? '').trim() ||
         (shenlunStudy.subTheses?.length ?? 0) > 0 ||
-        shenlunStudy.skeleton ||
-        shenlunStudy.reviewNote),
+        (shenlunStudy.skeleton &&
+          ((shenlunStudy.skeleton.opening ?? '').trim() ||
+            (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
+            (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
+            (shenlunStudy.skeleton.closing ?? '').trim())) ||
+        (shenlunStudy.reviewNote ?? '').trim()),
   )
   const allAnnotations = useAnnotationStore((s) => s.annotations)
   const shenlunMaterialCount = useMemo(
@@ -521,8 +525,8 @@ export function ReadingPage() {
             )}
           </header>
 
-          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架）——骨架与段意可折叠，避免长文被顶走 */}
-          {studyInline && shenlunStudy && (shenlunStudy.coreThesis || (shenlunStudy.subTheses?.length ?? 0) > 0 || shenlunStudy.skeleton) && (
+          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架）——只要有任意拆解数据就展示，避免“段意/心得填了却不显示” */}
+          {studyInline && hasStudyData && (
             <aside className="study-overview" aria-label="全篇拆解">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span className="study-overview-title" style={{ marginBottom: 0 }}>拆解 · 全篇</span>
@@ -535,27 +539,41 @@ export function ReadingPage() {
                   收起
                 </button>
               </div>
-              {shenlunStudy.coreThesis && (
-                <p className="study-thesis" style={{ marginTop: 8 }}>{shenlunStudy.coreThesis}</p>
+              {(shenlunStudy?.coreThesis ?? '').trim() && (
+                <p className="study-thesis" style={{ marginTop: 8 }}>{shenlunStudy!.coreThesis}</p>
               )}
-              {(shenlunStudy.subTheses?.length ?? 0) > 0 && (
+              {(shenlunStudy?.subTheses?.length ?? 0) > 0 && (
                 <ol className="study-subs">
-                  {shenlunStudy.subTheses.map((t, i) => (
+                  {shenlunStudy!.subTheses.map((t, i) => (
                     <li key={i}>{t}</li>
                   ))}
                 </ol>
               )}
-              {shenlunStudy.skeleton && (
+              {(shenlunStudy?.skeleton && (
+                ((shenlunStudy.skeleton.opening ?? '').trim() ||
+                  (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
+                  (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
+                  (shenlunStudy.skeleton.closing ?? '').trim())
+              )) && (
                 <details className="study-skeleton-details">
                   <summary>结构骨架</summary>
                   <div className="study-skeleton">
-                    {shenlunStudy.skeleton.opening && <p><b>开头</b>{shenlunStudy.skeleton.opening}</p>}
-                    {(shenlunStudy.skeleton.bodyLayers ?? []).filter(Boolean).map((l, i) => (
+                    {(shenlunStudy!.skeleton!.opening ?? '').trim() && <p><b>开头</b>{shenlunStudy!.skeleton!.opening}</p>}
+                    {(shenlunStudy!.skeleton!.bodyLayers ?? []).filter((s) => s.trim()).map((l, i) => (
                       <p key={i}><b>层次{i + 1}</b>{l}</p>
                     ))}
-                    {shenlunStudy.skeleton.closing && <p><b>收尾</b>{shenlunStudy.skeleton.closing}</p>}
+                    {(shenlunStudy!.skeleton!.transitions ?? []).filter((s) => s.trim()).length > 0 && (
+                      <p><b>过渡</b>{shenlunStudy!.skeleton!.transitions!.filter((s) => s.trim()).join(' / ')}</p>
+                    )}
+                    {(shenlunStudy!.skeleton!.closing ?? '').trim() && <p><b>收尾</b>{shenlunStudy!.skeleton!.closing}</p>}
                   </div>
                 </details>
+              )}
+              {/* 有段意或心得时给一句提示，避免“只填段意/心得”时卡片看起来像空的 */}
+              {!shenlunStudy?.coreThesis?.trim() && !(shenlunStudy?.subTheses?.length) && !shenlunStudy?.skeleton && (
+                <p style={{ margin: '8px 0 0', font: '400 12px/1.7 var(--sans)', color: 'var(--muted)' }}>
+                  已写入 {shenlunStudy?.paragraphSummaries?.length ?? 0} 段大意 {shenlunStudy?.reviewNote?.trim() ? '· 含心得' : ''}，段意附在各段下方。
+                </p>
               )}
             </aside>
           )}

@@ -7,6 +7,7 @@ import type {
   ReadingProgress,
   ThemeName,
 } from '../types'
+import type { ArticleStudy } from '../stores/shenlunStore'
 import { THEMES } from '../stores/themeStore'
 import { TOPICS, computeReadTime } from '../data'
 
@@ -19,6 +20,8 @@ export interface ParsedImport {
   annotations: Annotation[]
   /** 文章（带正文内容，按 id 覆盖/追加） */
   articles?: Article[]
+  /** 学习结构（含范文精读字段，按 articleId 覆盖合并） */
+  shenlun?: ArticleStudy[]
 }
 
 export interface ImportFailure {
@@ -44,6 +47,16 @@ function isProgressShape(v: unknown): v is ReadingProgress {
   if (!v || typeof v !== 'object') return false
   const p = v as Record<string, unknown>
   return typeof p.articleId === 'string' && typeof p.percent === 'number'
+}
+
+/** 校验一条学习结构记录（最小结构：articleId + status） */
+function isStudyShape(v: unknown): v is ArticleStudy {
+  if (!v || typeof v !== 'object') return false
+  const s = v as Record<string, unknown>
+  return (
+    typeof s.articleId === 'string' &&
+    (s.status === 'new' || s.status === 'learning' || s.status === 'mastered')
+  )
 }
 
 /** 从整包导出中提取带正文的文章 */
@@ -160,6 +173,15 @@ export function parseImportData(raw: string): ParsedImport | ImportFailure {
     const annotations = obj.annotations.filter(isAnnotationShape)
     if (annotations.length > 0) {
       result.annotations = annotations
+      recognized = true
+    }
+  }
+
+  // 学习结构（申论拆解 / 范文精读）
+  if (Array.isArray(obj.shenlun)) {
+    const study = obj.shenlun.filter(isStudyShape)
+    if (study.length > 0) {
+      result.shenlun = study
       recognized = true
     }
   }

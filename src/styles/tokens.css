@@ -53,12 +53,14 @@
   --hl-green: #93d8a8;
   --hl-pink: #f2aec4;
   --hl-violet: #c6aaf5;
+  --hl-orange: #f0b374;
   /* 高亮色点的固定品牌色（色点在深色弹出条上，不随主题透明度变化） */
   --hl-dot-yellow: #e9dc66;
   --hl-dot-blue: #9db9ea;
   --hl-dot-green: #93d8a8;
   --hl-dot-pink: #f2aec4;
   --hl-dot-violet: #c6aaf5;
+  --hl-dot-orange: #f0b374;
 
   /* 字体栈：Google Fonts 优先，随后按平台回退（Windows: 微软雅黑/宋体/楷体；macOS: 苹方/华文） */
   --serif: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif;
@@ -86,6 +88,7 @@
   --hl-green: #8fd6a4;
   --hl-pink: #f0a8c0;
   --hl-violet: #c0a8f2;
+  --hl-orange: #eeab6e;
 }
 
 :root[data-theme='night'] {
@@ -113,6 +116,7 @@
   --hl-green: rgba(147, 216, 168, 0.32);
   --hl-pink: rgba(242, 174, 196, 0.32);
   --hl-violet: rgba(198, 170, 245, 0.32);
+  --hl-orange: rgba(240, 179, 116, 0.32);
 }
 
 :root[data-theme='violet'] {
@@ -134,6 +138,7 @@
   --hl-green: #94d4aa;
   --hl-pink: #efa9c4;
   --hl-violet: #c9b3f7;
+  --hl-orange: #eeb076;
 }
 
 /* 墨夜 / GRAPHITE —— 提炼自 design/explorations/2026-direction.html（暗色「阅读 OS」方向） */
@@ -161,6 +166,7 @@
   --hl-green: rgba(147, 216, 168, 0.32);
   --hl-pink: rgba(242, 174, 196, 0.32);
   --hl-violet: rgba(198, 170, 245, 0.32);
+  --hl-orange: rgba(240, 179, 116, 0.32);
 }
 
 /* 阅读器变量（由 readerStore 写入内联 style） */

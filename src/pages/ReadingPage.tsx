@@ -24,13 +24,35 @@ import { useCycleTheme } from '../hooks/useCycleTheme'
 import { useIsNarrow } from '../lib/breakpoints'
 import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
+import { ShenlunPanel } from '../components/ShenlunPanel'
+import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
 import { paragraphStarts, splitParagraph } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
 import { formatDate } from '../data'
 import { formatTimeOnly } from '../lib/export'
 import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS } from '../types'
+import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS, MATERIAL_TYPE_HINTS } from '../data/material'
 
 /** 段落聚焦带：视口高度的比例上下限（按手感可调） */
+
+/** 句式模板编辑（标注管理弹层内）：原句已存为摘录，这里填抽象化后的可迁移模板 */
+function PatternInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  return (
+    <div className="pattern-input">
+      <input
+        placeholder="填可迁移模板，如：以……之笔，绘就……画卷"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSave(draft.trim())
+          e.stopPropagation()
+        }}
+      />
+      <button onClick={() => onSave(draft.trim())}>存模板</button>
+    </div>
+  )
+}
 
 /** 秒 → MM:SS / H:MM:SS */
 function fmtDuration(totalSec: number): string {
@@ -121,6 +143,53 @@ export function ReadingPage() {
   const annotationsVisible = useAnnotationStore((s) => s.visible)
   const setAnnotationsVisible = useAnnotationStore((s) => s.setVisible)
   const removeAnnotation = useAnnotationStore((s) => s.remove)
+  const updateAnnotation = useAnnotationStore((s) => s.update)
+
+  /* 申论拆解 / 范文精读抽屉 */
+  const [shenlunOpen, setShenlunOpen] = useState(false)
+  /* 拆解上屏：把拆解成果（全篇卡 + 每段大意 + 心得）内嵌到正文（打开抽屉时自动开启，可手动关） */
+  const [studyInline, setStudyInline] = useState(false)
+  const openShenlun = useCallback(() => {
+    setShenlunOpen(true)
+    setStudyInline(true)
+  }, [])
+  const shenlunStudy = useShenlunStore((s) => s.study[articleId])
+  const shenlunStatus: StudyStatus = shenlunStudy?.status ?? 'new'
+  const shenlunSummaryByPara = useMemo(
+    () => new Map((shenlunStudy?.paragraphSummaries ?? []).map((s) => [s.paraIndex, s.summary])),
+    [shenlunStudy],
+  )
+  const hasStudyData = Boolean(
+    shenlunStudy &&
+      ((shenlunStudy.paragraphSummaries?.length ?? 0) > 0 ||
+        shenlunStudy.coreThesis ||
+        (shenlunStudy.subTheses?.length ?? 0) > 0 ||
+        shenlunStudy.skeleton ||
+        shenlunStudy.reviewNote),
+  )
+  const allAnnotations = useAnnotationStore((s) => s.annotations)
+  const shenlunMaterialCount = useMemo(
+    () =>
+      allAnnotations.filter(
+        (a) => a.articleId === articleId && a.kind === 'highlight' && a.materialType,
+      ).length,
+    [allAnnotations, articleId],
+  )
+  const scrollToPara = useCallback((paraIndex: number) => {
+    const el = bodyRef.current?.querySelector<HTMLElement>(`[data-para="${paraIndex}"]`)
+    if (!el) return
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: 'smooth' })
+    /* 短文可能已滚到底、段落到不了视口顶部，闪烁提示目标段，避免"点了没反应" */
+    el.classList.add('para-flash')
+    window.setTimeout(() => el.classList.remove('para-flash'), 2200)
+  }, [])
+  const scrollToAnnotation = useCallback((annId: string) => {
+    const el = bodyRef.current?.querySelector<HTMLElement>(`[data-ann-ids*="${annId}"]`)
+    if (!el) return
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' })
+    el.classList.add('ann-flash')
+    window.setTimeout(() => el.classList.remove('ann-flash'), 2200)
+  }, [])
 
   const bodyRef = useRef<HTMLDivElement>(null)
   useFocusMode(bodyRef, settings.focusMode, contentReady && fontReady)
@@ -152,6 +221,9 @@ export function ReadingPage() {
     setNoteDraft,
     applyHighlight,
     applyUnderline,
+    applyMaterial,
+    addMaterialToAnn,
+    removeMaterialFromAnn,
     startNote,
     saveNote,
     showAnnActions,
@@ -418,6 +490,7 @@ export function ReadingPage() {
         onToggleAnnotations={() => setAnnotationsVisible(!annotationsVisible)}
         focusMode={settings.focusMode}
         onToggleFocus={() => setFocusMode(!settings.focusMode)}
+        onOpenShenlun={openShenlun}
       />
       <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
         <article>
@@ -448,6 +521,32 @@ export function ReadingPage() {
             )}
           </header>
 
+          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架） */}
+          {studyInline && shenlunStudy && (shenlunStudy.coreThesis || (shenlunStudy.subTheses?.length ?? 0) > 0 || shenlunStudy.skeleton) && (
+            <aside className="study-overview" aria-label="全篇拆解">
+              <span className="study-overview-title">拆解 · 全篇</span>
+              {shenlunStudy.coreThesis && (
+                <p className="study-thesis">{shenlunStudy.coreThesis}</p>
+              )}
+              {(shenlunStudy.subTheses?.length ?? 0) > 0 && (
+                <ol className="study-subs">
+                  {shenlunStudy.subTheses.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ol>
+              )}
+              {shenlunStudy.skeleton && (
+                <div className="study-skeleton">
+                  {shenlunStudy.skeleton.opening && <p><b>开头</b>{shenlunStudy.skeleton.opening}</p>}
+                  {(shenlunStudy.skeleton.bodyLayers ?? []).filter(Boolean).map((l, i) => (
+                    <p key={i}><b>层次{i + 1}</b>{l}</p>
+                  ))}
+                  {shenlunStudy.skeleton.closing && <p><b>收尾</b>{shenlunStudy.skeleton.closing}</p>}
+                </div>
+              )}
+            </aside>
+          )}
+
           <div
             className={`article-body${settings.focusMode ? ' focus-mode' : ''}${settings.indent ? '' : ' no-indent'}`}
             ref={bodyRef}
@@ -465,6 +564,7 @@ export function ReadingPage() {
                       if (seg.annotations.length === 0) return <TermText key={j} text={seg.text} />
                       const note = seg.annotations.find((a) => a.kind === 'note')
                       const anns = seg.annotations.filter((a) => a.kind !== 'note')
+                      const mat = anns.find((a) => a.kind === 'highlight' && a.materialType)?.materialType
                       const cls = [
                         note ? 'note-mark' : '',
                         ...anns.map((a) =>
@@ -472,6 +572,7 @@ export function ReadingPage() {
                             ? `highlighted hl-${a.color ?? 'yellow'}`
                             : `underlined${a.underlineStyle && a.underlineStyle !== 'solid' ? ` ul-${a.underlineStyle}` : ''}`,
                         ),
+                        mat ? `mat-${mat}` : '',
                       ]
                         .filter(Boolean)
                         .join(' ')
@@ -480,6 +581,7 @@ export function ReadingPage() {
                           <span
                             className={cls}
                             data-ann-ids={seg.annotations.map((a) => a.id).join(',')}
+                            data-mat-label={mat ? MATERIAL_TYPE_LABELS[mat] : undefined}
                             onClick={showAnnActions}
                             title="点击管理标注"
                           >
@@ -503,6 +605,13 @@ export function ReadingPage() {
                       )
                     })}
                   </p>
+
+                  {studyInline && shenlunSummaryByPara.get(i) && (
+                    <div className="para-gist">
+                      <span className="para-gist-tag">大意</span>
+                      {shenlunSummaryByPara.get(i)}
+                    </div>
+                  )}
 
                   {hasPending && (
                     <div className="note-form show">
@@ -595,6 +704,13 @@ export function ReadingPage() {
               <button onClick={() => applyUnderline(ulStyle)}>
                 <UnderlineIcon size={12} /> 下划线
               </button>
+              <div className="mat-row">
+                {MATERIAL_TYPES.map((t) => (
+                  <button key={t} className={`mat-btn mat-btn-${t}`} onClick={() => applyMaterial(t)} title={MATERIAL_TYPE_HINTS[t]}>
+                    {MATERIAL_TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
               <button onClick={startNote}>
                 <StickyNote size={12} /> 笔记
               </button>
@@ -658,6 +774,33 @@ export function ReadingPage() {
                 </div>
               )}
               {annPopover && (
+                <div className="mat-row ann-mat-row">
+                  <span className="ann-mat-label">素材</span>
+                  {MATERIAL_TYPES.map((t) => {
+                    const cur = annPopoverFirst('highlight')?.materialType
+                    return (
+                      <button
+                        key={t}
+                        className={`mat-btn mat-btn-${t}${cur === t ? ' active' : ''}`}
+                        onClick={() => (cur === t ? removeMaterialFromAnn() : addMaterialToAnn(t))}
+                        title={cur === t ? `取消「${MATERIAL_TYPE_LABELS[t]}」标记` : `标记为${MATERIAL_TYPE_LABELS[t]} · ${MATERIAL_TYPE_HINTS[t]}`}
+                      >
+                        {MATERIAL_TYPE_LABELS[t]}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {annPopover && annPopoverFirst('highlight')?.materialType === 'pattern' && (
+                <PatternInput
+                  value={annPopoverFirst('highlight')?.pattern ?? ''}
+                  onSave={(v) => {
+                    const a = annPopoverFirst('highlight')
+                    if (a) updateAnnotation(a.id, { pattern: v || undefined })
+                  }}
+                />
+              )}
+              {annPopover && (
                 <button onClick={() => addKindToAnn('note')}>加笔记</button>
               )}
               {annPopover && annPopoverHas('note') && (
@@ -674,6 +817,14 @@ export function ReadingPage() {
               )}
             </div>
           </div>
+
+          {/* 拆解上屏：学习心得放文末 */}
+          {studyInline && shenlunStudy?.reviewNote && (
+            <aside className="study-note-block" aria-label="学习心得">
+              <span className="study-overview-title">心得</span>
+              <p>{shenlunStudy.reviewNote}</p>
+            </aside>
+          )}
 
           {/* 文末相邻篇目：按文库排序取前后一篇 */}
           {(prevArticle || nextArticle) && (
@@ -710,8 +861,23 @@ export function ReadingPage() {
           onToggleAnnotations={() => setAnnotationsVisible(!annotationsVisible)}
           onToggleFocus={() => setFocusMode(!settings.focusMode)}
           onToggleTermBox={() => setTermBox(!settings.termBox)}
+          shenlunStatus={shenlunStatus === 'new' ? '拆解' : shenlunStatus === 'learning' ? '学习中' : '已掌握'}
+          shenlunMaterialCount={shenlunMaterialCount}
+          onOpenShenlun={openShenlun}
+          studyInline={studyInline}
+          hasStudyData={hasStudyData}
+          onToggleStudyInline={() => setStudyInline(!studyInline)}
         />
       </main>
+
+      {shenlunOpen && article && (
+        <ShenlunPanel
+          article={article}
+          onClose={() => setShenlunOpen(false)}
+          scrollToPara={scrollToPara}
+          scrollToAnnotation={scrollToAnnotation}
+        />
+      )}
     </section>
   )
 }

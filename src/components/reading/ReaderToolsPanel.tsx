@@ -1,4 +1,4 @@
-import { Bookmark, Minus, Plus } from 'lucide-react'
+import { BookOpenCheck, Bookmark, Minus, Plus } from 'lucide-react'
 import { MenuSelect } from '../ui/MenuSelect'
 import { FONT_FAMILIES } from '../../stores/readerStore'
 import { THEMES } from '../../stores/themeStore'
@@ -17,6 +17,14 @@ interface ReaderToolsPanelProps {
   onToggleAnnotations: () => void
   onToggleFocus: () => void
   onToggleTermBox: () => void
+  /** 申论拆解 / 范文精读：学习状态与素材计数用于展示，点击打开面板（真题预览页不接入） */
+  shenlunStatus?: string
+  shenlunMaterialCount?: number
+  onOpenShenlun?: () => void
+  /** 拆解上屏：把拆解成果（全篇卡 + 每段大意 + 心得）内嵌显示在正文（有拆解数据才出现该行） */
+  studyInline?: boolean
+  hasStudyData?: boolean
+  onToggleStudyInline?: () => void
   /** 标签字号（申论真题页传入；阅读页不传则隐藏该行） */
   labelFontSize?: number
   onLabelFontSizeDelta?: (delta: number) => void
@@ -35,6 +43,12 @@ export function ReaderToolsPanel({
   onToggleAnnotations,
   onToggleFocus,
   onToggleTermBox,
+  shenlunStatus,
+  shenlunMaterialCount,
+  onOpenShenlun,
+  studyInline,
+  hasStudyData,
+  onToggleStudyInline,
   labelFontSize,
   onLabelFontSizeDelta,
 }: ReaderToolsPanelProps) {
@@ -88,6 +102,22 @@ export function ReaderToolsPanel({
           <Bookmark size={12} style={{ verticalAlign: -2 }} /> {favorite ? '已收藏' : '收藏'}
         </button>
       </div>
+      <div className="tool">
+        <span>申论拆解</span>
+        <button onClick={onOpenShenlun}>
+          <BookOpenCheck size={12} style={{ verticalAlign: -2 }} />
+          {shenlunStatus ?? '打开'}
+          {shenlunMaterialCount ? ` · ${shenlunMaterialCount}` : ''}
+        </button>
+      </div>
+      {hasStudyData && onToggleStudyInline && (
+        <div className="tool">
+          <span>拆解上屏</span>
+          <button className={studyInline ? 'active' : ''} onClick={onToggleStudyInline}>
+            {studyInline ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      )}
       <div className="tool">
         <span>显示标注</span>
         <button className={annotationsVisible ? 'active' : ''} onClick={onToggleAnnotations}>

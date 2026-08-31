@@ -3,6 +3,8 @@ import { loadDisplayFont } from '../lib/fonts'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, PenLine, Search } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
+import { useShenlunStore } from '../stores/shenlunStore'
+import { useAnnotationStore } from '../stores/annotationStore'
 import { fetchMetaList } from '../lib/api'
 import { TOPICS, formatArticleNo, formatDate } from '../data'
 import { Pagination } from '../components/ui/Pagination'
@@ -45,6 +47,16 @@ export function LibraryPage() {
   const articles = useArticleStore((s) => s.articles)
   const progress = useArticleStore((s) => s.progress)
   const apiReady = useArticleStore((s) => s._apiReady)
+  /* 学习状态 / 素材数（申论拆解徽标） */
+  const shenlunStudy = useShenlunStore((s) => s.study)
+  const allAnnotations = useAnnotationStore((s) => s.annotations)
+  const matCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const a of allAnnotations) {
+      if (a.kind === 'highlight' && a.materialType) m.set(a.articleId, (m.get(a.articleId) ?? 0) + 1)
+    }
+    return m
+  }, [allAnnotations])
   const navigate = useNavigate()
 
   const [params, setParams] = useSearchParams()
@@ -314,6 +326,8 @@ export function LibraryPage() {
         {pageItems.map((a) => {
           const p = progress[a.id]
           const isRead = p?.completed === true
+          const study = shenlunStudy[a.id]
+          const matCount = matCounts.get(a.id) ?? 0
           return (
             <button className="article-row" key={a.id} onClick={() => open(a)} {...hoverWarm(() => warm(a))}>
               <span className="article-no">{formatArticleNo(a.id)}</span>
@@ -321,7 +335,15 @@ export function LibraryPage() {
               <span className="article-topic">
                 {a.topic} · {a.source}
               </span>
-              <span className="article-time">{formatDate(a.date)}　↗</span>
+              <span className="article-time">
+                {(study || matCount > 0) && (
+                  <em className={`study-badge${study?.status === 'mastered' ? ' mastered' : ''}`}>
+                    {study ? (study.status === 'learning' ? '学习中' : study.status === 'mastered' ? '已掌握' : '已拆解') : '已标记'}
+                    {matCount > 0 ? ` · ${matCount} 素材` : ''}
+                  </em>
+                )}
+                {formatDate(a.date)}　↗
+              </span>
             </button>
           )
         })}

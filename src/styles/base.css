@@ -555,6 +555,9 @@ a {
   right: 0;
   z-index: var(--z-dropdown);
   min-width: 138px;
+  /* 选项多时限高滚动，不超出视口（如 /assist 的 13 个主题） */
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
   padding: 4px;
   background: var(--soft);
   border: 1px solid var(--ink);
@@ -562,6 +565,12 @@ a {
   box-shadow: 0 6px 18px color-mix(in srgb, var(--ink) 22%, transparent);
   display: grid;
   gap: 1px;
+}
+
+/* 下方空间不足：向上翻（避免超出视口） */
+.menu-select .menu-select-pop.up {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 /* 高特异性：防止被 .tool button 等规则覆盖文字颜色 */
@@ -751,6 +760,13 @@ a {
   left: 0;
   min-width: 0;
   width: 100%;
+}
+
+/* form 变体的向上翻转（需与上面的 top 覆写同优先级才生效） */
+.menu-select.form .menu-select-pop.up,
+.setting-control .menu-select .menu-select-pop.up {
+  top: auto;
+  bottom: calc(100% + 2px);
 }
 
 /* ---------- 全屏 loading（首次访问 / 数据加载） ----------

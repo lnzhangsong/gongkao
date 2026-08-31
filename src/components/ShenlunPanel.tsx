@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
 import { useAnnotationStore } from '../stores/annotationStore'
@@ -62,6 +62,64 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   const skeleton = study?.skeleton
   const patterns = materialByType.get('pattern') ?? []
 
+  /* ---------- 防丢稿：段落大意受控 + 防抖 + 关闭时 flush ---------- */
+  const [paraDrafts, setParaDrafts] = useState<Record<number, string>>({})
+  const paraTimersRef = useRef<Map<number, number>>(new Map())
+  const skeletonTimersRef = useRef<Map<string, number>>(new Map())
+  // 初次 / 切换文章时以 store 为准同步本地草稿（用户正在输入的段不覆盖）
+  const draftInitRef = useRef<string>('')
+  const draftKey = `${article.id}:${summaries.length}:${summaries.map((s) => `${s.paraIndex}:${s.summary}`).join('|')}`
+  useEffect(() => {
+    if (draftInitRef.current === draftKey) return
+    draftInitRef.current = draftKey
+    const next: Record<number, string> = {}
+    for (const [k, v] of summaryByPara) next[k] = v
+    setParaDrafts(next)
+  }, [draftKey, summaryByPara])
+
+  const flushPara = useCallback(
+    (idx: number, value: string) => {
+      const timer = paraTimersRef.current.get(idx)
+      if (timer) {
+        window.clearTimeout(timer)
+        paraTimersRef.current.delete(idx)
+      }
+      setParagraphSummary(article.id, idx, value)
+    },
+    [article.id, setParagraphSummary],
+  )
+
+  const flushAllParas = useCallback(() => {
+    for (const [idx, timer] of paraTimersRef.current) {
+      window.clearTimeout(timer)
+      const v = paraDrafts[idx] ?? summaryByPara.get(idx) ?? ''
+      setParagraphSummary(article.id, idx, v)
+    }
+    paraTimersRef.current.clear()
+    // 句式模板与骨架的一并 flush（由子组件各自 flush，这里额外兜底清定时器）
+    for (const [, timer] of skeletonTimersRef.current) window.clearTimeout(timer)
+    skeletonTimersRef.current.clear()
+  }, [article.id, paraDrafts, setParagraphSummary, summaryByPara])
+
+  const handleClose = useCallback(() => {
+    flushAllParas()
+    onClose()
+  }, [flushAllParas, onClose])
+
+  // 卸载时兜底 flush（Esc / 路由切走等未走 handleClose 的路径）
+  useEffect(() => {
+    return () => {
+      for (const [idx, timer] of paraTimersRef.current) {
+        window.clearTimeout(timer)
+        const v = paraDrafts[idx] ?? ''
+        if (v.trim() || summaryByPara.get(idx)) setParagraphSummary(article.id, idx, v)
+      }
+      paraTimersRef.current.clear()
+    }
+    // 仅卸载时 flush，不随 paraDrafts 变化重建
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   /** 由逐段大意推导骨架候选：首段=开头，中间=层次，尾段=收尾（覆盖现有骨架，可再手工调整） */
   const deriveSkeleton = () => {
     if (summaries.length === 0) return
@@ -75,14 +133,14 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
 
   return (
     <>
-      <div className="shenlun-backdrop" onClick={onClose} />
+      <div className="shenlun-backdrop" onClick={handleClose} />
       <aside className="shenlun-panel" role="dialog" aria-label="申论拆解">
         <header className="shenlun-head">
           <div>
             <span className="shenlun-eyebrow">SHENLUN / 拆解 · 精读</span>
             <h3>{article.title}</h3>
           </div>
-          <button className="shenlun-close" onClick={onClose} aria-label="关闭">
+          <button className="shenlun-close" onClick={handleClose} aria-label="关闭">
             <X size={16} />
           </button>
         </header>
@@ -121,16 +179,8 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             </div>
           </section>
 
-          {/* 核心观点 */}
-          <section className="shenlun-sec">
-            <span className="shenlun-label">核心观点</span>
-            <textarea
-              className="shenlun-input"
-              placeholder="这篇文章主张什么？"
-              value={study?.coreThesis ?? ''}
-              onChange={(e) => setCoreThesis(article.id, e.target.value)}
-            />
-          </section>
+          {/* 核心观点：受控 + 150ms 防抖落盘，避免每键一次 IDB 写入 */}
+          <CoreThesisField articleId={article.id} value={study?.coreThesis ?? ''} onChange={setCoreThesis} />
 
           {/* 分论点 */}
           <section className="shenlun-sec">
@@ -161,7 +211,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             </div>
           </section>
 
-          {/* 范文精读：每段大意 */}
+          {/* 范文精读：每段大意（受控 + 防抖 + 失焦/关闭 flush） */}
           <section className="shenlun-sec">
             <span className="shenlun-label">
               每段大意
@@ -174,8 +224,19 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
                 </button>
                 <input
                   placeholder={`第 ${i + 1} 段大意…`}
-                  defaultValue={summaryByPara.get(i) ?? ''}
-                  onBlur={(e) => setParagraphSummary(article.id, i, e.target.value)}
+                  value={paraDrafts[i] ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setParaDrafts((prev) => ({ ...prev, [i]: v }))
+                    const prevTimer = paraTimersRef.current.get(i)
+                    if (prevTimer) window.clearTimeout(prevTimer)
+                    const t = window.setTimeout(() => {
+                      paraTimersRef.current.delete(i)
+                      setParagraphSummary(article.id, i, v)
+                    }, 300)
+                    paraTimersRef.current.set(i, t)
+                  }}
+                  onBlur={(e) => flushPara(i, e.target.value)}
                 />
               </div>
             ))}
@@ -193,6 +254,8 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
               label="开头"
               value={skeleton?.opening ?? ''}
               onChange={(v) => setSkeleton(article.id, { opening: v })}
+              debounceMs={350}
+              timersRef={skeletonTimersRef}
             />
             <SkeletonField
               label="主体层次"
@@ -209,11 +272,15 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
                   transitions: v.split('\n').map((s) => s.trim()).filter(Boolean),
                 })
               }
+              debounceMs={350}
+              timersRef={skeletonTimersRef}
             />
             <SkeletonField
               label="收尾"
               value={skeleton?.closing ?? ''}
               onChange={(v) => setSkeleton(article.id, { closing: v })}
+              debounceMs={350}
+              timersRef={skeletonTimersRef}
             />
           </section>
 
@@ -232,11 +299,9 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
                         “{m.text.length > 48 ? `${m.text.slice(0, 48)}…` : m.text}”
                       </button>
                       {t === 'pattern' && (
-                        <input
-                          className="mat-card-pattern"
-                          placeholder="可迁移模板…"
-                          defaultValue={m.pattern ?? ''}
-                          onBlur={(e) => updateAnnotation(m.id, { pattern: e.target.value.trim() || undefined })}
+                        <PatternDraftInput
+                          initial={m.pattern ?? ''}
+                          onSave={(v) => updateAnnotation(m.id, { pattern: v || undefined })}
                         />
                       )}
                       {(t === 'quote' || t === 'pattern') && (
@@ -296,7 +361,83 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   )
 }
 
-/** 骨架字段：单值（textarea）或列表（bodyLayers 逐条） */
+function CoreThesisField({
+  articleId,
+  value,
+  onChange,
+}: {
+  articleId: string
+  value: string
+  onChange: (id: string, v: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  const timerRef = useRef<number | null>(null)
+  useEffect(() => setDraft(value), [value])
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current)
+    }
+  }, [])
+  const schedule = (v: string) => {
+    if (timerRef.current) window.clearTimeout(timerRef.current)
+    timerRef.current = window.setTimeout(() => onChange(articleId, v), 250)
+  }
+  return (
+    <section className="shenlun-sec">
+      <span className="shenlun-label">核心观点</span>
+      <textarea
+        className="shenlun-input"
+        placeholder="这篇文章主张什么？"
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          schedule(e.target.value)
+        }}
+        onBlur={(e) => {
+          if (timerRef.current) {
+            window.clearTimeout(timerRef.current)
+            timerRef.current = null
+          }
+          onChange(articleId, e.target.value)
+        }}
+      />
+    </section>
+  )
+}
+
+function PatternDraftInput({ initial, onSave }: { initial: string; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(initial)
+  const timerRef = useRef<number | null>(null)
+  useEffect(() => setDraft(initial), [initial])
+  useEffect(
+    () => () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current)
+    },
+    [],
+  )
+  return (
+    <input
+      className="mat-card-pattern"
+      placeholder="可迁移模板…"
+      value={draft}
+      onChange={(e) => {
+        const v = e.target.value
+        setDraft(v)
+        if (timerRef.current) window.clearTimeout(timerRef.current)
+        timerRef.current = window.setTimeout(() => onSave(v.trim()), 400)
+      }}
+      onBlur={(e) => {
+        if (timerRef.current) {
+          window.clearTimeout(timerRef.current)
+          timerRef.current = null
+        }
+        onSave(e.target.value.trim())
+      }}
+    />
+  )
+}
+
+/** 骨架字段：单值（textarea）或列表（bodyLayers 逐条）——单值走防抖受控，失焦/卸载 flush */
 function SkeletonField({
   label,
   value = '',
@@ -304,6 +445,8 @@ function SkeletonField({
   onChange,
   onChangeList,
   list,
+  debounceMs = 300,
+  timersRef,
 }: {
   label: string
   value?: string
@@ -311,8 +454,19 @@ function SkeletonField({
   onChange?: (v: string) => void
   onChangeList?: (v: string[]) => void
   list?: boolean
+  debounceMs?: number
+  timersRef?: React.MutableRefObject<Map<string, number>>
 }) {
   const [extra, setExtra] = useState('')
+  const [draft, setDraft] = useState(value)
+  const timerRef = useRef<number | null>(null)
+  useEffect(() => setDraft(value), [value])
+  useEffect(
+    () => () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current)
+    },
+    [],
+  )
   if (list && onChangeList) {
     const items = valueList ?? []
     return (
@@ -351,9 +505,24 @@ function SkeletonField({
       <span className="skeleton-label">{label}</span>
       <textarea
         rows={2}
-        value={value}
+        value={draft}
         placeholder={`${label}方式…`}
-        onChange={(e) => onChange?.(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value
+          setDraft(v)
+          if (timerRef.current) window.clearTimeout(timerRef.current)
+          const t = window.setTimeout(() => onChange?.(v), debounceMs)
+          timerRef.current = t
+          if (timersRef) timersRef.current.set(label, t)
+        }}
+        onBlur={(e) => {
+          if (timerRef.current) {
+            window.clearTimeout(timerRef.current)
+            timerRef.current = null
+          }
+          if (timersRef) timersRef.current.delete(label)
+          onChange?.(e.target.value)
+        }}
       />
     </div>
   )

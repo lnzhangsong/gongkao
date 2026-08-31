@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Download, Search, Trash2, X } from 'lucide-react'
 
@@ -86,6 +86,8 @@ export function NotesPage() {
   const [editNoteId, setEditNoteId] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [tagDraft, setTagDraft] = useState('')
+  const [patternDraft, setPatternDraft] = useState('')
+  const patternTimerRef = useRef<number | null>(null)
   /** 移动端：详情栏收进底部抽屉，点击列表行时打开；桌面端右侧栏常驻不受影响 */
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
 
@@ -126,6 +128,20 @@ export function NotesPage() {
 
   const rowKinds = (r: Row) => new Set(r.anns.map((a) => a.kind))
 
+  const quickCounts = useMemo(() => {
+    const m: Record<QuickKey, number> = { all: rows.length, recent: 0, highlight: 0, underline: 0, note: 0, memorize: 0 }
+    const sevenDays = Date.now() - 7 * 24 * 3600 * 1000
+    for (const r of rows) {
+      if (new Date(r.date).getTime() > sevenDays) m.recent += 1
+      const kinds = rowKinds(r)
+      if (kinds.has('highlight')) m.highlight += 1
+      if (kinds.has('underline')) m.underline += 1
+      if (kinds.has('note')) m.note += 1
+      if (r.anns.some((a) => a.memorized)) m.memorize += 1
+    }
+    return m
+  }, [rows])
+
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase()
     const sevenDays = Date.now() - 7 * 24 * 3600 * 1000
@@ -153,6 +169,36 @@ export function NotesPage() {
   const pageItems = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE)
 
   const selectedRow = rows.find((r) => r.key === selectedKey) ?? pageItems[0] ?? null
+
+  /* ---------- 防丢稿：批量勾选与句式模板 ---------- */
+  // 筛选变化后，已选集合里不再可见的行应移除（避免「导出/删除选中」带上不可见条目）
+  useEffect(() => {
+    if (checked.size === 0) return
+    const visible = new Set(filtered.map((r) => r.key))
+    let changed = false
+    for (const k of checked) if (!visible.has(k)) { changed = true; break }
+    if (!changed) return
+    setChecked((prev) => {
+      const next = new Set<string>()
+      for (const k of prev) if (visible.has(k)) next.add(k)
+      return next
+    })
+  }, [filtered, checked])
+
+  // 句式模板输入：受控 + 300ms 防抖 + 切行/卸载时 flush
+  const patternAnn = selectedRow?.anns.find((a) => a.materialType === 'pattern')
+  useEffect(() => {
+    setPatternDraft(patternAnn?.pattern ?? '')
+    if (patternTimerRef.current) {
+      window.clearTimeout(patternTimerRef.current)
+      patternTimerRef.current = null
+    }
+  }, [patternAnn?.id, patternAnn?.pattern])
+  useEffect(() => {
+    return () => {
+      if (patternTimerRef.current) window.clearTimeout(patternTimerRef.current)
+    }
+  }, [])
 
   /** 按月分组 */
   const groups = useMemo(() => {
@@ -243,12 +289,16 @@ export function NotesPage() {
   }
 
   const addTag = (id: string) => {
-    const tag = tagDraft.trim().replace(/^#/, '')
+    const raw = tagDraft.trim()
+    if (!raw) return
+    const tag = raw.replace(/^#/, '')
     if (!tag) return
     const ann = annotations.find((a) => a.id === id)
-    if (ann && !(ann.tags ?? []).includes(tag)) {
-      update(id, { tags: [...(ann.tags ?? []), tag] })
+    if (ann && (ann.tags ?? []).includes(tag)) {
+      toast('该标签已存在')
+      return
     }
+    if (ann) update(id, { tags: [...(ann.tags ?? []), tag] })
     setTagDraft('')
   }
 
@@ -276,13 +326,7 @@ export function NotesPage() {
           <div className="side-label">QUICK ACCESS</div>
           <nav className="side-nav">
             {QUICK.map((item) => {
-              const count = rows.filter((r) => {
-                const kinds = rowKinds(r)
-                if (item.key === 'all') return true
-                if (item.key === 'recent') return new Date(r.date).getTime() > Date.now() - 7 * 24 * 3600 * 1000
-                if (item.key === 'memorize') return r.anns.some((a) => a.memorized === true)
-                return kinds.has(item.key)
-              }).length
+              const count = quickCounts[item.key]
               return (
                 <button
                   key={item.key}
@@ -545,8 +589,23 @@ export function NotesPage() {
                         <input
                           className="pattern-edit"
                           placeholder="可迁移模板，如：以……之笔，绘就……画卷"
-                          defaultValue={m.pattern ?? ''}
-                          onBlur={(e) => update(m.id, { pattern: e.target.value.trim() || undefined })}
+                          value={patternDraft}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setPatternDraft(v)
+                            if (patternTimerRef.current) window.clearTimeout(patternTimerRef.current)
+                            patternTimerRef.current = window.setTimeout(
+                              () => update(m.id, { pattern: v.trim() || undefined }),
+                              300,
+                            )
+                          }}
+                          onBlur={(e) => {
+                            if (patternTimerRef.current) {
+                              window.clearTimeout(patternTimerRef.current)
+                              patternTimerRef.current = null
+                            }
+                            update(m.id, { pattern: e.target.value.trim() || undefined })
+                          }}
                         />
                       )}
                     </div>

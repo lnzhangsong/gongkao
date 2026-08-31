@@ -58,11 +58,11 @@ export function ReaderToolsPanel({
       <div className="tool">
         <span>阅读设置</span>
         <span className="tool-btns">
-          <button onClick={() => onFontSizeDelta(-1)} aria-label="减小字号">
+          <button onClick={() => onFontSizeDelta(-1)} aria-label="减小字号" disabled={settings.fontSize <= 14}>
             <Minus size={12} />
           </button>
           <span className="tool-val">{settings.fontSize}</span>
-          <button onClick={() => onFontSizeDelta(1)} aria-label="增大字号">
+          <button onClick={() => onFontSizeDelta(1)} aria-label="增大字号" disabled={settings.fontSize >= 28}>
             <Plus size={12} />
           </button>
         </span>
@@ -71,11 +71,11 @@ export function ReaderToolsPanel({
         <div className="tool">
           <span>标签字号</span>
           <span className="tool-btns">
-            <button onClick={() => onLabelFontSizeDelta(-1)} aria-label="减小标签字号">
+            <button onClick={() => onLabelFontSizeDelta(-1)} aria-label="减小标签字号" disabled={labelFontSize <= 11}>
               <Minus size={12} />
             </button>
             <span className="tool-val">{labelFontSize}</span>
-            <button onClick={() => onLabelFontSizeDelta(1)} aria-label="增大标签字号">
+            <button onClick={() => onLabelFontSizeDelta(1)} aria-label="增大标签字号" disabled={labelFontSize >= 18}>
               <Plus size={12} />
             </button>
           </span>

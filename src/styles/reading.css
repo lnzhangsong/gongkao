@@ -304,6 +304,83 @@
 
 .selection-popover.show {
   display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.selection-popover .popover-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.selection-popover .popover-row-mats {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.selection-popover .popover-row-label {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-right: 2px;
+}
+
+/* 键盘焦点可见：正文标注为 role=button，需明确 focus 态 */
+.highlighted:focus-visible,
+.underlined:focus-visible,
+.note-mark:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 拆解上屏：骨架折叠 */
+.study-skeleton-details {
+  margin-top: 10px;
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 12%, transparent);
+  padding-top: 8px;
+}
+
+.study-skeleton-details summary {
+  font: 600 11px/1 var(--sans);
+  letter-spacing: 0.06em;
+  color: var(--accent-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.study-skeleton-details summary::-webkit-details-marker { display: none; }
+.study-skeleton-details summary::before {
+  content: '▸ ';
+  color: var(--muted);
+}
+.study-skeleton-details[open] summary::before { content: '▾ '; }
+
+/* 字号按钮禁用态 */
+.tool button:disabled,
+.tools-menu-item .tool-btns button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 全篇拆解卡的「收起」与素材标签在触屏常显（hover 仅桌面） */
+@media (hover: none) {
+  .mat-thesis::after,
+  .mat-evidence::after,
+  .mat-quote::after,
+  .mat-measure::after,
+  .mat-pattern::after {
+    opacity: 0.95;
+    position: static;
+    display: inline-block;
+    margin-left: 6px;
+    transform: none;
+    vertical-align: 1px;
+    font-size: 9px;
+    padding: 1px 5px;
+  }
 }
 
 /* 上方放不下时翻到选区下方 */

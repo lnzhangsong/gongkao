@@ -134,7 +134,9 @@ export function LibraryPage() {
   }, [articles, progress, q, topic, source, status, sort, fulltextIds])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  /* 筛选后结果变少时钳到最后一页，避免「页内无内容」的假空态（与 NotesPage 一致） */
+  const curPage = Math.min(page, totalPages)
+  const pageItems = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE)
 
   const completedCount = articles.filter((a) => progress[a.id]?.completed).length
   const annualPct = Math.round((completedCount / Math.max(1, articles.length)) * 100)
@@ -349,7 +351,7 @@ export function LibraryPage() {
         })}
 
         <Pagination
-          page={page}
+          page={curPage}
           totalPages={totalPages}
           onChange={(p) => setParam('page', String(p))}
         />

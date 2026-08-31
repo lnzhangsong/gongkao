@@ -521,12 +521,22 @@ export function ReadingPage() {
             )}
           </header>
 
-          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架） */}
+          {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架）——骨架与段意可折叠，避免长文被顶走 */}
           {studyInline && shenlunStudy && (shenlunStudy.coreThesis || (shenlunStudy.subTheses?.length ?? 0) > 0 || shenlunStudy.skeleton) && (
             <aside className="study-overview" aria-label="全篇拆解">
-              <span className="study-overview-title">拆解 · 全篇</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span className="study-overview-title" style={{ marginBottom: 0 }}>拆解 · 全篇</span>
+                <button
+                  className="text-btn"
+                  style={{ font: '600 11px/1 var(--sans)', color: 'var(--muted)' }}
+                  onClick={() => setStudyInline(false)}
+                  aria-label="收起拆解上屏"
+                >
+                  收起
+                </button>
+              </div>
               {shenlunStudy.coreThesis && (
-                <p className="study-thesis">{shenlunStudy.coreThesis}</p>
+                <p className="study-thesis" style={{ marginTop: 8 }}>{shenlunStudy.coreThesis}</p>
               )}
               {(shenlunStudy.subTheses?.length ?? 0) > 0 && (
                 <ol className="study-subs">
@@ -536,13 +546,16 @@ export function ReadingPage() {
                 </ol>
               )}
               {shenlunStudy.skeleton && (
-                <div className="study-skeleton">
-                  {shenlunStudy.skeleton.opening && <p><b>开头</b>{shenlunStudy.skeleton.opening}</p>}
-                  {(shenlunStudy.skeleton.bodyLayers ?? []).filter(Boolean).map((l, i) => (
-                    <p key={i}><b>层次{i + 1}</b>{l}</p>
-                  ))}
-                  {shenlunStudy.skeleton.closing && <p><b>收尾</b>{shenlunStudy.skeleton.closing}</p>}
-                </div>
+                <details className="study-skeleton-details">
+                  <summary>结构骨架</summary>
+                  <div className="study-skeleton">
+                    {shenlunStudy.skeleton.opening && <p><b>开头</b>{shenlunStudy.skeleton.opening}</p>}
+                    {(shenlunStudy.skeleton.bodyLayers ?? []).filter(Boolean).map((l, i) => (
+                      <p key={i}><b>层次{i + 1}</b>{l}</p>
+                    ))}
+                    {shenlunStudy.skeleton.closing && <p><b>收尾</b>{shenlunStudy.skeleton.closing}</p>}
+                  </div>
+                </details>
               )}
             </aside>
           )}
@@ -580,10 +593,19 @@ export function ReadingPage() {
                         <span className="note-wrap" key={j}>
                           <span
                             className={cls}
+                            role="button"
+                            tabIndex={0}
                             data-ann-ids={seg.annotations.map((a) => a.id).join(',')}
                             data-mat-label={mat ? MATERIAL_TYPE_LABELS[mat] : undefined}
                             onClick={showAnnActions}
-                            title="点击管理标注"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                showAnnActions(e as unknown as React.MouseEvent<HTMLSpanElement>)
+                              }
+                            }}
+                            title="点击管理标注（回车亦可）"
+                            aria-label="管理标注"
                           >
                             {seg.text}
                           </span>
@@ -670,50 +692,55 @@ export function ReadingPage() {
               <blockquote className="pullquote">“{article.pullquote}”</blockquote>
             )}
 
-            {/* 选择弹出工具栏（位于 article-body 内，坐标相对正文） */}
+            {/* 选择弹出工具栏（位于 article-body 内，坐标相对正文）— 分两行：标注行 + 素材/动作行，避免 17 个按钮挤一行 */}
             <div
               className={`selection-popover${popover ? ' show' : ''}${popover?.below ? ' below' : ''}`}
               ref={popoverRef}
               style={popover && !isNarrow ? { left: popover.x, top: popover.y } : undefined}
             >
-              <div className="hl-dots">
-                {HL_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    className={`hl-dot ${c}${hlColor === c ? ' active' : ''}`}
-                    onClick={() => applyHighlight(c)}
-                    title={`高亮 · ${HL_COLOR_LABELS[c]}`}
-                    aria-label={`高亮 · ${HL_COLOR_LABELS[c]}`}
-                  />
-                ))}
+              <div className="popover-row popover-row-marks">
+                <div className="hl-dots">
+                  {HL_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      className={`hl-dot ${c}${hlColor === c ? ' active' : ''}`}
+                      onClick={() => applyHighlight(c)}
+                      title={`高亮 · ${HL_COLOR_LABELS[c]}`}
+                      aria-label={`高亮 · ${HL_COLOR_LABELS[c]}`}
+                    />
+                  ))}
+                </div>
+                <div className="ul-dots">
+                  {UNDERLINE_STYLES.map((st) => (
+                    <button
+                      key={st}
+                      className={`ul-dot ${st}${ulStyle === st ? ' active' : ''}`}
+                      onClick={() => applyUnderline(st)}
+                      title={`下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
+                      aria-label={`下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
+                    />
+                  ))}
+                </div>
+                <button onClick={() => applyHighlight(hlColor)}>
+                  <Highlighter size={12} /> 高亮
+                </button>
+                <button onClick={() => applyUnderline(ulStyle)}>
+                  <UnderlineIcon size={12} /> 下划线
+                </button>
+                <button onClick={startNote}>
+                  <StickyNote size={12} /> 笔记
+                </button>
               </div>
-              <div className="ul-dots">
-                {UNDERLINE_STYLES.map((st) => (
-                  <button
-                    key={st}
-                    className={`ul-dot ${st}${ulStyle === st ? ' active' : ''}`}
-                    onClick={() => applyUnderline(st)}
-                    title={`下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
-                    aria-label={`下划线 · ${UNDERLINE_STYLE_LABELS[st]}`}
-                  />
-                ))}
+              <div className="popover-row popover-row-mats">
+                <span className="popover-row-label">素材</span>
+                <div className="mat-row">
+                  {MATERIAL_TYPES.map((t) => (
+                    <button key={t} className={`mat-btn mat-btn-${t}`} onClick={() => applyMaterial(t)} title={MATERIAL_TYPE_HINTS[t]}>
+                      {MATERIAL_TYPE_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <button onClick={() => applyHighlight(hlColor)}>
-                <Highlighter size={12} /> 高亮
-              </button>
-              <button onClick={() => applyUnderline(ulStyle)}>
-                <UnderlineIcon size={12} /> 下划线
-              </button>
-              <div className="mat-row">
-                {MATERIAL_TYPES.map((t) => (
-                  <button key={t} className={`mat-btn mat-btn-${t}`} onClick={() => applyMaterial(t)} title={MATERIAL_TYPE_HINTS[t]}>
-                    {MATERIAL_TYPE_LABELS[t]}
-                  </button>
-                ))}
-              </div>
-              <button onClick={startNote}>
-                <StickyNote size={12} /> 笔记
-              </button>
               <button
                 onClick={() => {
                   if (termSaved === 'idle') void saveSelectionAsTerm()

@@ -110,11 +110,11 @@ export function ArticleToolsMenu({
           <div className="tools-menu-item">
             <span>阅读设置</span>
             <span className="tool-btns">
-              <button onClick={() => onFontSize(fontSize - 1)} aria-label="减小字号">
+              <button onClick={() => onFontSize(fontSize - 1)} aria-label="减小字号" disabled={fontSize <= 14}>
                 <Minus size={12} />
               </button>
               <span className="tools-size-value">{fontSize}px</span>
-              <button onClick={() => onFontSize(fontSize + 1)} aria-label="增大字号">
+              <button onClick={() => onFontSize(fontSize + 1)} aria-label="增大字号" disabled={fontSize >= 28}>
                 <Plus size={12} />
               </button>
             </span>

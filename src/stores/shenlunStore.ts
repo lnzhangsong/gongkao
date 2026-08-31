@@ -36,7 +36,15 @@ interface ArticleState {  study: Record<string, ArticleStudy>
   removeSubThesis: (articleId: string, index: number) => void
   setReviewNote: (articleId: string, text: string) => void
   /* 范文精读 */
-  setParagraphSummary: (articleId: string, paraIndex: number, summary: string) => void
+  setParagraphSummary: (
+    articleId: string,
+    paraIndex: number,
+    summary: string,
+    meta?: { origin?: 'ai' | 'user'; confirmed?: boolean },
+  ) => void
+  /** AI 起草：写入未确认草稿，待用户编辑或采纳转正 */
+  setParagraphSummaryDraft: (articleId: string, paraIndex: number, summary: string) => void
+  confirmParagraphSummary: (articleId: string, paraIndex: number) => void
   setSkeleton: (articleId: string, patch: Partial<ArticleSkeleton>) => void
   removeForArticle: (articleId: string) => void
   importStudy: (list: ArticleStudy[]) => void
@@ -97,14 +105,37 @@ export const useShenlunStore = create<ArticleState>()(
 
       setReviewNote: (articleId, text) => get().upsert(articleId, { reviewNote: text }),
 
-      setParagraphSummary: (articleId, paraIndex, summary) => {
+      setParagraphSummary: (articleId, paraIndex, summary, meta) => {
         const cur = get().study[articleId]
         const list = (cur?.paragraphSummaries ?? []).filter((p) => p.paraIndex !== paraIndex)
         if (!summary.trim() && !cur) return
         const next = summary.trim()
-          ? [...list, { paraIndex, summary: summary.trim() }].sort((a, b) => a.paraIndex - b.paraIndex)
+          ? [
+              ...list,
+              {
+                paraIndex,
+                summary: summary.trim(),
+                /* 人工编辑即视为已确认；AI 起草走 meta 标记草稿态 */
+                origin: meta?.origin ?? 'user',
+                confirmed: meta?.confirmed ?? true,
+              },
+            ].sort((a, b) => a.paraIndex - b.paraIndex)
           : list
         get().upsert(articleId, { paragraphSummaries: next })
+      },
+
+      /** AI 草稿：写入 origin=ai 未确认；采纳/编辑走 setParagraphSummary 转正 */
+      setParagraphSummaryDraft: (articleId, paraIndex, summary) =>
+        get().setParagraphSummary(articleId, paraIndex, summary, { origin: 'ai', confirmed: false }),
+
+      confirmParagraphSummary: (articleId, paraIndex) => {
+        const cur = get().study[articleId]
+        if (!cur?.paragraphSummaries) return
+        get().upsert(articleId, {
+          paragraphSummaries: cur.paragraphSummaries.map((p) =>
+            p.paraIndex === paraIndex ? { ...p, origin: 'user' as const, confirmed: true } : p,
+          ),
+        })
       },
 
       setSkeleton: (articleId, patch) => {

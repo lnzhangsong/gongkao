@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '../components/ui/Toast'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { computeSelectionRange, flatText } from '../lib/offsets'
+import { isNoteEmpty, noteHtmlToText } from '../lib/richNote'
 import { NARROW_BREAKPOINT } from '../lib/breakpoints'
 import type { Annotation, AnnotationKind, HighlightColor, MaterialType, UnderlineStyle } from '../types'
 import { MATERIAL_TYPE_COLORS } from '../data/material'
@@ -266,11 +267,11 @@ export function useAnnotationPopover(
     return () => document.removeEventListener('keydown', onKey)
   })
 
-  /** 删除正在编辑且内容为空的笔记（没填就不保留） */
+  /** 删除正在编辑且内容为空的笔记（没填就不保留）；富文本有图也算有内容 */
   const removeEmptyDraftNote = () => {
     if (!editingNoteId) return
     const ann = articleAnnotations.find((a) => a.id === editingNoteId)
-    if (ann?.kind === 'note' && !(ann.noteText ?? '').trim()) {
+    if (ann?.kind === 'note' && !(ann.noteText ?? '').trim() && !(ann.noteRich ?? '').trim()) {
       removeAnnotation(ann.id)
       setEditingNoteId(null)
       setOpenNoteIds((cur) => {
@@ -430,8 +431,9 @@ export function useAnnotationPopover(
 
   const saveNote = () => {
     if (!article || !pendingNote) return
-    const content = noteDraft.trim()
-    if (!content) {
+    const rich = noteDraft.trim()
+    const content = noteHtmlToText(rich)
+    if (!content && isNoteEmpty(rich)) {
       // 内容为空：不保存笔记
       setPendingNote(null)
       setNoteDraft('')
@@ -444,6 +446,7 @@ export function useAnnotationPopover(
       start: pendingNote.start,
       end: pendingNote.end,
       noteText: content,
+      noteRich: rich,
     })
     setPendingNote(null)
     setNoteDraft('')
@@ -469,8 +472,8 @@ export function useAnnotationPopover(
   }
 
   const saveEditNote = (id: string) => {
-    const content = noteDraft.trim()
-    if (!content) {
+    const rich = noteDraft.trim()
+    if (isNoteEmpty(rich)) {
       removeAnnotation(id)
       setOpenNoteIds((cur) => {
         const next = new Set(cur)
@@ -478,7 +481,7 @@ export function useAnnotationPopover(
         return next
       })
     } else {
-      updateAnnotation(id, { noteText: content })
+      updateAnnotation(id, { noteText: noteHtmlToText(rich), noteRich: rich })
     }
     setEditingNoteId(null)
     setNoteDraft('')

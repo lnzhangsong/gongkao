@@ -145,6 +145,17 @@ const json = (data, status = 200, extra = {}) =>
     },
   })
 
+/** undici 在上游连接失败时抛 `TypeError: fetch failed`（真实原因在 err.cause），
+ *  把它翻译成可操作的提示，避免把原生报错原样漏给前端。 */
+function upstreamErrorMessage(err, root) {
+  const cause = err instanceof Error && err.cause instanceof Error ? err.cause.message : ''
+  const raw = `${err instanceof Error ? err.message : String(err)}${cause ? `（${cause}）` : ''}`
+  if (/fetch failed|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|ERR_SOCKET/i.test(raw)) {
+    return `无法连接到 AI 服务（${root}），请检查接口地址与网络后重试`
+  }
+  return raw
+}
+
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`)
   // GET 200 响应附带 ETag；浏览器带 If-None-Match 且内容未变时回 304，省掉响应体传输
@@ -492,7 +503,7 @@ const server = createServer((req, res) => {
         }
         void respond(json({ content }))
       } catch (err) {
-        void respond(json({ error: String(err) }, 502))
+        void respond(json({ error: upstreamErrorMessage(err, root) }, 502))
       }
     })
     return

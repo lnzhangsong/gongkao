@@ -2032,3 +2032,43 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   gap: 14px;
   margin-top: 6px;
 }
+
+/* ---------- 拆解面板「本文题目」（AI-4 存题回流） ---------- */
+.shenlun-exams {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shenlun-exam {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: none;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.shenlun-exam:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.shenlun-exam-type {
+  flex-shrink: 0;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--accent-text);
+  border: 1px solid color-mix(in srgb, var(--accent-text) 40%, transparent);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+.shenlun-exam-q {
+  font: 400 12.5px/1.7 var(--sans);
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

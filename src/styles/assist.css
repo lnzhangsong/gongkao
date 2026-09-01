@@ -76,7 +76,10 @@
   padding: 9px 22px;
   border-radius: 2px;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
 }
 .assist-run:hover:not(:disabled) {
   transform: translate(-2px, -2px);
@@ -92,21 +95,39 @@
   margin: 0;
 }
 
-/* ---------- 结果编辑区 ---------- */
+/* ---------- 结果编辑区（试卷纸风格：无边框文档排版，悬停可见可编辑） ---------- */
 .assist-editor {
   margin-top: 34px;
   border: 1px solid var(--ink);
   border-radius: 2px;
-  padding: 22px;
+  padding: 28px clamp(20px, 4.5vw, 52px) 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
-.assist-editor-head {
+/* 分区标题：mono 小字眉题 + 延伸细线 */
+.assist-editor .assist-label {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  margin-bottom: 0;
 }
+.assist-editor .assist-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.assist-editor .assist-label small {
+  letter-spacing: 0.02em;
+  font: 400 11px var(--sans);
+  flex-shrink: 0;
+}
+
+/* 题型徽标 */
 .assist-badge {
   flex-shrink: 0;
   font: 500 12px var(--mono);
@@ -117,33 +138,130 @@
   padding: 3px 8px;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
-.assist-label {
-  display: block;
-  font: 500 13px var(--sans);
-  margin-bottom: 8px;
+/* 题头：徽标 + 题干大字（无边框，聚焦时下划线） */
+.assist-editor-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
 }
-.assist-label small {
+.assist-question-view {
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  border-radius: 0;
+  padding: 2px 0;
+  font: 500 17px/1.85 var(--serif);
+  background: transparent;
+  resize: none;
+  field-sizing: content;
+}
+.assist-question-view:hover {
+  border-bottom-color: var(--line);
+}
+.assist-question-view:focus {
+  border-bottom-color: color-mix(in srgb, var(--accent) 60%, var(--ink));
+}
+
+/* 作答要求 / 审题立意：细则行，无框 */
+.assist-stance textarea {
+  border: 0;
+  border-radius: 0;
+  padding: 2px 0;
+  font: 400 13.5px/2 var(--sans);
+  color: color-mix(in srgb, var(--ink) 80%, var(--paper));
+  background: transparent;
+  resize: none;
+  field-sizing: content;
+  border-bottom: 1px dashed transparent;
+}
+.assist-stance textarea:hover {
+  border-bottom-color: var(--line);
+}
+.assist-stance textarea:focus {
+  border-bottom-color: color-mix(in srgb, var(--accent) 60%, var(--ink));
+}
+
+/* 给定资料：正文排版，衬线、两端对齐、宽行距 */
+.assist-given-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.assist-given-head small {
   font: 400 11px var(--sans);
+  letter-spacing: 0.02em;
   color: var(--muted);
 }
-.assist-stance textarea {
-  font-size: 14px;
+.assist-given-head small a {
+  color: var(--accent-text);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-text) 35%, transparent);
 }
-.assist-item {
-  border-bottom: 1px solid var(--line);
-  padding: 12px 0;
+.assist-given-head small a:hover {
+  border-bottom-color: var(--accent-text);
+}
+.assist-given-material {
+  border: 0;
+  border-radius: 0;
+  padding: 4px 0;
+  font: 400 15.5px/2.2 var(--serif);
+  letter-spacing: 0.02em;
+  text-align: justify;
+  background: transparent;
+  resize: none;
+  field-sizing: content;
+  max-height: 520px;
+  overflow-y: auto;
+  border-bottom: 1px dashed transparent;
+}
+.assist-given-material:hover {
+  border-bottom-color: var(--line);
+}
+.assist-given-material:focus {
+  border-bottom-color: color-mix(in srgb, var(--accent) 60%, var(--ink));
+}
+
+/* 作答框架 / 参考要点：编号清单 + 细线分隔 */
+.assist-outline {
+  counter-reset: point;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+.assist-outline .assist-label {
+  margin-bottom: 2px;
+}
+.assist-item {
+  counter-increment: point;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px 30px 13px 40px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s ease;
+}
+.assist-item:hover {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.assist-item::before {
+  content: counter(point, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 16px;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--accent-text);
 }
 .assist-item textarea {
-  font-size: 14px;
   border: 0;
-  border-bottom: 1px dashed var(--line);
-  padding: 4px 2px;
-}
-.assist-item textarea:focus {
-  border-bottom-color: color-mix(in srgb, var(--accent) 60%, var(--ink));
+  border-radius: 0;
+  padding: 2px 0;
+  font: 400 14.5px/1.95 var(--serif);
+  background: transparent;
+  field-sizing: content;
+  min-height: 0;
+  resize: none;
 }
 .assist-item-mats {
   display: flex;
@@ -194,36 +312,44 @@ a.assist-chip-link:hover {
   gap: 10px;
 }
 .assist-item-del {
+  position: absolute;
+  top: 14px;
+  right: 4px;
   border: 0;
   background: none;
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
   padding: 3px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.assist-item:hover .assist-item-del {
+  opacity: 0.55;
 }
 .assist-item-del:hover {
   color: #c0392b;
+  opacity: 1;
 }
 .assist-add-item {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px dashed var(--line);
+  border: none;
   background: none;
-  border-radius: 2px;
   color: var(--muted);
   font: 400 13px var(--sans);
-  padding: 7px 14px;
+  padding: 10px 2px;
   cursor: pointer;
 }
 .assist-add-item:hover {
-  color: var(--ink);
-  border-color: var(--ink);
+  color: var(--accent-text);
 }
 .assist-editor-actions {
   display: flex;
   gap: 12px;
+  padding-top: 4px;
 }
 .assist-save {
   border: 1px solid var(--ink);
@@ -237,7 +363,9 @@ a.assist-chip-link:hover {
 .assist-save:hover {
   box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 70%, transparent);
   transform: translate(-2px, -2px);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 /* ---------- 历史记录 ---------- */
@@ -259,6 +387,86 @@ a.assist-chip-link:hover {
   gap: 18px;
   border-top: 1px solid var(--line);
   padding: 16px 0;
+}
+.assist-record.expanded {
+  padding-bottom: 20px;
+}
+/* 记录主体改为可点击展开的按钮，重置原生样式 */
+button.assist-record-main {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.assist-record-detail {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.assist-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.assist-detail-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.assist-detail-label a {
+  font: 400 11px var(--sans);
+  letter-spacing: 0.02em;
+  color: var(--accent-text);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-text) 35%, transparent);
+}
+.assist-detail-sec p {
+  margin: 0;
+  font: 400 13.5px/2 var(--sans);
+  color: color-mix(in srgb, var(--ink) 82%, var(--paper));
+}
+.assist-detail-material {
+  font: 400 14.5px/2.1 var(--serif) !important;
+  white-space: pre-line;
+}
+.assist-detail-points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pt;
+}
+.assist-detail-points li {
+  counter-increment: pt;
+  position: relative;
+  padding: 8px 0 8px 36px;
+  border-bottom: 1px solid var(--line);
+  font: 400 14px/1.9 var(--serif);
+}
+.assist-detail-points li::before {
+  content: counter(pt, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 10px;
+  font: 500 11px var(--mono);
+  color: var(--accent-text);
+}
+.assist-detail-points li:last-child {
+  border-bottom: 0;
+}
+.assist-detail-mats {
+  font: 400 11px var(--sans);
+  color: var(--muted);
 }
 .assist-record-meta {
   display: flex;
@@ -299,10 +507,162 @@ a.assist-chip-link:hover {
 
 @media (max-width: 800px) {
   .assist-editor {
-    padding: 16px;
+    padding: 18px 16px;
+  }
+  .assist-item {
+    padding-left: 32px;
   }
   .assist-record {
     flex-direction: column;
     gap: 10px;
+  }
+}
+
+/* ---------- AI-4 反向联想面板 ---------- */
+.assist-infer {
+  position: relative;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  border-radius: 3px;
+  padding: 20px 22px 18px;
+  margin: 0 0 32px;
+  background: color-mix(in srgb, var(--accent) 3%, var(--paper));
+}
+.assist-infer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.assist-infer-head .assist-label {
+  font: 600 13px var(--sans);
+  letter-spacing: 0.02em;
+}
+.assist-infer-article {
+  font: 400 12.5px/1.7 var(--sans);
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.assist-infer-article a {
+  color: var(--accent-text);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-text) 35%, transparent);
+}
+.assist-infer-article a:hover {
+  border-bottom-color: var(--accent-text);
+}
+.assist-infer-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.assist-infer-error {
+  color: #b4453c;
+}
+.assist-infer-theme {
+  font: 400 13px/1.9 var(--sans);
+  margin: 16px 0 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.assist-infer-theme b {
+  font: 600 14px var(--serif);
+  color: var(--ink);
+}
+.assist-infer-tags {
+  margin-left: 10px;
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  vertical-align: middle;
+}
+.assist-infer-tags i {
+  font: 400 11px var(--mono);
+  font-style: normal;
+  color: var(--accent-text);
+  border: 1px solid color-mix(in srgb, var(--accent-text) 30%, transparent);
+  border-radius: 2px;
+  padding: 1px 7px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.assist-infer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.assist-infer-cand {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 3px;
+  padding: 12px 16px;
+  background: var(--paper);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.assist-infer-cand:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.assist-infer-cand-main {
+  min-width: 0;
+}
+.assist-infer-qline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.assist-infer-qline .assist-badge {
+  flex-shrink: 0;
+}
+.assist-infer-q {
+  flex: 1;
+  min-width: 0;
+  font: 500 14.5px/1.7 var(--serif);
+  margin: 0;
+}
+.assist-infer-reason {
+  font: 400 12px/1.7 var(--sans);
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.assist-infer-reason::before {
+  content: '▸ ';
+  color: var(--accent-text);
+}
+.assist-infer-cand-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.assist-infer-cand-actions .ghost {
+  white-space: nowrap;
+}
+.assist-infer .assist-material-note {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.shenlun-sec-btns {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 800px) {
+  .assist-infer {
+    padding: 16px;
+  }
+  .assist-infer-head {
+    flex-direction: column;
+  }
+  .assist-infer-cand {
+    flex-direction: column;
+    gap: 8px;
   }
 }

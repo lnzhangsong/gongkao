@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, X } from 'lucide-react'
 import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
 import { useAnnotationStore } from '../stores/annotationStore'
+import { useAiAssistStore } from '../stores/aiAssistStore'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { MATERIAL_TYPE_LABELS } from '../data/material'
 import { draftStudy } from '../lib/aiPresplit'
@@ -112,6 +114,16 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   const skeleton = study?.skeleton
   const patterns = materialByType.get('pattern') ?? []
 
+  /* ---------- 本文题目：以本文为底本的已存申论题（AI-4 存题后回流展示） ---------- */
+  const assistRecords = useAiAssistStore((s) => s.records)
+  const relatedExams = useMemo(
+    () =>
+      Object.values(assistRecords)
+        .filter((r) => r.sourceArticleId === article.id)
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [assistRecords, article.id],
+  )
+
   /* ---------- 防丢稿：段落大意受控 + 防抖 + 关闭时 flush ---------- */
   const [paraDrafts, setParaDrafts] = useState<Record<number, string>>({})
   const paraTimersRef = useRef<Map<number, number>>(new Map())
@@ -155,6 +167,14 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
     flushAllParas()
     onClose()
   }, [flushAllParas, onClose])
+
+  /* ---------- AI-4 反向联想入口：去 /assist 对本文做申论考点联想 ---------- */
+  const navigate = useNavigate()
+  const goInferExam = useCallback(() => {
+    flushAllParas()
+    onClose()
+    navigate(`/assist?infer=${article.id}`)
+  }, [article.id, flushAllParas, navigate, onClose])
 
   // 卸载时兜底 flush（Esc / 路由切走等未走 handleClose 的路径）
   useEffect(() => {
@@ -200,14 +220,23 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
           <section className="shenlun-sec ai-presplit">
             <div className="shenlun-sec-row">
               <span className="shenlun-label">AI 预拆解</span>
-              <button
-                className="text-btn"
-                disabled={aiBusy || !aiConfigured}
-                title={aiConfigured ? '一键生成并填入：核心观点 / 分论点 / 骨架 / 每段大意（只填空缺，不覆盖手填）' : '先到设置页配置 AI 服务'}
-                onClick={runAiPresplit}
-              >
-                {aiBusy ? '生成中…' : '一键填入 ✦'}
-              </button>
+              <div className="shenlun-sec-btns">
+                <button
+                  className="text-btn"
+                  title="AI-4 反向联想：这篇文章能出什么申论题（到 AI 辅助页进行）"
+                  onClick={goInferExam}
+                >
+                  考点联想 →
+                </button>
+                <button
+                  className="text-btn"
+                  disabled={aiBusy || !aiConfigured}
+                  title={aiConfigured ? '一键生成并填入：核心观点 / 分论点 / 骨架 / 每段大意（只填空缺，不覆盖手填）' : '先到设置页配置 AI 服务'}
+                  onClick={runAiPresplit}
+                >
+                  {aiBusy ? '生成中…' : '一键填入 ✦'}
+                </button>
+              </div>
             </div>
             {aiError && <p className="ai-presplit-error">{aiError}</p>}
             {aiDone && !aiError && <p className="ai-presplit-hint">{aiDone}</p>}
@@ -395,6 +424,32 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             })}
             {materialByType.size === 0 && (
               <p className="shenlun-empty">阅读时选中文字标记为素材，会出现在这里。</p>
+            )}
+          </section>
+
+          {/* 本文题目：以这篇文章为底本保存的申论题（AI-4 反向出题闭环） */}
+          <section className="shenlun-sec">
+            <div className="shenlun-sec-row">
+              <span className="shenlun-label">本文题目</span>
+              {relatedExams.length > 0 && (
+                <button className="text-btn" title="到 AI 辅助页查看与修改" onClick={() => navigate(`/assist?record=${relatedExams[0].id}`)}>
+                  去 AI 辅助 →
+                </button>
+              )}
+            </div>
+            {relatedExams.length > 0 ? (
+              <div className="shenlun-exams">
+                {relatedExams.map((r) => (
+                  <button key={r.id} className="shenlun-exam" title="查看完整题目" onClick={() => navigate(`/assist?record=${r.id}`)}>
+                    <span className="shenlun-exam-type">{r.questionType}</span>
+                    <span className="shenlun-exam-q">{r.question}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="shenlun-empty">
+                还没有基于本文出题。点上方「考点联想」可反向出题，存题后显示在这里。
+              </p>
             )}
           </section>
 

@@ -31,6 +31,13 @@ export interface AssistRecord {
   /** 审题立意 / 作答方向 */
   stance: string
   outline: OutlineItem[]
+  /** AI-4+ 完整出题（§5.3 L2）：以下三个字段仅完整题目记录有值，向后兼容 */
+  /** 给定资料（以来源文章为底本的申论材料） */
+  givenMaterial?: string
+  /** AI 参考要点（不是批改，仅供成文后对照方向） */
+  referencePoints?: string[]
+  /** 底本来源文章 id（素材卡片与给定资料保持出处关联，可跳转对照） */
+  sourceArticleId?: string
   createdAt: string
   updatedAt: string
 }

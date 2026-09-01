@@ -202,7 +202,6 @@ function extractPoints(text) {
   return m ? +m[1] : null
 }
 
-const APPL = /提案|讲话稿|发言稿|倡议书|公开信|一封信|报告|提纲|宣传|短文|简报|编者按|导言|新闻稿|公众号|汇报|总结| commentary|材料作文题/
 function classifyQuestion(stem, requirement, wordLimit) {
   const t = stem + requirement
   if (/写一篇(?:文章|议论文|文章)|自拟题目|自选角度|作文|写一篇.{0,6}文章/.test(t)) return '大作文'
@@ -266,7 +265,7 @@ function parsePaper(relPath, text) {
   const warnings = []
   const qStart = findFirst(body, QUESTIONS_START)
   const mStart = findFirst(body, MATERIALS_START)
-  let aStart = findFirst(body, ANSWERS_START, qStart ? qStart.index + 10 : 0)
+  const aStart = findFirst(body, ANSWERS_START, qStart ? qStart.index + 10 : 0)
 
   // —— 特例 A：2026 式「作答要求/参考答案」逐题交错 ——
   const qMarksAll = [...body.matchAll(/^[ \t\u3000]*【作答要求】\s*$/gm)].map((m) => m.index)

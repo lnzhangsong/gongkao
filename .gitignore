@@ -9,3 +9,6 @@ dist
 # SQLite WAL 临时文件
 data/*.db-shm
 data/*.db-wal
+
+# Command Code 工具自身配置（taste / settings / plans 等，不随项目提交）
+.commandcode/

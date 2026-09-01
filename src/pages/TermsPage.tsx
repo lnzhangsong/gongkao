@@ -50,7 +50,6 @@ export default function TermsPage() {
       })
   useEffect(() => {
     void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const themes = useMemo(() => (terms ? orderedThemes(terms) : []), [terms])

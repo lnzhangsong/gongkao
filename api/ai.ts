@@ -56,8 +56,19 @@ export async function POST(request: Request) {
     }
     return json({ content })
   } catch (err) {
-    return json({ error: String(err) }, 502)
+    return json({ error: upstreamErrorMessage(err, root) }, 502)
   }
+}
+
+/** undici 在上游连接失败时抛 `TypeError: fetch failed`（真实原因在 err.cause），
+ *  把它翻译成可操作的提示，避免把原生报错原样漏给前端。 */
+function upstreamErrorMessage(err: unknown, root: string): string {
+  const cause = err instanceof Error && err.cause instanceof Error ? (err.cause as Error).message : ''
+  const raw = `${err instanceof Error ? err.message : String(err)}${cause ? `（${cause}）` : ''}`
+  if (/fetch failed|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|ERR_SOCKET/i.test(raw)) {
+    return `无法连接到 AI 服务（${root}），请检查接口地址与网络后重试`
+  }
+  return raw
 }
 
 function json(data: unknown, status = 200): Response {

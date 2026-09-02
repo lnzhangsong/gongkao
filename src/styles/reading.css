@@ -977,7 +977,7 @@
     padding: 8px 10px;
     white-space: normal;
     z-index: var(--z-mobile-popover);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
   }
   .ann-popover.show { display: none; }
@@ -1108,7 +1108,7 @@
   margin: 8px 0 36px;
   padding: 18px 20px 16px;
   border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 46%),
     color-mix(in srgb, var(--ink) 3%, transparent);
@@ -1984,7 +1984,7 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
     height: 78vh;
     border-left: none;
     border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-    border-radius: 14px 14px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     animation-name: shenlun-in-up;
   }
 }
@@ -2009,7 +2009,7 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   color: var(--muted);
   margin: 6px 0 0;
 }
-.ai-presplit-error { color: #c0392b; }
+.ai-presplit-error { color: var(--danger); }
 .ai-presplit-result {
   margin-top: 8px;
   padding: 10px 12px;

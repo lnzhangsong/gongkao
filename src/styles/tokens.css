@@ -198,6 +198,17 @@
   --z-cursor: 200;
   --z-toast: 3000;
   --z-loading: 9999;
+
+  /* ---------- Paper OS 统一令牌（Phase 1 收敛，2026-09-03） ----------
+     圆角两档：卡片/输入 = sm(10)，大面板/抽屉/弹窗 = lg(16)；筛选签/小控件保留直角 2px，胶囊保留 999px
+     阴影一档：卡片统一 7px 8px 硬阴影（--shadow-hard）；弹层/抽屉等浮层允许柔影 */
+  --radius-sm: 10px;
+  --radius-lg: 16px;
+  --shadow-hard: 7px 8px 0 var(--ink);
+  --container: 1180px;
+
+  /* 危险色单值（原 #b84b37 / #c0392b 两值并存，Paper OS DESIGN.md §2 裁定 #c24a3a） */
+  --danger: #c24a3a;
 }
 
 /* 减少动效 */

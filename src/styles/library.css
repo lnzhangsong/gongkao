@@ -139,7 +139,7 @@
 .featured-main {
   background: var(--surface-b);
   min-height: 285px;
-  border-radius: 2px; /* 与全站直角语言一致（原 14px） */
+  border-radius: var(--radius-sm); /* 与全站直角语言一致（原 14px） */
   padding: 25px;
   display: flex;
   flex-direction: column;
@@ -150,7 +150,7 @@
 
 .featured-main:hover {
   transform: translateY(-4px);
-  box-shadow: 6px 8px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  box-shadow: var(--shadow-hard);
 }
 
 .featured-main .tag {

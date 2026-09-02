@@ -83,7 +83,9 @@ a {
    仅淡入（不用 transform，避免影响 fixed 定位的进度条/工具栏）；
    html.reduced-motion 下由全局规则关闭 */
 .route-fade {
-  animation: route-enter 0.35s ease both;
+  /* backwards 而非 both：fill-forwards 会让动画元素永久持有层叠上下文，
+     把内部 z-index 较高的 fixed 元素（移动端阅读辅助菜单）压在 sticky 导航之下 */
+  animation: route-enter 0.35s ease backwards;
 }
 
 @keyframes route-enter {
@@ -118,8 +120,8 @@ a {
   padding: 0 38px;
   position: sticky;
   top: 0;
-  background: color-mix(in srgb, var(--paper) 93%, transparent);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(1.15);
   z-index: var(--z-nav);
 }
 
@@ -687,7 +689,7 @@ a {
   padding: 8px 18px 10px;
   background: var(--soft);
   border: 1px solid var(--ink);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 6px 24px color-mix(in srgb, var(--ink) 24%, transparent);
   pointer-events: none;
 }
@@ -959,7 +961,7 @@ a {
   width: min(400px, calc(100vw - 48px));
   background: var(--paper);
   border: 1px solid var(--ink);
-  border-radius: 2px;
+  border-radius: var(--radius-lg);
   box-shadow: 7px 8px 0 var(--ink);
   padding: 26px 26px 22px;
 }

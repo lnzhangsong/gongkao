@@ -46,7 +46,7 @@
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 60px;
-  max-width: 1240px;
+  max-width: var(--container);
   margin: 0 auto;
   padding: 38px 38px 80px;
 }
@@ -227,24 +227,24 @@
 
 /* 危险操作 */
 .danger {
-  color: #b84b37;
+  color: var(--danger);
 }
 
 .danger h2 {
-  color: #b84b37;
+  color: var(--danger);
 }
 
 .danger .setting-desc {
-  color: color-mix(in srgb, #b84b37 65%, var(--paper));
+  color: color-mix(in srgb, var(--danger) 65%, var(--paper));
 }
 
 .danger button.ghost {
-  color: #b84b37;
-  border-color: #b84b37;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .danger button.ghost:hover {
-  background: #b84b37;
+  background: var(--danger);
   color: var(--paper);
 }
 
@@ -352,7 +352,7 @@
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 7px 10px;
   outline: none;
   transition: border-color 0.15s;
@@ -368,7 +368,7 @@
   color: var(--muted);
 }
 .ai-status.ok { color: var(--accent-text); }
-.ai-status.err { color: #c0392b; }
+.ai-status.err { color: var(--danger); }
 @media (max-width: 860px) {
   .ai-config { grid-template-columns: 1fr 1fr; }
 }

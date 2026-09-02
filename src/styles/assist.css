@@ -17,7 +17,7 @@
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 12px 14px;
   outline: none;
   resize: vertical;
@@ -74,7 +74,7 @@
   color: var(--paper);
   font: 500 14px var(--sans);
   padding: 9px 22px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
     transform 0.15s,
@@ -83,7 +83,7 @@
 }
 .assist-run:hover:not(:disabled) {
   transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: var(--shadow-hard);
 }
 .assist-run:disabled {
   opacity: 0.45;
@@ -99,7 +99,7 @@
 .assist-editor {
   margin-top: 34px;
   border: 1px solid var(--ink);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 28px clamp(20px, 4.5vw, 52px) 24px;
   display: flex;
   flex-direction: column;
@@ -328,7 +328,7 @@ a.assist-chip-link:hover {
   opacity: 0.55;
 }
 .assist-item-del:hover {
-  color: #c0392b;
+  color: var(--danger);
   opacity: 1;
 }
 .assist-add-item {
@@ -361,7 +361,7 @@ a.assist-chip-link:hover {
   cursor: pointer;
 }
 .assist-save:hover {
-  box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: var(--shadow-hard);
   transform: translate(-2px, -2px);
   transition:
     transform 0.15s,

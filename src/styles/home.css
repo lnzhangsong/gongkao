@@ -243,7 +243,7 @@
   padding: 20px;
   background: var(--item-bg, var(--paper));
   border: 1px solid var(--ink);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -303,7 +303,7 @@
 .continue-bar {
   margin-top: 44px;
   border: 1px solid var(--ink);
-  border-radius: 2px; /* 与 .item 等全站直角语言一致（原为 14px 圆角，是唯一异类） */
+  border-radius: var(--radius-sm); /* 与 .item 等全站直角语言一致（原为 14px 圆角，是唯一异类） */
   padding: 22px 25px;
   display: flex;
   align-items: center;
@@ -358,6 +358,12 @@
   .hero h1,
   .hero h1 span {
     font-size: clamp(36px, 13vw, 62px);
+  }
+  .hero-foot {
+    /* 移动端纵向堆叠：段落与统计横排会挤在一行、基线错位 */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
   .hero-foot p {
     font-size: 12px;

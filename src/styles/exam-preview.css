@@ -64,7 +64,7 @@
   padding: 18px 20px;
   background: var(--paper);
   border: 1px solid var(--ink);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -124,7 +124,7 @@
   font: 500 clamp(24px, 3vw, 34px) / 1.4 var(--serif);
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   background: transparent;
   color: var(--ink);
@@ -334,7 +334,7 @@
   background: var(--soft);
   border: 1px solid var(--line);
   border-top: 2px solid var(--ink);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 22px 26px;
 }
 
@@ -389,7 +389,7 @@
   color: var(--ink);
   background: color-mix(in srgb, var(--ink) 3%, var(--paper));
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 12px 14px;
   margin: 8px 0 0;
   resize: vertical;
@@ -406,7 +406,7 @@
   font-size: var(--label-size, 13px);
   letter-spacing: 0.05em;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
   padding: 3px 8px;
@@ -426,7 +426,7 @@
   width: 52px;
   font: 12px var(--mono);
   border: 1px dashed var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
   padding: 3px 6px;
@@ -504,7 +504,7 @@
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 7px 10px;
 }
 

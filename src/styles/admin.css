@@ -70,7 +70,7 @@
 }
 
 .admin-row-actions .danger {
-  color: #b84b37;
+  color: var(--danger);
 }
 
 /* 编辑器页 */
@@ -193,11 +193,11 @@
 }
 
 .admin-error {
-  border-left: 2px solid #b84b37;
+  border-left: 2px solid var(--danger);
   padding: 8px 12px;
   font: 12px var(--sans);
-  color: #b84b37;
-  background: color-mix(in srgb, #b84b37 6%, transparent);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
   margin-bottom: 14px;
 }
 
@@ -208,13 +208,13 @@
 
 .admin-form-actions .ghost.danger,
 .ghost.danger {
-  color: #b84b37;
-  border-color: #b84b37;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .admin-form-actions .ghost.danger:hover,
 .ghost.danger:hover {
-  background: #b84b37;
+  background: var(--danger);
   color: var(--paper);
 }
 

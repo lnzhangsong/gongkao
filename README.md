@@ -5,19 +5,19 @@
 ## 快速开始
 
 ```bash
-npm install        # 安装依赖（使用项目内缓存 .npm-cache）
-npm run dev        # 开发服务器 http://localhost:5173
-npm run build      # 类型检查 + 生产构建（输出 dist/）
-npm run preview    # 预览生产构建
+pnpm install       # 项目用 pnpm（devEngines 强制，npm 会被拒绝）
+pnpm dev           # 开发服务器 http://localhost:5173（API 另起：pnpm dev:api，或 pnpm dev:all 一键双起）
+pnpm build         # 类型检查 + 生产构建（输出 dist/）
+pnpm preview       # 预览生产构建
 ```
 
 ## 技术栈
 
 - **Vite 8 + React 19 + TypeScript 7**
-- **React Router 7** —— 五个页面路由，浏览器前进后退，刷新保持
+- **React Router 7** —— 十个页面路由，浏览器前进后退，刷新保持
 - **Zustand 5**（`persist` 中间件）—— 状态管理 + localStorage 持久化
 - **Lucide React** —— 工具栏/操作图标
-- **CSS Variables** —— 沿用设计稿的令牌系统与四套主题（未引入 Tailwind，保持与设计稿一致的排版语言）
+- **CSS Variables** —— 令牌系统与五套主题（paper/blue/violet/night/graphite，未引入 Tailwind；2026-09 起按 Paper OS 收敛：圆角 10/16 两档、7×8 硬阴影、1180 版心，见 `design/design/DESIGN.md`）
 - 字体：DM Mono / DM Sans / Noto Sans SC / Noto Serif SC / Ma Shan Zheng / LXGW WenKai（Google Fonts）
 
 ## 页面路由
@@ -29,6 +29,12 @@ npm run preview    # 预览生产构建
 | `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记） | `design/pages/reading.html` |
 | `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
 | `/settings` | 设置（字体、字号、行高、主题、动效、数据导出 / 清空） | `design/pages/settings.html` |
+| `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑） | `scripts/import-exams.mjs` 入库 |
+| `/terms` | 申论规范词库（1070+ 词，按主题检索） | `scripts/import-guifanci.mjs` 入库 |
+| `/assist` | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK） | `docs/申论写作AI辅助设计方案.md` |
+| `/admin` 系列 | 文章管理（列表 + 录入/编辑编辑器） | — |
+
+> 全部进度（P1–P7、AI 线、Paper OS 设计系统落地）**以 `docs/README.md` 的路线图表为唯一真源**；设计系统规范见 `design/design/DESIGN.md`。
 
 文章库的搜索状态同步到 URL（`/library?q=基层治理&topic=民生保障&page=2`），刷新后筛选条件不丢失。
 
@@ -73,7 +79,7 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 
 ## 主题
 
-四套主题与 `design/explorations/palettes.html` 一致，通过 `data-theme` 属性切换：
+四套基础主题与 `design/explorations/palettes.html` 一致，graphite 墨夜来自 `2026-direction.html`，通过 `data-theme` 属性切换：
 
 | 主题 | 名称 | 关键色 |
 |---|---|---|
@@ -118,11 +124,11 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 
 ## 端到端冒烟测试
 
-`scripts/e2e-smoke.mjs` 用本机 Microsoft Edge 无头模式跑通核心链路（94 项断言，自动拉起本地 API server）：
+`scripts/e2e-smoke.mjs` 用本机 Microsoft Edge 无头模式跑通核心链路（115 项断言，自动拉起本地 API server）：
 
 ```bash
-npm i -D playwright-core          # 需要本机安装 Microsoft Edge
-npm run dev                       # 先启动开发服务器
+pnpm add -D playwright-core        # 需要本机安装 Microsoft Edge
+pnpm dev                           # 先启动开发服务器
 node scripts/e2e-smoke.mjs
 ```
 

@@ -253,7 +253,7 @@ export default function ExamPreviewPage() {
         year: draft.year,
         level: draft.level,
         title: draft.title,
-        materials: draft.materials.map((m) => ({ idx: m.idx, content: m.content })),
+        materials: draft.materials.map((m) => ({ idx: m.idx, label: m.label, content: m.content })),
         questions: draft.questions.map((q) => ({
           idx: q.idx, type: q.type, stem: q.stem, requirement: q.requirement,
           wordLimit: q.wordLimit, points: q.points, answer: q.answer,
@@ -439,7 +439,12 @@ export default function ExamPreviewPage() {
                 ? draft.materials.map((m) => (
                     <Fragment key={m.idx}>
                       <h3 className="exam-mat-label">
-                        <span>{m.label}</span>
+                        <input
+                          className="exam-mat-label-input"
+                          value={m.label}
+                          onChange={(e) => patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.label = e.target.value))}
+                          aria-label="材料标题"
+                        />
                         <span className="exam-move-group">
                           <button className="exam-move-btn" title="上移" disabled={m.idx === 1} onClick={() => moveItem('materials', m.idx, -1)}>↑</button>
                           <button className="exam-move-btn" title="下移" disabled={m.idx === draft.materials.length} onClick={() => moveItem('materials', m.idx, 1)}>↓</button>

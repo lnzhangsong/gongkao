@@ -194,6 +194,24 @@
   margin-top: 38px;
 }
 
+/* 编辑态：材料标题改成 input（mono 字号跟随 label-size，沿用细线延伸） */
+.exam-mat-label-input {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--line);
+  padding: 2px 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: 24ch;
+}
+.exam-mat-label-input:focus {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
 /* ===================== 题目与答案 ===================== */
 
 .exam-questions {

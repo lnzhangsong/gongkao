@@ -140,18 +140,6 @@
   font-size: 12px;
 }
 
-/* meta 行均匀分布（同阅读页），编辑按钮自然靠右 */
-.exam-reading .article-meta {
-  font-size: 13px;
-  align-items: center;
-}
-
-.exam-actions {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-}
-
 /* 申论页 mono 标签：字号跟随「标签字号」设置（右栏可调） */
 .exam-mat-label,
 .exam-q-idx,
@@ -376,13 +364,6 @@
   text-indent: 0;
 }
 
-
-/* ===================== 编辑态 ===================== */
-
-.exam-edit-block {
-  margin-bottom: 26px;
-}
-
 .exam-ta {
   display: block;
   width: 100%;
@@ -452,11 +433,6 @@
   .exam-grid {
     grid-template-columns: 1fr;
   }
-
-  .exam-actions {
-    flex-wrap: wrap;
-    margin-left: 0;
-  }
 }
 
 /* 页头 tag 可点击返回列表（与阅读页 tag 同样式，hover 提示可点） */
@@ -475,7 +451,6 @@
 .exam-tag-link:hover {
   color: var(--accent-text);
 }
-
 
 /* 编辑入口：安静的 mono 文字按钮（hover 提亮），不再用边框盒子 */
 .exam-edit-btn {
@@ -593,7 +568,6 @@
   border-color: var(--ink);
 }
 
-
 .exam-mat-label,
 .exam-questions {
   /* 锚点跳转时给顶部导航留出呼吸空间 */
@@ -642,13 +616,6 @@
   gap: 10px;
 }
 
-/* 编辑态：年份/级别调整 */
-.exam-meta-edit {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .exam-year-input {
   width: 76px;
 }
@@ -657,10 +624,6 @@
 .exam-page .article-meta {
   align-items: center;
   gap: 14px;
-}
-
-.exam-meta-edit .exam-select {
-  padding: 2px 6px;
 }
 
 .exam-year-input {
@@ -956,51 +919,9 @@
   margin-top: 10px;
 }
 
-/* 卡内通用标签行：mono 标签 + sans 说明 */
-.exam-tag-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 6px 0 0;
-  font: 12.5px/1.8 var(--sans);
-  color: color-mix(in srgb, var(--ink) 76%, var(--paper));
-}
-
-.exam-tag-row > i,
-.exam-mat-note p > i {
-  font-family: var(--mono);
-  font-style: normal;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: var(--accent-text);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* 要点句 / 引文：serif，与答题纸正文同语言 */
-.draw-point-text {
-  margin: 0;
-  flex: 1;
-  font: 500 14.5px/1.9 var(--serif);
-  color: var(--ink);
-}
-
-.draw-point-text .draw-no {
-  font: 500 12px/1.9 var(--mono);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  margin-right: 2px;
-}
-
 .draw-quote {
   font-family: var(--serif);
   color: color-mix(in srgb, var(--ink) 74%, var(--paper));
-}
-
-.draw-mark-quote {
-  flex: 1;
-  font: 500 14px/1.9 var(--serif);
-  color: var(--ink);
 }
 
 /* —— 要点卡头部：序号 + 加工徽标 + 要点句 —— */
@@ -1097,11 +1018,6 @@
   color: var(--muted);
 }
 
-/* 来源跳转 chip：与真题页材料 chip 同语言 */
-.draw-src {
-  flex-shrink: 0;
-}
-
 /* —— 原文高亮：accent 下划线系，悬停加深 —— */
 p mark.exam-mark {
   background: transparent;
@@ -1140,31 +1056,11 @@ p mark.exam-mark.flash {
   100% { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 }
 
-/* —— 材料内联思路卡：与要点卡同容器语言，贴段展示 —— */
-.exam-mat-note {
-  margin: -6px 0 22px;
-  padding: 10px 16px;
-  background: var(--soft);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-
-
-.exam-mat-note p {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 2px 0 0;
-  font: 12.5px/1.8 var(--sans);
-  color: color-mix(in srgb, var(--ink) 76%, var(--paper));
-}
-
 /* 题头「解析」入口 */
 .exam-analysis-btn {
   font-size: 12px;
   white-space: nowrap;
 }
-
 
 /* —— 作答要求抽屉：题距 —— */
 .draw-q + .draw-q {
@@ -1193,7 +1089,6 @@ p mark.exam-mark.flash {
   border-color: var(--ink);
 }
 
-
 /* 一键解析行：主按钮 + 说明 */
 .draw-run-row {
   display: flex;
@@ -1221,7 +1116,6 @@ p mark.exam-mark.flash {
 
 /* 材料菜单行：标签 + chips + 弹性空隙 + 行文思路开关，单行收纳 */
 
-
 /* ===================== 原文标注：重要性双色体系 =====================
    core 核心 = accent（暖红，直接得分句）
    normal 辅助 = --hl-blue（冷蓝，结构/背景/衔接句）
@@ -1241,46 +1135,6 @@ p mark.exam-mark.lv-useless {
   text-decoration: line-through;
   text-decoration-color: color-mix(in srgb, var(--ink) 45%, transparent);
   text-decoration-thickness: 1.5px;
-}
-
-
-
-
-
-/* 行文作用 chip：体系词 */
-.exam-mat-note .draw-role {
-  font: 700 12px/1.7 var(--sans);
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
-  border-radius: 2px;
-  padding: 0 6px;
-}
-
-/* 抽屉标注行：等级徽标 + 作用 chip */
-.draw-level {
-  flex-shrink: 0;
-  font: 700 11px/1.7 var(--sans);
-  letter-spacing: 0.04em;
-  border-radius: 2px;
-  padding: 1px 7px;
-}
-
-.draw-level.lv-core {
-  color: var(--accent-text);
-  border: 1px solid color-mix(in srgb, var(--accent-text) 45%, transparent);
-}
-
-.draw-level.lv-normal {
-  color: color-mix(in srgb, var(--hl-blue) 55%, var(--ink));
-  border: 1px solid color-mix(in srgb, var(--hl-blue) 75%, transparent);
-}
-
-.draw-role {
-  font: 700 12px/1.7 var(--sans);
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
-  border-radius: 2px;
-  padding: 0 6px;
 }
 
 /* —— 句内解析：紧跟句子插在正文里，不换行，「」括起来（括号在 JSX 文本里） —— */

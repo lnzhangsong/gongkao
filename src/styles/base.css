@@ -274,16 +274,10 @@ a {
 
 /* ---------- 自定义光标（仅精细指针设备） ---------- */
 @media (pointer: fine) {
-  body.cursor-on {
-    cursor: none;
-  }
-  body.cursor-on a,
-  body.cursor-on button,
-  body.cursor-on input,
-  body.cursor-on select,
-  body.cursor-on textarea,
-  body.cursor-on [data-cursor] {
-    cursor: none;
+  /* 圆圈光标开启时压掉一切原生光标（含散落的 cursor:pointer 手型），只保留圆圈 */
+  body.cursor-on,
+  body.cursor-on * {
+    cursor: none !important;
   }
 }
 
@@ -327,7 +321,7 @@ a {
   border: 1px solid var(--line);
   background: transparent;
   /* 直角签：与全站直角/墨线语言一致（原 99px 圆角胶囊为原型遗留） */
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   padding: 8px 13px;
   font: 12px var(--mono);
   color: var(--muted);
@@ -408,7 +402,7 @@ a {
   background: transparent;
   color: var(--muted);
   font: 12px var(--mono);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -449,7 +443,7 @@ a {
   font: 12px var(--mono);
   text-align: center;
   outline: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .page-jump input:focus {
@@ -464,7 +458,7 @@ a {
   color: var(--muted);
   font: 12px var(--mono);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   transition: all 0.2s;
 }
 
@@ -563,8 +557,8 @@ a {
   padding: 4px;
   background: var(--soft);
   border: 1px solid var(--ink);
-  border-radius: 3px;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-pop);
   display: grid;
   gap: 1px;
 }

@@ -704,13 +704,13 @@
   color: var(--accent-text);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
   .reading-layout {
     grid-template-columns: 1fr;
     gap: 28px;
     padding: 42px 24px 65px;
   }
-  /* 阅读辅助挪入汉堡包菜单，右侧栏隐藏 */
+  /* 阅读辅助挪入汉堡包菜单，右侧栏隐藏（断点与顶栏 800 对齐） */
   .article-tools {
     display: none;
   }
@@ -787,8 +787,8 @@
   display: none;
 }
 
-/* ≤900px 显示（本规则须位于上方 display:none 之后，同特异性按源序取胜） */
-@media (max-width: 900px) {
+/* ≤800px 显示（与顶栏/阅读布局断点对齐，消除 800-900 错位） */
+@media (max-width: 800px) {
   .article-tools-menu {
     display: block;
   }
@@ -958,8 +958,8 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* ---------- 移动端（≤900px，与 TS 侧 NARROW_BREAKPOINT 一致）：选择工具栏固定为底部面板 ---------- */
-@media (max-width: 900px) {
+/* ---------- 移动端（≤800px）：选择工具栏固定为底部面板 ---------- */
+@media (max-width: 800px) {
   /* 移动端：选中文字后只显示笔记工具，不显示高亮管理菜单 */
   .selection-popover.show {
     position: fixed;
@@ -1102,7 +1102,7 @@
   }
 }
 
-/* 拆解上屏：全篇拆解卡（正文开头）与心得块（文末）——bento 卡片风：圆角、发丝边、微渐变、柔投影 */
+/* 拆解上屏：全篇拆解卡（正文开头）与心得块（文末）——B 语言特例：仅正文栏内，克制版 */
 .study-overview,
 .study-note-block {
   margin: 8px 0 36px;
@@ -1110,11 +1110,9 @@
   border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 46%),
-    color-mix(in srgb, var(--ink) 3%, transparent);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.04),
-    0 12px 32px -20px rgb(0 0 0 / 0.4);
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 4%, transparent), transparent 52%),
+    color-mix(in srgb, var(--ink) 2.5%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .study-note-block {
@@ -1296,7 +1294,7 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   display: block;
 }
 
-/* 段意上屏：拆解抽屉里写的每段大意，内嵌显示在正文段后——与拆解卡同语言的迷你 bento 条，撑满正文栏宽 */
+/* 段意上屏：拆解抽屉里写的每段大意，内嵌显示在正文段后——B 特例迷你条，仅正文栏内 */
 .para-gist {
   margin: 8px 0 26px;
   padding: 9px 14px;
@@ -1304,8 +1302,8 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   gap: 12px;
   align-items: center;
   border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--ink) 2.5%, transparent);
+  border-radius: var(--radius);
+  background: transparent;
   font: 400 var(--gist-font-size, 13.5px)/1.8 var(--gist-font-family, var(--serif));
   color: var(--ink);
 }
@@ -1632,7 +1630,7 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.28);
-  z-index: 60;
+  z-index: var(--z-drawer-backdrop);
 }
 
 .shenlun-panel {
@@ -1643,8 +1641,8 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   width: min(420px, 92vw);
   background: var(--soft);
   border-left: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
-  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.18);
-  z-index: 61;
+  box-shadow: var(--shadow-pop);
+  z-index: var(--z-drawer);
   display: flex;
   flex-direction: column;
   animation: shenlun-in 0.24s cubic-bezier(0.22, 0.8, 0.36, 1);
@@ -1976,7 +1974,7 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   cursor: pointer;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
   .shenlun-panel {
     top: auto;
     left: 0;

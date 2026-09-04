@@ -498,7 +498,7 @@
   letter-spacing: 0.02em;
   padding: 4px 11px;
   /* 直角签：与全站 .filter-pill 语言一致（原 999px 胶囊为遗留样式） */
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--line);
   background: none;
   color: var(--muted);

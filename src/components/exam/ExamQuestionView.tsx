@@ -1,7 +1,8 @@
 import { joinParagraphs } from '../../lib/examText'
 import type { ExamQuestion } from '../../lib/api'
 
-/** 阅读态的单道题：题干 + 关联材料跳转 + 要求 + 折叠参考答案 */
+/** 阅读态的单道题：题干 + 关联材料跳转 + 要求 + 折叠参考答案。
+ *  方法论 / 答案溯源等解析能力统一收进 ExamAnalysisDrawer（页面级抽屉），本组件保持零增重。 */
 export function ExamQuestionView({
   q,
   materialAnchors,

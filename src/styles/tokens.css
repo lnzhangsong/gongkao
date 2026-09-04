@@ -40,6 +40,8 @@
   /* 面板底色 A/B（::selection、picks 卡等；暗色主题下是低饱和暗面板色） */
   --surface-a: #d9eb73;
   --surface-b: #c9d8f1;
+  --pick-a: color-mix(in srgb, var(--surface-b) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--surface-a) 14%, var(--paper));
   --dark: #242321;
   --soft: #fffaf2;
   --body-bg: #111;
@@ -77,6 +79,8 @@
   --accent: #667ff0;
   --surface-a: #c8d5ff;
   --surface-b: #c8d5ff;
+  --pick-a: color-mix(in srgb, var(--surface-b) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--surface-a) 14%, var(--paper));
   --dark: #1e2a40;
   --soft: #eef2fa;
   --body-bg: #10141d;
@@ -127,6 +131,8 @@
   --accent: #aa7bff;
   --surface-a: #d9c9ff;
   --surface-b: #c9b8fa;
+  --pick-a: color-mix(in srgb, var(--surface-b) 45%, var(--paper));
+  --pick-b: color-mix(in srgb, var(--surface-a) 14%, var(--paper));
   --dark: #2b2340;
   --soft: #f3f0fb;
   --body-bg: #13101c;
@@ -202,10 +208,22 @@
   /* ---------- Paper OS 统一令牌（Phase 1 收敛，2026-09-03） ----------
      圆角两档：卡片/输入 = sm(10)，大面板/抽屉/弹窗 = lg(16)；筛选签/小控件保留直角 2px，胶囊保留 999px
      阴影一档：卡片统一 7px 8px 硬阴影（--shadow-hard）；弹层/抽屉等浮层允许柔影 */
+  --radius-xs: 2px;
   --radius-sm: 10px;
   --radius-lg: 16px;
+  --radius-pill: 999px;
   --shadow-hard: 7px 8px 0 var(--ink);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -20px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 6px 18px color-mix(in srgb, var(--ink) 16%, transparent);
   --container: 1180px;
+  --gutter: 38px;
+  --gutter-sm: 20px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 20px;
+  --space-lg: 32px;
+  --space-xl: 56px;
+  --space-2xl: 96px;
 
   /* 危险色单值（原 #b84b37 / #c0392b 两值并存，Paper OS DESIGN.md §2 裁定 #c24a3a） */
   --danger: #c24a3a;

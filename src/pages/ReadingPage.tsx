@@ -25,6 +25,7 @@ import { useIsNarrow } from '../lib/breakpoints'
 import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
 import { ShenlunPanel } from '../components/ShenlunPanel'
+import { ParaGist, PatternInput } from '../components/reading/ParaGist'
 import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { draftParaGist } from '../lib/aiPresplit'
@@ -32,29 +33,10 @@ import { paragraphStarts, splitParagraph } from '../lib/offsets'
 import { loadFontFamily } from '../lib/fonts'
 import { formatDate } from '../data'
 import { formatTimeOnly } from '../lib/export'
-import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS, type ParagraphSummary } from '../types'
+import { HL_COLORS, HL_COLOR_LABELS, UNDERLINE_STYLES, UNDERLINE_STYLE_LABELS } from '../types'
 import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS, MATERIAL_TYPE_HINTS } from '../data/material'
 
 /** 段落聚焦带：视口高度的比例上下限（按手感可调） */
-
-/** 句式模板编辑（标注管理弹层内）：原句已存为摘录，这里填抽象化后的可迁移模板 */
-function PatternInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
-  const [draft, setDraft] = useState(value)
-  return (
-    <div className="pattern-input">
-      <input
-        placeholder="填可迁移模板，如：以……之笔，绘就……画卷"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') onSave(draft.trim())
-          e.stopPropagation()
-        }}
-      />
-      <button onClick={() => onSave(draft.trim())}>存模板</button>
-    </div>
-  )
-}
 
 /** 秒 → MM:SS / H:MM:SS */
 function fmtDuration(totalSec: number): string {
@@ -64,109 +46,6 @@ function fmtDuration(totalSec: number): string {
   const sec = s % 60
   const p = (n: number) => String(n).padStart(2, '0')
   return h > 0 ? `${h}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`
-}
-
-/** 段落大意：栏外序号入口点开后就地编辑/展示；AI 草稿（未确认）弱化展示，可一键采纳 */
-function ParaGist({
-  paraIndex,
-  entry,
-  editing,
-  onToggle,
-  onSave,
-  onConfirm,
-  onAiDraft,
-  aiBusy,
-  aiReady,
-}: {
-  paraIndex: number
-  entry?: ParagraphSummary
-  editing: boolean
-  onToggle: () => void
-  onSave: (text: string) => void
-  onConfirm: () => void
-  /** AI 起草：返回生成的句子（写入 store 并回填编辑框）；null = 失败/未配置 */
-  onAiDraft?: () => Promise<string | null>
-  aiBusy?: boolean
-  aiReady?: boolean
-}) {
-  const [draft, setDraft] = useState('')
-  useEffect(() => {
-    if (editing) setDraft(entry?.summary ?? '')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing])
-  if (!editing && !entry) return null
-  if (editing) {
-    return (
-      <div className="para-gist para-gist-editor">
-        <textarea
-          rows={2}
-          autoFocus
-          value={draft}
-          placeholder={`第 ${paraIndex + 1} 段大意…`}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') onToggle()
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              onSave(draft)
-              onToggle()
-            }
-          }}
-        />
-        <div className="para-gist-actions">
-          <span className="para-gist-hint">Esc 取消 · ⌘↵ 保存</span>
-          {entry && (
-            <button
-              className="para-gist-btn"
-              onClick={() => {
-                onSave('')
-                onToggle()
-              }}
-            >
-              清除
-            </button>
-          )}
-          <button
-            className="para-gist-btn"
-            disabled={!aiReady || aiBusy}
-            title={aiReady ? '让 AI 起草本段大意（可再编辑）' : '先到设置页配置 AI 服务'}
-            onClick={async () => {
-              const text = await onAiDraft?.()
-              if (text) setDraft(text)
-            }}
-          >
-            {aiBusy ? '起草中…' : 'AI 起草'}
-          </button>
-          <button
-            className="para-gist-btn primary"
-            onClick={() => {
-              onSave(draft)
-              onToggle()
-            }}
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    )
-  }
-  const isDraft = entry!.confirmed === false
-  return (
-    <div className={`para-gist${isDraft ? ' draft' : ''}`} onClick={onToggle} title="点击编辑本段大意">
-      <span className="para-gist-tag">{isDraft ? 'AI 草稿' : '大意'}</span>
-      <span className="para-gist-text">{entry!.summary}</span>
-      {isDraft && (
-        <button
-          className="para-gist-adopt"
-          onClick={(e) => {
-            e.stopPropagation()
-            onConfirm()
-          }}
-        >
-          采纳
-        </button>
-      )}
-    </div>
-  )
 }
 
 /** 拆解上屏开关（按文章）持久化到 localStorage；存储异常时静默退化为内存态 */

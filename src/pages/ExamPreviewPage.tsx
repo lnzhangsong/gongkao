@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta, type ExamQuestion } from '../lib/api'
 import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
@@ -14,8 +14,10 @@ import { ExamAnalysisDrawer } from '../components/exam/ExamAnalysisDrawer'
 import { draftMaterialMarks } from '../lib/aiExamTrace'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { ExamQuestionsDrawer } from '../components/exam/ExamQuestionsDrawer'
-import { findQuoteInMaterial, splitParagraphByMarks, type MarkRange } from '../lib/examMarks'
-import { useExamStudyStore, type MaterialMark } from '../stores/examStudyStore'
+import { MarkedParagraph } from '../components/exam/ExamMarkedParagraph'
+import { YearInput } from '../components/exam/YearInput'
+import { findQuoteInMaterial, type MarkRange } from '../lib/examMarks'
+import { useExamStudyStore } from '../stores/examStudyStore'
 import {
   joinParagraphs,
   reflowParagraphs,
@@ -869,90 +871,13 @@ export default function ExamPreviewPage() {
 }
 
 /** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
+
+
+/** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
 function cloneDraft(d: ExamDetail): ExamDetail {
   return {
     ...d,
     materials: d.materials.map((m) => ({ ...m })),
     questions: d.questions.map((q) => ({ ...q })),
   }
-}
-
-/** 材料段落渲染：有标注时把命中片段包上 <mark>（句后内联「」解析，从抽屉可跳转定位） */
-function MarkedParagraph({ text, ranges }: { text: string; ranges: MarkRange[] }) {
-  const segs = useMemo(() => splitParagraphByMarks(text, ranges), [text, ranges])
-  if (!ranges.length) return <p>{text}</p>
-  /* 解释紧跟每句原文：句号后挂解析块（等级·行文作用·答题解释） */
-  const nodes: ReactNode[] = []
-  let key = 0
-  let pending: MaterialMark | null = null
-  const flushNote = () => {
-    if (pending) {
-      nodes.push(<SentenceNote key={key++} mark={pending} />)
-      pending = null
-    }
-  }
-  for (const seg of segs) {
-    if (seg.mark) {
-      flushNote()
-      nodes.push(
-        <mark
-          key={key++}
-          id={`exam-mk-${seg.mark.id}`}
-          className={`exam-mark lv-${seg.mark.level ?? 'normal'}`}
-        >
-          {seg.text}
-        </mark>,
-      )
-      pending = seg.mark
-    } else if (pending) {
-      let rest: string = seg.text
-      while (pending && rest) {
-        const m = rest.match(/[。；！？!?]/)
-        if (!m || m.index === undefined) break
-        const cut = m.index + 1
-        nodes.push(<span key={key++}>{rest.slice(0, cut)}</span>)
-        flushNote()
-        rest = rest.slice(cut)
-      }
-      if (rest) nodes.push(<span key={key++}>{rest}</span>)
-    } else {
-      nodes.push(<span key={key++}>{seg.text}</span>)
-    }
-  }
-  flushNote()
-  return <p>{nodes}</p>
-}
-
-/** 句内解析：紧跟句子原样插在正文里，不换行，英文中括号括起来，等级与行文作用均为药丸样式 */
-function SentenceNote({ mark }: { mark: MaterialMark }) {
-  const level = mark.level === 'core' ? '核心' : mark.level === 'useless' ? '无用' : '辅助'
-  return (
-    <span className={`exam-inline-note lv-${mark.level ?? 'normal'}`}>
-      {'「'}
-      <b>{level}</b>
-      <i>{mark.role}</i>
-      {mark.use ? `：${mark.use}` : ''}」
-    </span>
-  )
-}
-
-/** 年份输入：输入过程中允许自由编辑（含清空），失焦时校验 2000-2100 并回写 */
-function YearInput({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
-  const [raw, setRaw] = useState(String(value))
-  useEffect(() => setRaw(String(value)), [value])
-  return (
-    <input
-      type="number"
-      className="exam-select exam-year-input"
-      value={raw}
-      min={2000}
-      max={2100}
-      onChange={(e) => setRaw(e.target.value)}
-      onBlur={() => {
-        const n = parseInt(raw, 10)
-        if (n >= 2000 && n <= 2100) onCommit(n)
-        else setRaw(String(value))
-      }}
-    />
-  )
 }

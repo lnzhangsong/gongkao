@@ -11,10 +11,14 @@ interface ReaderToolsPanelProps {
   /** 当前生效主题名（含阅读页覆盖解析后的值） */
   activeTheme: string
   onCycleTheme: () => void
-  favorite: boolean
-  onToggleFavorite: () => void
-  annotationsVisible: boolean
-  onToggleAnnotations: () => void
+  /** 真题页专属：行文思路标注开关 + 作答要求抽屉入口（不传则隐藏） */
+  examMarks?: { on: boolean; onToggle: () => void }
+  onOpenQuestions?: () => void
+  /** 收藏 / 标注显隐为文章专属能力：不传回调则隐藏对应条目（真题页） */
+  favorite?: boolean
+  onToggleFavorite?: () => void
+  annotationsVisible?: boolean
+  onToggleAnnotations?: () => void
   onToggleFocus: () => void
   onToggleTermBox: () => void
   /** 申论拆解 / 范文精读：学习状态与素材计数用于展示，点击打开面板（真题预览页不接入） */
@@ -43,6 +47,8 @@ export function ReaderToolsPanel({
   onToggleAnnotations,
   onToggleFocus,
   onToggleTermBox,
+  examMarks,
+  onOpenQuestions,
   shenlunStatus,
   shenlunMaterialCount,
   onOpenShenlun,
@@ -96,20 +102,23 @@ export function ReaderToolsPanel({
           {THEMES.find((t) => t.name === activeTheme)?.label ?? '跟随页面'}　↻
         </button>
       </div>
-      <div className="tool">
-        <span>文章操作</span>
-        <button className={favorite ? 'active' : ''} onClick={onToggleFavorite}>
-          <Bookmark size={12} style={{ verticalAlign: -2 }} /> {favorite ? '已收藏' : '收藏'}
-        </button>
-      </div>
-      <div className="tool">
-        <span>申论拆解</span>
-        <button onClick={onOpenShenlun}>
-          <BookOpenCheck size={12} style={{ verticalAlign: -2 }} />
-          {shenlunStatus ?? '打开'}
-          {shenlunMaterialCount ? ` · ${shenlunMaterialCount}` : ''}
-        </button>
-      </div>
+      {onToggleFavorite && (
+        <div className="tool">
+          <span>文章操作</span>
+          <button className={favorite ? 'active' : ''} onClick={onToggleFavorite}>
+            <Bookmark size={12} style={{ verticalAlign: -2 }} /> {favorite ? '已收藏' : '收藏'}
+          </button>
+        </div>
+      )}
+      {onOpenShenlun && (
+        <div className="tool">
+          <span>申论拆解</span>
+          <button onClick={onOpenShenlun}>
+            <BookOpenCheck size={12} style={{ verticalAlign: -2 }} /> {shenlunStatus ?? '打开'}
+            {shenlunMaterialCount ? ` · ${shenlunMaterialCount}` : ''}
+          </button>
+        </div>
+      )}
       {onToggleStudyInline && (
         <div className="tool">
           <span>拆解上屏</span>
@@ -123,18 +132,38 @@ export function ReaderToolsPanel({
           </button>
         </div>
       )}
-      <div className="tool">
-        <span>显示标注</span>
-        <button className={annotationsVisible ? 'active' : ''} onClick={onToggleAnnotations}>
-          {annotationsVisible ? 'ON' : 'OFF'}
-        </button>
-      </div>
+      {onToggleAnnotations && (
+        <div className="tool">
+          <span>显示标注</span>
+          <button className={annotationsVisible ? 'active' : ''} onClick={onToggleAnnotations}>
+            {annotationsVisible ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      )}
       <div className="tool">
         <span>规范词框</span>
         <button className={settings.termBox ? 'active' : ''} onClick={onToggleTermBox}>
           {settings.termBox ? 'ON' : 'OFF'}
         </button>
       </div>
+      {examMarks && (
+        <div className="tool">
+          <span>行文思路</span>
+          <button
+            className={examMarks.on ? 'active' : ''}
+            title="在材料原文上高亮重要句并内联展示行文/答题思路"
+            onClick={examMarks.onToggle}
+          >
+            {examMarks.on ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      )}
+      {onOpenQuestions && (
+        <div className="tool">
+          <span>作答要求</span>
+          <button onClick={onOpenQuestions}>打开</button>
+        </div>
+      )}
       <div className="tool">
         <span>段落聚焦</span>
         <button className={settings.focusMode ? 'active' : ''} onClick={onToggleFocus}>

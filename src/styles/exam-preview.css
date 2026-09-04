@@ -376,23 +376,6 @@
   text-indent: 0;
 }
 
-.exam-raw {
-  margin-top: 24px;
-}
-
-.exam-raw > button {
-  margin-bottom: 16px;
-}
-
-.exam-raw p {
-  margin: 0 0 20px;
-  font-size: var(--reader-font-size, 17px);
-  line-height: var(--reader-line-height, 2.15);
-  font-family: var(--reader-font-family, var(--serif));
-  text-align: justify;
-  text-indent: 2em;
-  color: color-mix(in srgb, var(--ink) 82%, var(--paper));
-}
 
 /* ===================== 编辑态 ===================== */
 
@@ -591,14 +574,6 @@
 /* 站内确认弹窗样式已提升为全站组件（.exam-modal-* 定义在 base.css，ConfirmDialog 使用） */
 
 /* ---------- 材料快速跳转锚点 ---------- */
-.exam-jump {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line);
-}
 
 .exam-jump-chip {
   font-family: var(--mono);
@@ -618,11 +593,6 @@
   border-color: var(--ink);
 }
 
-.exam-jump-chip.exam-jump-qs {
-  margin-left: auto;
-  color: var(--accent-text);
-  border-color: color-mix(in srgb, var(--accent-text) 45%, transparent);
-}
 
 .exam-mat-label,
 .exam-questions {
@@ -866,3 +836,675 @@
   z-index: 1;
 }
 
+/* ===================== 题目解析（抽屉 + 原文标注）· 统一视觉语言 =====================
+   收敛到真题页既有语言：
+   · 容器 = 答题纸：--soft 底 + 1px --line 边 + --radius-sm（同 exam-answer-sheet / exam-q-req）
+   · 标签 = mono 10px 0.14em accent-text（同 exam-q-req-label）
+   · accent 色只用于：标签、要点徽标、原文高亮；不再出现左边线/彩底卡片
+   · 正文 = 要点句/引文 serif，说明文字 sans */
+
+/* —— 抽屉骨架：宽一档 —— */
+.shenlun-panel.exam-draw {
+  width: min(600px, 94vw);
+}
+
+.shenlun-panel.exam-draw .shenlun-body {
+  padding: 6px 26px 48px;
+}
+
+@media (max-width: 640px) {
+  .shenlun-panel.exam-draw {
+    width: 100%;
+  }
+
+  .shenlun-panel.exam-draw .shenlun-body {
+    padding: 10px 18px 40px;
+  }
+}
+
+/* 抽屉头动作区：一键收起 + 关闭 */
+.draw-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* —— 题干预览：默认两行，点击展开 —— */
+.draw-stem {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  font: 13.5px/1.9 var(--serif);
+  color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.draw-stem:hover {
+  color: var(--ink);
+}
+
+.draw-stem.open {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+
+.draw-stem-caret {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent-text);
+  margin-right: 6px;
+}
+
+/* —— 区块：分隔线 + 统一区块头 —— */
+.draw-sec {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 16px;
+}
+
+.draw-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.draw-sec-title {
+  margin: 0;
+  font: 700 13.5px/1.6 var(--sans);
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.draw-sec-title small {
+  font: 400 12px/1.6 var(--sans);
+  color: var(--muted);
+  margin-left: 8px;
+}
+
+.draw-hint {
+  margin: 0 0 12px;
+  font: 12.5px/1.8 var(--sans);
+  color: var(--muted);
+}
+
+.draw-error {
+  margin: 6px 0;
+  font: 12.5px/1.8 var(--sans);
+  color: var(--accent-text);
+}
+
+/* —— 卡片：唯一容器语言（答题纸同款） —— */
+.draw-card {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+
+.draw-card + .draw-card {
+  margin-top: 10px;
+}
+
+/* 卡内通用标签行：mono 标签 + sans 说明 */
+.exam-tag-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 0;
+  font: 12.5px/1.8 var(--sans);
+  color: color-mix(in srgb, var(--ink) 76%, var(--paper));
+}
+
+.exam-tag-row > i,
+.exam-mat-note p > i {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 要点句 / 引文：serif，与答题纸正文同语言 */
+.draw-point-text {
+  margin: 0;
+  flex: 1;
+  font: 500 14.5px/1.9 var(--serif);
+  color: var(--ink);
+}
+
+.draw-point-text .draw-no {
+  font: 500 12px/1.9 var(--mono);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-right: 2px;
+}
+
+.draw-quote {
+  font-family: var(--serif);
+  color: color-mix(in srgb, var(--ink) 74%, var(--paper));
+}
+
+.draw-mark-quote {
+  flex: 1;
+  font: 500 14px/1.9 var(--serif);
+  color: var(--ink);
+}
+
+/* —— 要点卡头部：序号 + 加工徽标 + 要点句 —— */
+.draw-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.draw-no {
+  font: 500 12px/1.9 var(--mono);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.draw-mode {
+  flex-shrink: 0;
+  font: 700 11px/1.7 var(--sans);
+  letter-spacing: 0.04em;
+  border-radius: 2px;
+  padding: 1px 7px;
+  cursor: default;
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  color: color-mix(in srgb, var(--ink) 80%, var(--paper));
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+}
+
+/* 加工深度 0 摘抄 → 5 补充，accent 渐进 */
+.draw-mode.m0 { background: color-mix(in srgb, var(--accent) 16%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+.draw-mode.m1 { background: color-mix(in srgb, var(--accent) 28%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.draw-mode.m2 { background: color-mix(in srgb, var(--accent) 42%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 62%, transparent); }
+.draw-mode.m3 { background: color-mix(in srgb, var(--accent) 56%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 74%, transparent); color: var(--accent-text); }
+.draw-mode.m4 { background: color-mix(in srgb, var(--ink) 14%, var(--paper)); border-color: color-mix(in srgb, var(--ink) 40%, transparent); }
+.draw-mode.m5 { background: transparent; border-style: dashed; }
+
+.draw-card-top textarea.draw-point-input {
+  flex: 1;
+  font: 500 13.5px/1.8 var(--serif);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 6px 10px;
+  resize: vertical;
+}
+
+.draw-del {
+  flex-shrink: 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.draw-del:hover {
+  color: var(--accent-text);
+}
+
+/* 编辑态字段：统一输入语言 */
+.draw-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.draw-edit input,
+.draw-edit textarea {
+  width: 100%;
+  font: 12.5px/1.7 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 5px 9px;
+}
+
+.draw-edit textarea {
+  resize: vertical;
+}
+
+.draw-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.draw-count {
+  font: 12px/1.6 var(--sans);
+  color: var(--muted);
+}
+
+/* 来源跳转 chip：与真题页材料 chip 同语言 */
+.draw-src {
+  flex-shrink: 0;
+}
+
+/* —— 原文高亮：accent 下划线系，悬停加深 —— */
+p mark.exam-mark {
+  background: transparent;
+  color: inherit;
+  border-bottom: 2px solid var(--hl-blue);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0;
+  border-radius: 0;
+  cursor: default; /* 悬浮解释已内联到句后，高亮本身不再可点 */
+  transition: background 0.2s;
+}
+
+p mark.exam-mark:hover {
+  background: color-mix(in srgb, var(--hl-blue) 16%, transparent);
+}
+
+p mark.exam-mark.lv-core {
+  border-bottom-color: var(--accent);
+}
+
+p mark.exam-mark.lv-core:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+p mark.exam-mark.lv-normal {
+  border-bottom-color: color-mix(in srgb, var(--hl-blue) 80%, transparent);
+}
+
+p mark.exam-mark.flash {
+  animation: exam-mark-flash 1.6s ease;
+}
+
+@keyframes exam-mark-flash {
+  0%, 30% { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+}
+
+/* —— 材料内联思路卡：与要点卡同容器语言，贴段展示 —— */
+.exam-mat-note {
+  margin: -6px 0 22px;
+  padding: 10px 16px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+
+.exam-mat-note p {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 0;
+  font: 12.5px/1.8 var(--sans);
+  color: color-mix(in srgb, var(--ink) 76%, var(--paper));
+}
+
+/* 题头「解析」入口 */
+.exam-analysis-btn {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+
+/* —— 作答要求抽屉：题距 —— */
+.draw-q + .draw-q {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px dashed color-mix(in srgb, var(--line) 55%, transparent);
+}
+
+/* —— 解析相关开关统一为描边 chip（与材料跳转 chips 同族） —— */
+
+/* 抽屉头「收起/展开」：与关闭按钮配套的描边按钮，不再裸文本 */
+.draw-head-actions .text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.draw-head-actions .text-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+
+/* 一键解析行：主按钮 + 说明 */
+.draw-run-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.draw-run-hint {
+  font: 12px/1.7 var(--sans);
+  color: var(--muted);
+}
+
+/* 材料区空标注引导 */
+.exam-inline-empty {
+  margin: 8px 0 0;
+  font: 12.5px/1.8 var(--sans);
+  color: var(--muted);
+}
+
+/* 空态文案里的行内按钮对齐 */
+.draw-hint .text-btn {
+  margin: 0 2px;
+}
+
+/* 材料菜单行：标签 + chips + 弹性空隙 + 行文思路开关，单行收纳 */
+
+
+/* ===================== 原文标注：重要性双色体系 =====================
+   core 核心 = accent（暖红，直接得分句）
+   normal 辅助 = --hl-blue（冷蓝，结构/背景/衔接句）
+   三处统一：原文高亮、材料内联思路卡、抽屉标注行 */
+
+/* 原文高亮：只换下划线颜色，不加背景色块（背景会让正文花、换行处更乱） */
+p mark.exam-mark.lv-core {
+  border-bottom-color: var(--accent);
+}
+
+p mark.exam-mark.lv-normal {
+  border-bottom-color: color-mix(in srgb, var(--hl-blue) 80%, transparent);
+}
+
+p mark.exam-mark.lv-useless {
+  border-bottom-color: transparent;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--ink) 45%, transparent);
+  text-decoration-thickness: 1.5px;
+}
+
+
+
+
+
+/* 行文作用 chip：体系词 */
+.exam-mat-note .draw-role {
+  font: 700 12px/1.7 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
+  border-radius: 2px;
+  padding: 0 6px;
+}
+
+/* 抽屉标注行：等级徽标 + 作用 chip */
+.draw-level {
+  flex-shrink: 0;
+  font: 700 11px/1.7 var(--sans);
+  letter-spacing: 0.04em;
+  border-radius: 2px;
+  padding: 1px 7px;
+}
+
+.draw-level.lv-core {
+  color: var(--accent-text);
+  border: 1px solid color-mix(in srgb, var(--accent-text) 45%, transparent);
+}
+
+.draw-level.lv-normal {
+  color: color-mix(in srgb, var(--hl-blue) 55%, var(--ink));
+  border: 1px solid color-mix(in srgb, var(--hl-blue) 75%, transparent);
+}
+
+.draw-role {
+  font: 700 12px/1.7 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
+  border-radius: 2px;
+  padding: 0 6px;
+}
+
+/* —— 句内解析：紧跟句子插在正文里，不换行，「」括起来（括号在 JSX 文本里） —— */
+.exam-inline-note {
+  font: 13.5px/1.9 var(--sans);
+  color: color-mix(in srgb, var(--hl-blue) 72%, var(--ink));
+}
+
+.exam-inline-note.lv-core {
+  color: var(--accent);
+}
+
+.exam-inline-note.lv-useless {
+  color: color-mix(in srgb, var(--ink) 55%, var(--paper));
+}
+
+/* 等级药丸：沿用原「辅助/核心/无用」小色块；保持 inline，
+   不能用 inline-block——两端对齐（justify）会把它当独立盒拉开间距 */
+.exam-inline-note b {
+  font: 700 11.5px/1.8 var(--sans);
+  padding: 0 6px;
+  margin: 0 2px 0 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--hl-blue) 45%, var(--paper));
+  color: color-mix(in srgb, var(--ink) 75%, var(--hl-blue));
+}
+
+.exam-inline-note.lv-core b {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.exam-inline-note.lv-useless b {
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+  color: color-mix(in srgb, var(--ink) 55%, var(--paper));
+}
+
+/* 行文作用药丸：体系词（如「权威观点」），中性描边感 */
+.exam-inline-note i {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11.5px;
+  line-height: 1.8;
+  padding: 0 6px;
+  margin: 0 2px 0 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 7%, var(--paper));
+  color: var(--ink);
+}
+
+/* —— 要点推导链：题目 → 材料 → 加工 → 得出要点句，自上而下带竖线轨 —— */
+.trace-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trace-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.trace-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 3px 0 3px 16px;
+}
+
+/* 竖线轨 + 节点：串起「题目/材料/加工」三步 */
+.trace-step::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.trace-step:first-child::before {
+  top: 10px;
+}
+
+.trace-step:last-child::before {
+  bottom: calc(100% - 14px);
+}
+
+.trace-step::after {
+  content: '';
+  position: absolute;
+  left: 1.5px;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.trace-step-label {
+  flex-shrink: 0;
+  width: 30px;
+  font: 700 11px/1.9 var(--sans);
+  color: var(--muted);
+}
+
+.trace-step-body {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font: 12.5px/1.9 var(--sans);
+  color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+}
+
+.trace-src {
+  flex-shrink: 0;
+}
+
+/* 得出的要点句：链条终点，用答案的 serif 强调 */
+.trace-point {
+  margin: 0;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  border-left: 2px solid var(--accent);
+  font: 500 14px/1.9 var(--serif);
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.trace-point .draw-no {
+  font: 500 12px/1.9 var(--mono);
+  color: var(--accent-text);
+}
+
+/* 加工方式速查：折叠面板，列出六类及判断口诀 */
+.trace-mode-guide {
+  margin: 0 0 12px;
+  font: 12.5px/1.9 var(--sans);
+  color: color-mix(in srgb, var(--ink) 75%, var(--paper));
+}
+
+.trace-mode-guide summary {
+  cursor: default;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.trace-mode-guide ul {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+  border: 1px dashed color-mix(in srgb, var(--line) 90%, transparent);
+}
+
+.trace-mode-guide li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* —— 上下分栏：解析/作答面板贴底（桌面），原文整宽在上、不再遮挡 —— */
+@media (min-width: 641px) {
+  .shenlun-panel.exam-draw {
+    top: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: min(52vh, 620px);
+    border-left: none;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -12px 32px color-mix(in srgb, var(--ink) 10%, transparent);
+    animation: exam-draw-up 0.24s cubic-bezier(0.22, 0.8, 0.36, 1);
+  }
+
+  .shenlun-panel.exam-draw .shenlun-body {
+    padding: 10px 40px 40px;
+    max-width: 1244px;
+    margin: 0 auto;
+  }
+}
+
+@keyframes exam-draw-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* 面板顶缘调高把手：拖拽改面板高度，选择持久化 */
+.panel-resize-handle {
+  flex-shrink: 0;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none; /* pointer capture 拖拽需要 */
+}
+
+.panel-resize-handle::before {
+  content: '';
+  width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  transition: background 0.2s;
+}
+
+.panel-resize-handle:hover::before {
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}

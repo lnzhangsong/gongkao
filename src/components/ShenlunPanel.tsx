@@ -18,10 +18,10 @@ const STATUS_OPTIONS: { key: StudyStatus; label: string }[] = [
 interface ShenlunPanelProps {
   article: Article
   onClose: () => void
-  /** 定位正文：段落锚点 */
-  scrollToPara: (paraIndex: number) => void
+  /** 定位正文：段落锚点（真题页等无正文锚点的宿主可省略，定位按钮随之隐藏） */
+  scrollToPara?: (paraIndex: number) => void
   /** 定位正文：摘录标注 */
-  scrollToAnnotation: (annotationId: string) => void
+  scrollToAnnotation?: (annotationId: string) => void
 }
 
 /**
@@ -318,9 +318,15 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             </span>
             {(article.content ?? []).map((_, i) => (
               <div className="para-summary" key={i}>
-                <button className="para-go" onClick={() => scrollToPara(i)} title="定位到该段">
-                  {i + 1}
-                </button>
+                {scrollToPara ? (
+                  <button className="para-go" onClick={() => scrollToPara(i)} title="定位到该段">
+                    {i + 1}
+                  </button>
+                ) : (
+                  <span className="para-go" title={undefined}>
+                    {i + 1}
+                  </span>
+                )}
                 <input
                   placeholder={`第 ${i + 1} 段大意…`}
                   value={paraDrafts[i] ?? ''}
@@ -394,7 +400,11 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
                   <span className={`mat-group-title mat-${t}`}>{MATERIAL_TYPE_LABELS[t]} · {list.length}</span>
                   {list.map((m) => (
                     <div className="mat-card" key={m.id}>
-                      <button className="mat-card-text" onClick={() => scrollToAnnotation(m.id)}>
+                      <button
+                        className="mat-card-text"
+                        onClick={() => scrollToAnnotation?.(m.id)}
+                        style={scrollToAnnotation ? undefined : { cursor: 'default' }}
+                      >
                         “{m.text.length > 48 ? `${m.text.slice(0, 48)}…` : m.text}”
                       </button>
                       {t === 'pattern' && (

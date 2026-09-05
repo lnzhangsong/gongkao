@@ -20,14 +20,13 @@ export function PatternInput({ value, onSave }: { value: string; onSave: (v: str
   )
 }
 
-/** 段落大意：栏外序号入口点开后就地编辑/展示；AI 草稿（未确认）弱化展示，可一键采纳 */
+/** 段落大意：栏外序号入口点开后就地编辑/展示，AI 产出直接转正 */
 export function ParaGist({
   paraIndex,
   entry,
   editing,
   onToggle,
   onSave,
-  onConfirm,
   onAiDraft,
   aiBusy,
   aiReady,
@@ -37,7 +36,6 @@ export function ParaGist({
   editing: boolean
   onToggle: () => void
   onSave: (text: string) => void
-  onConfirm: () => void
   /** AI 起草：返回生成的句子（写入 store 并回填编辑框）；null = 失败/未配置 */
   onAiDraft?: () => Promise<string | null>
   aiBusy?: boolean
@@ -103,22 +101,10 @@ export function ParaGist({
       </div>
     )
   }
-  const isDraft = entry!.confirmed === false
   return (
-    <div className={`para-gist${isDraft ? ' draft' : ''}`} onClick={onToggle} title="点击编辑本段大意">
-      <span className="para-gist-tag">{isDraft ? 'AI 草稿' : '大意'}</span>
+    <div className="para-gist" onClick={onToggle} title="点击编辑本段大意">
+      <span className="para-gist-tag">大意</span>
       <span className="para-gist-text">{entry!.summary}</span>
-      {isDraft && (
-        <button
-          className="para-gist-adopt"
-          onClick={(e) => {
-            e.stopPropagation()
-            onConfirm()
-          }}
-        >
-          采纳
-        </button>
-      )}
     </div>
   )
 }

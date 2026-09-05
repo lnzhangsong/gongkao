@@ -183,8 +183,6 @@ export function ReadingPage() {
     [shenlunStudy],
   )
   const setParagraphSummary = useShenlunStore((s) => s.setParagraphSummary)
-  const setParagraphSummaryDraft = useShenlunStore((s) => s.setParagraphSummaryDraft)
-  const confirmParagraphSummary = useShenlunStore((s) => s.confirmParagraphSummary)
   /* 正文里正在就地编辑大意（strip 编辑器）的段落序号 */
   const [editingGistPara, setEditingGistPara] = useState<number | null>(null)
   /* 「AI 起草」：单段大意生成中 / 未配置 AI 时按钮置灰 */
@@ -196,7 +194,7 @@ export function ReadingPage() {
       setAiBusyPara(paraIndex)
       try {
         const text = await draftParaGist(article.title, article.content?.[paraIndex] ?? '')
-        if (text) setParagraphSummaryDraft(articleId, paraIndex, text)
+        if (text) setParagraphSummary(articleId, paraIndex, text, { origin: 'ai' })
         return text || null
       } catch (err) {
         void alertDialog(err instanceof Error ? err.message : String(err))
@@ -205,7 +203,7 @@ export function ReadingPage() {
         setAiBusyPara(null)
       }
     },
-    [article, articleId, aiBusyPara, setParagraphSummaryDraft],
+    [article, articleId, aiBusyPara, setParagraphSummary],
   )
   /* 全篇层面的拆解内容（观点/分论点/骨架）有任意一项非空——只有段意时全篇卡不渲染 */
   const hasOverviewData = Boolean(
@@ -720,7 +718,6 @@ export function ReadingPage() {
                       editing={editingGistPara === i}
                       onToggle={() => setEditingGistPara(editingGistPara === i ? null : i)}
                       onSave={(text) => setParagraphSummary(articleId, i, text)}
-                      onConfirm={() => confirmParagraphSummary(articleId, i)}
                       onAiDraft={() => draftGistWithAi(i)}
                       aiBusy={aiBusyPara === i}
                       aiReady={aiConfigured}

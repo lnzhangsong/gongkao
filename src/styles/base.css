@@ -70,6 +70,14 @@ a {
   outline-offset: 2px;
 }
 
+/* ---------- 按钮统一方框语言 ----------
+   全站按钮：直角、无阴影。例外：开关 .toggle、划词菜单的取色圆点
+   （.hl-dot/.ul-dot）等圆形控件保持原状。 */
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 /* ---------- 页面外壳 ---------- */
 /* 通栏铺满（纸色覆盖全屏，宽屏/4K 无深色留白条）；内容分区各自限宽居中 */
 .page {

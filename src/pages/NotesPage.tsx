@@ -4,6 +4,9 @@ import { Download, Search, Trash2, X } from 'lucide-react'
 
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
+import { useLearningEventStore } from '../stores/learningEventStore'
+import { reviewQueue } from '../lib/reviewQueue'
+import { ReviewModal } from '../components/notes/ReviewModal'
 import { toast } from '../components/ui/Toast'
 import { formatLocalDate } from '../data'
 import { downloadJSON, downloadText, formatDateTime, monthOf } from '../lib/export'
@@ -83,6 +86,9 @@ export function NotesPage() {
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [checked, setChecked] = useState<Set<string>>(new Set())
+  /* 复习翻转卡：到期队列由事件层时间戳计算（学习者数据模型第 4 期），?review=1 从首页直达 */
+  const reviewParam = params.get('review') === '1'
+  const [reviewOpen, setReviewOpen] = useState(reviewParam)
   const [editNoteId, setEditNoteId] = useState<string | null>(null)
   const [noteDraft, setNoteDraft] = useState('')
   const [tagDraft, setTagDraft] = useState('')
@@ -125,6 +131,13 @@ export function NotesPage() {
     for (const r of rows) m.set(r.topic, (m.get(r.topic) ?? 0) + 1)
     return [...m.entries()].sort((a, b) => b[1] - a[1])
   }, [rows])
+
+  const events = useLearningEventStore((s) => s.events)
+  const eventsHydrated = useLearningEventStore((s) => s._hasHydrated)
+  const dueQueue = useMemo(
+    () => (eventsHydrated ? reviewQueue(annotations, events) : []),
+    [annotations, events, eventsHydrated],
+  )
 
   const rowKinds = (r: Row) => new Set(r.anns.map((a) => a.kind))
 
@@ -368,7 +381,14 @@ export function NotesPage() {
 
         <section className="notes-main">
           <div className="main-top">
-            <span className="result-count">{filtered.length} 条摘录　/　按时间分组</span>
+            <span className="result-count">
+              {filtered.length} 条摘录　/　按时间分组
+              {dueQueue.length > 0 && (
+                <button className="text-btn review-entry" onClick={() => setReviewOpen(true)}>
+                  　·　开始复习（{dueQueue.length} 条到期）
+                </button>
+              )}
+            </span>
             <label className="note-search">
               <Search size={13} style={{ color: 'var(--muted)' }} />
               <input
@@ -700,6 +720,7 @@ export function NotesPage() {
           )}
         </aside>
       </main>
+      {reviewOpen && dueQueue.length > 0 && <ReviewModal queue={dueQueue} onClose={() => setReviewOpen(false)} />}
     </section>
   )
 }

@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useArticleStore } from '../stores/articleStore'
 import { useShenlunStore } from '../stores/shenlunStore'
 import { useAnnotationStore } from '../stores/annotationStore'
+import { useLearningEventStore } from '../stores/learningEventStore'
+import { reviewQueue } from '../lib/reviewQueue'
 import { loadDisplayFont } from '../lib/fonts'
 import { formatArticleNo } from '../data'
 import { useEffect } from 'react'
@@ -27,6 +29,14 @@ export function HomePage() {
     const materials = annotations.reduce((n, a) => (a.materialType ? n + 1 : n), 0)
     return { deconstructed, materials }
   }, [studyMap, annotations])
+
+  /* 今日复习：到期背记素材（未掌握 + 已掌握超 7 天未复习，事件层时间戳计算） */
+  const events = useLearningEventStore((s) => s.events)
+  const eventsHydrated = useLearningEventStore((s) => s._hasHydrated)
+  const dueCount = useMemo(
+    () => (eventsHydrated ? reviewQueue(annotations, events).length : 0),
+    [annotations, events, eventsHydrated],
+  )
 
   /** 进行中的阅读（有进度、未读完、最近读过） */
   const continueList = useMemo(() => {
@@ -128,6 +138,14 @@ export function HomePage() {
                     已拆解 <Ticker value={shenlunStats.deconstructed} /> 篇 · 素材{' '}
                     <Ticker value={shenlunStats.materials} /> 条
                   </span>
+                </>
+              )}
+              {dueCount > 0 && (
+                <>
+                  <span className="week-stats-sep">/</span>
+                  <Link className="memorize-link" to="/notes?review=1" title="开始复习到期素材">
+                    今日复习 <Ticker value={dueCount} /> 条
+                  </Link>
                 </>
               )}
             </div>

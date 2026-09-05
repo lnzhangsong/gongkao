@@ -16,7 +16,7 @@ import type { Article, ArticleSource } from '../types'
 
 const PAGE_SIZE = 8
 
-type SortKey = 'latest' | 'mostRead' | 'recent'
+type SortKey = 'latest' | 'mostRead' | 'recent' | 'related'
 type StatusKey = 'all' | 'unread' | 'reading' | 'done' | 'favorite'
 
 const SOURCE_FILTERS: { key: ArticleSource | 'all'; label: string }[] = [
@@ -37,6 +37,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: 'latest', label: '最新收录' },
   { key: 'mostRead', label: '阅读最多' },
   { key: 'recent', label: '最近阅读' },
+  { key: 'related', label: '与我相关' },
 ]
 
 export function LibraryPage() {
@@ -58,6 +59,22 @@ export function LibraryPage() {
     return m
   }, [allAnnotations])
   const navigate = useNavigate()
+
+  /* 「与我相关」排序的分素材：我拆过/存过素材的主题 + 我有素材/读过的文章加分 */
+  const articleById = useMemo(() => new Map(articles.map((a) => [a.id, a] as const)), [articles])
+  const myTopics = useMemo(() => {
+    const topics = new Set<string>()
+    for (const s of Object.values(shenlunStudy)) {
+      if (s.status === 'new') continue
+      const t = articleById.get(s.articleId)?.topic
+      if (t) topics.add(t)
+    }
+    for (const a of allAnnotations) {
+      const t = articleById.get(a.articleId)?.topic
+      if (t) topics.add(t)
+    }
+    return topics
+  }, [shenlunStudy, allAnnotations, articleById])
 
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
@@ -120,6 +137,20 @@ export function LibraryPage() {
     list = [...list].sort((a, b) => {
       const pa = progress[a.id]
       const pb = progress[b.id]
+      if (sort === 'related') {
+        /* 与我相关：拆过/存过的主题 +2，本篇有自己的素材 +1，读过 +1；同级按日期新→旧 */
+        const score = (x: (typeof list)[number]) => {
+          const p = progress[x.id]
+          return (
+            (myTopics.has(x.topic) ? 2 : 0) +
+            (matCounts.get(x.id) ? 1 : 0) +
+            (p && (p.percent > 0 || p.lastReadAt) ? 1 : 0)
+          )
+        }
+        const diff = score(b) - score(a)
+        if (diff !== 0) return diff
+        return b.date < a.date ? -1 : 1
+      }
       if (sort === 'latest') return b.date < a.date ? -1 : 1
       if (sort === 'mostRead') return (pb?.readCount ?? 0) - (pa?.readCount ?? 0)
       // recent
@@ -131,7 +162,7 @@ export function LibraryPage() {
       return tb < ta ? -1 : 1
     })
     return list
-  }, [articles, progress, q, topic, source, status, sort, fulltextIds])
+  }, [articles, progress, q, topic, source, status, sort, fulltextIds, myTopics, matCounts])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   /* 筛选后结果变少时钳到最后一页，避免「页内无内容」的假空态（与 NotesPage 一致） */

@@ -267,17 +267,31 @@
 }
 
 .article-no {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
   font: 12px var(--mono);
   color: var(--accent-text);
 }
 
-/* 学习徽标挂在序号下方（竖排小标签），窄列也放得下 */
-.article-no .study-badge {
-  margin-right: 0;
+/* 已拆解：序号圈上方框；已掌握用强调色 */
+.article-no.boxed {
+  border: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: 6px;
+  padding: 3px 6px;
+  width: fit-content;
+}
+
+.article-no.boxed.mastered {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* 图例注释：跟在「全部文章」标题后 */
+.row-legend {
+  margin-left: 14px;
+  font: 400 11px/1.6 var(--sans);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  vertical-align: 3px;
 }
 
 .article-title {
@@ -415,20 +429,3 @@
 
 
 /* 申论拆解徽标（学习状态 + 素材数） */
-.study-badge {
-  display: inline-block;
-  font: 600 10px/1.5 var(--sans);
-  font-style: normal;
-  letter-spacing: 0.05em;
-  color: var(--accent-text, var(--accent));
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 999px;
-  padding: 0 8px;
-  margin-right: 8px;
-  vertical-align: 1px;
-}
-
-.study-badge.mastered {
-  color: #fff;
-  background: #4c9d6b;
-}

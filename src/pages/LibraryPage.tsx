@@ -303,7 +303,10 @@ export function LibraryPage() {
         </section>
 
         <div className="section-title">
-          <h2>全部文章</h2>
+          <h2>
+            全部文章
+            <small className="row-legend">方框序号 = 已拆解 · 绿框 = 已掌握</small>
+          </h2>
           <span>
             {filtered.length} ARTICLES　/　{TOPICS.length} TOPICS
           </span>
@@ -332,16 +335,11 @@ export function LibraryPage() {
           const matCount = matCounts.get(a.id) ?? 0
           return (
             <button className="article-row" key={a.id} onClick={() => open(a)} {...hoverWarm(() => warm(a))}>
-              <span className="article-no">
+              <span
+                className={`article-no${study ? ' boxed' : ''}${study?.status === 'mastered' ? ' mastered' : ''}`}
+                title={matCount > 0 ? `${matCount} 条素材` : undefined}
+              >
                 {formatArticleNo(a.id)}
-                {(study || matCount > 0) && (
-                  <em
-                    className={`study-badge${study?.status === 'mastered' ? ' mastered' : ''}`}
-                    title={matCount > 0 ? `${matCount} 条素材` : undefined}
-                  >
-                    {study ? (study.status === 'learning' ? '学习中' : study.status === 'mastered' ? '已掌握' : '已拆解') : '已标记'}
-                  </em>
-                )}
               </span>
               <h3 className={`article-title${isRead ? ' is-read' : ''}`}>{a.title}</h3>
               <span className="article-topic">

@@ -66,6 +66,8 @@ export function ExamAnswerTrace({
   const [busy, setBusy] = useState(false)
   const editing = Boolean(draft) || editingProp
   const [error, setError] = useState('')
+  /* 要点展示形态：导图（默认）/ 文字链 */
+  const [view, setView] = useState<'map' | 'text'>('map')
 
   const points = draft ?? trace?.points ?? []
   const hasAnswer = Boolean(q.answer)
@@ -156,6 +158,26 @@ export function ExamAnswerTrace({
           {hasAnswer ? '答案溯源' : '要点推导'}
           {points.length > 0 && <small>{points.length} 条要点</small>}
         </h3>
+        {open && points.length > 0 && (
+          <div className="trace-view-toggle" role="tablist" aria-label="要点展示形态">
+            <button
+              type="button"
+              className={view === 'map' ? 'on' : ''}
+              aria-pressed={view === 'map'}
+              onClick={() => setView('map')}
+            >
+              导图
+            </button>
+            <button
+              type="button"
+              className={view === 'text' ? 'on' : ''}
+              aria-pressed={view === 'text'}
+              onClick={() => setView('text')}
+            >
+              文字
+            </button>
+          </div>
+        )}
       </header>
 
       {error && <p className="draw-error">{error}</p>}
@@ -192,6 +214,7 @@ export function ExamAnswerTrace({
                 key={p.id}
                 no={i + 1}
                 point={p}
+                view={view}
                 materials={materials}
                 materialOptions={materialOptions}
                 anchorByNum={anchorByNum}
@@ -235,6 +258,7 @@ export function ExamAnswerTrace({
 function PointCard({
   no,
   point,
+  view,
   materials,
   materialOptions,
   anchorByNum,
@@ -245,6 +269,8 @@ function PointCard({
 }: {
   no: number
   point: AnswerPointTrace
+  /** 只读态展示形态：导图 / 文字链 */
+  view: 'map' | 'text'
   materials: TraceExamMaterial[]
   materialOptions: { key: string; label: string }[]
   anchorByNum: Map<number, string>
@@ -313,12 +339,13 @@ function PointCard({
     )
   }
   const anchor = point.sourceIdx != null ? anchorByNum.get(point.sourceIdx) : undefined
-  /* 只读态：教方法的三步链「定位 → 材料 → 加工判断」，终点是得出的要点句 */
-  const steps: { key: string; label: string; node: ReactNode }[] = []
+  /* 只读态方法链数据：定位 → 材料 → 加工判断；文字链与导图共用同一份 */
+  const steps: { key: string; label: string; tone: string; node: ReactNode }[] = []
   if (point.locate || point.think) {
     steps.push({
       key: 'q',
       label: '定位',
+      tone: 'n-locate',
       node: <span>{point.locate ?? point.think}</span>,
     })
   }
@@ -326,6 +353,7 @@ function PointCard({
     steps.push({
       key: 'm',
       label: '材料',
+      tone: 'n-mat',
       node: (
         <>
           {point.sourceIdx != null &&
@@ -351,6 +379,7 @@ function PointCard({
     steps.push({
       key: 'p',
       label: '加工',
+      tone: 'n-mode',
       node: (
         <>
           <span className={`draw-mode m${DERIVE_MODES.indexOf(point.mode)}`} title={DERIVE_MODE_HINTS[point.mode]}>
@@ -361,6 +390,22 @@ function PointCard({
         </>
       ),
     })
+  }
+  if (view === 'map' && steps.length > 0) {
+    /* 导图视图：节点卡 + 带箭头连线，终点是要点句 */
+    return (
+      <article className="draw-card trace-chain">
+        <div className="trace-map">
+          {steps.map((s) => (
+            <MapNode key={s.key} step={s} />
+          ))}
+          <div className="trace-map-point">
+            <span className="draw-no">{no}</span>
+            <p>{point.text}</p>
+          </div>
+        </div>
+      </article>
+    )
   }
   return (
     <article className="draw-card trace-chain">
@@ -379,5 +424,18 @@ function PointCard({
         {point.text}
       </p>
     </article>
+  )
+}
+
+/** 导图节点：顶部色条小标题 + 内容体，节点间由 .trace-map 的连线元素衔接 */
+function MapNode({ step }: { step: { key: string; label: string; tone: string; node: ReactNode } }) {
+  return (
+    <>
+      <div className={`trace-map-node ${step.tone}`}>
+        <span className="trace-map-cap">{step.label}</span>
+        <div className="trace-map-body">{step.node}</div>
+      </div>
+      <span className="trace-map-link" aria-hidden="true" />
+    </>
   )
 }

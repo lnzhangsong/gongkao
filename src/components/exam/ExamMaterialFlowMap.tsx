@@ -100,12 +100,20 @@ export function ExamMaterialFlowModal({
                 </div>
               )}
               <section className={`flow-outline-stage${g.marks.some((m) => m.level === 'core') ? ' core' : ''}`}>
-                <header>
+                <button
+                  type="button"
+                  className={`flow-outline-head${openSet.has(gi) ? ' open' : ''}`}
+                  onClick={() => toggle(gi)}
+                  aria-expanded={openSet.has(gi)}
+                >
                   <h4>{g.role}</h4>
-                  <span>
+                  <span className="flow-outline-meta">
                     {numOf(g.from)}–{numOf(g.from + g.marks.length - 1)} · {g.marks.length} 句
+                    <i className="flow-outline-caret" aria-hidden="true">
+                      ▸
+                    </i>
                   </span>
-                </header>
+                </button>
                 {g.summary ? (
                   <p className="flow-outline-summary">{g.summary}</p>
                 ) : (
@@ -124,13 +132,6 @@ export function ExamMaterialFlowModal({
                     ))}
                   </div>
                 )}
-                <button
-                  type="button"
-                  className="flow-outline-toggle"
-                  onClick={() => toggle(gi)}
-                >
-                  {openSet.has(gi) ? '收起句子' : `展开 ${g.marks.length} 句`}
-                </button>
               </section>
             </Fragment>
           ))}

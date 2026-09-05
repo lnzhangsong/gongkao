@@ -2071,3 +2071,55 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* —— 回声条：旧积累作为线索回到眼前（使用即复习）—— */
+.echo-strip {
+  margin: 4px 0 26px;
+  padding: 12px 16px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.echo-label {
+  font: 500 10px/1.8 var(--mono);
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.echo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.echo-list a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  flex-wrap: wrap;
+}
+
+.echo-list a:hover .echo-text {
+  color: var(--accent-text);
+}
+
+.echo-text {
+  font: 400 12.5px/1.8 var(--serif);
+}
+
+.echo-meta {
+  font: 400 10.5px/1.8 var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}

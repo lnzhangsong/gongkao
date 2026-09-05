@@ -407,7 +407,20 @@ button.assist-record-main {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
+}
+/* 资料读左、要点对照右：宽屏双栏，窄屏堆叠 */
+.assist-detail-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (min-width: 1080px) {
+  .assist-detail-cols.two {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 32px;
+  }
 }
 .assist-detail-label {
   display: flex;
@@ -436,9 +449,14 @@ button.assist-record-main {
   font: 400 13.5px/2 var(--sans);
   color: color-mix(in srgb, var(--ink) 82%, var(--paper));
 }
+/* 给定资料：长文阅读面板化——浅底、内边距、行长受限（serif 下约 40 字/行） */
 .assist-detail-material {
   font: 400 14.5px/2.1 var(--serif) !important;
   white-space: pre-line;
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
 }
 .assist-detail-points {
   margin: 0;
@@ -449,7 +467,7 @@ button.assist-record-main {
 .assist-detail-points li {
   counter-increment: pt;
   position: relative;
-  padding: 8px 0 8px 36px;
+  padding: 10px 0 10px 44px;
   border-bottom: 1px solid var(--line);
   font: 400 14px/1.9 var(--serif);
 }
@@ -457,7 +475,8 @@ button.assist-record-main {
   content: counter(pt, decimal-leading-zero);
   position: absolute;
   left: 0;
-  top: 10px;
+  top: 12px;
+  min-width: 22px;
   font: 500 11px var(--mono);
   color: var(--accent-text);
 }

@@ -1700,6 +1700,8 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
 .shenlun-body {
   flex: 1;
   overflow-y: auto;
+  /* 滚到头不把滚动传给底下页面（滚动链） */
+  overscroll-behavior: contain;
   padding: 14px 20px 40px;
 }
 

@@ -958,6 +958,8 @@ a {
   border-radius: var(--radius-lg);
   box-shadow: 7px 8px 0 var(--ink);
   padding: 26px 26px 22px;
+  /* 滚到头不把滚动传给底下页面（滚动链） */
+  overscroll-behavior: contain;
 }
 
 .exam-modal-msg {

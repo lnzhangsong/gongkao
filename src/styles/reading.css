@@ -282,10 +282,11 @@
   display: none;
   z-index: var(--z-popover);
   gap: 3px;
-  padding: 4px;
+  padding: 6px;
   background: var(--dark);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--ink) 20%, transparent);
-  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
   transform: translate(-50%, -100%);
   margin-top: -12px;
   white-space: nowrap;
@@ -311,13 +312,13 @@
 .selection-popover .popover-row {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .selection-popover .popover-row-mats {
   margin-top: 6px;
-  padding-top: 6px;
+  padding-top: 7px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
@@ -395,18 +396,28 @@
 
 .selection-popover button {
   border: 0;
+  border-radius: 6px;
   background: transparent;
-  color: var(--dark-ink);
+  color: rgba(255, 255, 255, 0.88);
   padding: 7px 10px;
   font: 12px var(--mono);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: background 0.12s, color 0.12s;
 }
 
-.selection-popover button:hover {
-  background: var(--accent);
+/* 悬停/聚焦：半透明白叠加——文字保持亮色，深浅主题下都可读；
+   accent 只用于选中标记，不再作为悬停底色（亮字配亮底会看不清） */
+.selection-popover button:hover,
+.selection-popover button:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.selection-popover button:active {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 /* 高亮颜色选择 */
@@ -415,7 +426,7 @@
   align-items: center;
   gap: 5px;
   padding: 5px 8px;
-  border-right: 1px solid color-mix(in srgb, var(--paper) 22%, transparent);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 /* 用更高特异性覆盖 .selection-popover button 的 padding，保证正圆 */
@@ -472,7 +483,7 @@
   align-items: center;
   gap: 5px;
   padding: 5px 8px;
-  border-right: 1px solid color-mix(in srgb, var(--paper) 22%, transparent);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .selection-popover .ul-dot {
@@ -1570,21 +1581,24 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
 
 .selection-popover .mat-btn {
   font: 600 11px/1 var(--sans);
-  padding: 4px 7px;
-  border-radius: 4px;
+  padding: 5px 8px;
+  border-radius: 6px;
   border: 1px solid transparent;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
 }
 
 .selection-popover .mat-btn:hover {
   background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
 .selection-popover .mat-btn.active {
   border-color: rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 /* 各素材按钮的类型色点 */

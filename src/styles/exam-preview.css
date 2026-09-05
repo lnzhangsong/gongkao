@@ -1470,132 +1470,129 @@ p mark.exam-mark.lv-useless {
   color: var(--ink);
 }
 
-/* —— React Flow 节点样式（行文思路导图：根→阶段→句子），连线由库渲染 —— */
-.rf-flow-canvas {
-  height: min(66vh, 620px);
-  border: 1px dashed color-mix(in srgb, var(--line) 90%, transparent);
+/* —— 行文思路提纲（弹窗）：阶段卡自上而下箭头推进，文字为主 —— */
+.exam-flow-modal {
+  width: min(680px, calc(100vw - 48px));
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 20px 22px 18px;
+}
+
+.exam-flow-head {
+  position: sticky;
+  top: -20px;
+  margin: 0 -22px 14px;
+  padding: 18px 22px 12px;
+  background: var(--paper);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 1;
+}
+
+.exam-flow-head h3 {
+  margin: 0;
+  font: 600 15px/1.6 var(--sans);
+  color: var(--ink);
+}
+
+.exam-flow-head small {
+  margin-left: 8px;
+  font: 400 12px/1.6 var(--sans);
+  color: var(--muted);
+}
+
+.exam-flow-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font: 400 20px/1 var(--sans);
+  color: var(--muted);
+  padding: 2px 6px;
+}
+
+.exam-flow-close:hover {
+  color: var(--ink);
+}
+
+.flow-outline {
+  display: flex;
+  flex-direction: column;
+}
+
+.flow-outline-stage {
+  padding: 11px 14px 9px;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--ink) 40%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--ink) 2%, var(--paper));
 }
 
-.rf-flow-canvas .react-flow__attribution {
-  display: none;
+.flow-outline-stage.core {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 4%, var(--paper));
 }
 
-/* 连线：细墨线，弱化装饰 */
-.rf-flow-canvas .react-flow__edge-path {
-  stroke: color-mix(in srgb, var(--ink) 35%, transparent);
-  stroke-width: 1.2;
-}
-
-/* 连接点收成小点且视觉弱化（导图里连线才是主角） */
-.rf-flow-canvas .react-flow__handle {
-  width: 5px;
-  height: 5px;
-  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
-  background: var(--paper);
-  opacity: 0.7;
-}
-
-.rf-root-node {
+.flow-outline-stage header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  width: 118px;
-  padding: 14px 12px;
-  border: 1.5px solid var(--ink);
-  border-radius: 10px;
-  background: var(--paper);
-  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 20%, transparent);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
-.rf-root-label {
-  font: 700 15px/1.5 var(--sans);
-  color: var(--ink);
-}
-
-.rf-root-sub {
-  font: 400 11px/1.5 var(--sans);
-  letter-spacing: 0.1em;
-  color: var(--muted);
-}
-
-.rf-stage-node {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 1px;
-  width: 150px;
-  min-height: 56px;
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
-}
-
-.rf-stage-node.core {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  background: color-mix(in srgb, var(--accent) 7%, var(--paper));
-}
-
-.rf-stage-role {
-  font: 700 12.5px/1.6 var(--sans);
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.rf-stage-node small {
-  font: 400 10.5px/1.5 var(--sans);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.rf-leaf-node {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  width: 260px;
-  height: 104px;
-  padding: 8px 11px;
-  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
-  border-radius: 7px;
-  background: var(--paper);
-  overflow: hidden;
-}
-
-.rf-leaf-node.core {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: color-mix(in srgb, var(--accent) 5%, var(--paper));
-}
-
-.rf-leaf-no {
-  font: 500 11px/1.5 var(--mono);
-  color: var(--muted);
-}
-
-.rf-leaf-quote {
+.flow-outline-stage h4 {
   margin: 0;
-  font: 12px/1.7 var(--serif);
+  font: 700 13.5px/1.7 var(--sans);
   color: var(--ink);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.rf-leaf-use {
-  margin: 0;
-  font: 11px/1.6 var(--sans);
+.core.flow-outline-stage h4 {
+  color: var(--accent-text);
+}
+
+.flow-outline-stage header span {
+  font: 400 11px/1.7 var(--sans);
   color: var(--muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.flow-outline-sent {
+  display: flex;
+  gap: 8px;
+  padding: 7px 0 6px;
+}
+
+.flow-outline-sent + .flow-outline-sent {
+  border-top: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.flow-outline-no {
+  flex-shrink: 0;
+  font: 500 12px/1.9 var(--mono);
+  color: var(--muted);
+}
+
+.flow-outline-quote {
+  margin: 0;
+  font: 12.5px/1.85 var(--serif);
+  color: var(--ink);
+}
+
+.flow-outline-use {
+  margin: 1px 0 0;
+  font: 11.5px/1.75 var(--sans);
+  color: var(--muted);
+}
+
+/* 阶段间推进箭头 */
+.flow-outline-arrow {
+  align-self: center;
+  font: 400 14px/1 var(--sans);
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+  padding: 6px 0;
 }
 
 /* 加工方式速查：折叠面板，列出六类及判断口诀 */

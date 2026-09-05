@@ -1436,14 +1436,14 @@ p mark.exam-mark.lv-useless {
   width: min(860px, calc(100vw - 48px));
   max-height: 88vh;
   overflow-y: auto;
-  /* 滚到头不把滚动传给底下页面（滚动链） */
+  /* 滚到头不把滚动传给底下页面（滚动链）；左右/下留 padding，顶部交给吸顶标题栏 */
   overscroll-behavior: contain;
-  padding: 20px 22px 18px;
+  padding: 0 22px 18px;
 }
 
 .exam-flow-head {
   position: sticky;
-  top: -20px;
+  top: 0;
   margin: 0 -22px 14px;
   padding: 18px 22px 12px;
   background: var(--paper);

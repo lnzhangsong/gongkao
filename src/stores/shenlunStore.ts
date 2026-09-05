@@ -43,8 +43,6 @@ interface ArticleState {  study: Record<string, ArticleStudy>
     meta?: { origin?: 'ai' | 'user'; confirmed?: boolean },
   ) => void
   /** AI 起草：写入未确认草稿，待用户编辑或采纳转正 */
-  setParagraphSummaryDraft: (articleId: string, paraIndex: number, summary: string) => void
-  confirmParagraphSummary: (articleId: string, paraIndex: number) => void
   setSkeleton: (articleId: string, patch: Partial<ArticleSkeleton>) => void
   removeForArticle: (articleId: string) => void
   importStudy: (list: ArticleStudy[]) => void
@@ -125,18 +123,7 @@ export const useShenlunStore = create<ArticleState>()(
       },
 
       /** AI 草稿：写入 origin=ai 未确认；采纳/编辑走 setParagraphSummary 转正 */
-      setParagraphSummaryDraft: (articleId, paraIndex, summary) =>
-        get().setParagraphSummary(articleId, paraIndex, summary, { origin: 'ai', confirmed: false }),
 
-      confirmParagraphSummary: (articleId, paraIndex) => {
-        const cur = get().study[articleId]
-        if (!cur?.paragraphSummaries) return
-        get().upsert(articleId, {
-          paragraphSummaries: cur.paragraphSummaries.map((p) =>
-            p.paraIndex === paraIndex ? { ...p, origin: 'user' as const, confirmed: true } : p,
-          ),
-        })
-      },
 
       setSkeleton: (articleId, patch) => {
         const cur = get().study[articleId]

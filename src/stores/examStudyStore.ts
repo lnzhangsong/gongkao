@@ -116,6 +116,10 @@ export interface MaterialMark {
   use?: string
   /** 重要性：决定高亮与思路卡的颜色（core=accent / normal=蓝） */
   level?: MarkLevel
+  /** 行文阶段编号（AI 产出，同阶段同号）；无则展示端按连续同作用兜底分组 */
+  stage?: number
+  /** 所在行文阶段的一句话概括（AI 产出，同阶段重复携带） */
+  stageSummary?: string
 }
 
 export interface QuestionMarks {

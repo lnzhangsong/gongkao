@@ -27,6 +27,8 @@ import { useAnnotationPopover } from '../hooks/useAnnotationPopover'
 import { ShenlunPanel } from '../components/ShenlunPanel'
 import { ParaGist, PatternInput } from '../components/reading/ParaGist'
 import { useShenlunStore, type StudyStatus } from '../stores/shenlunStore'
+import { EchoStrip } from '../components/reading/EchoStrip'
+import { TermDwellTracker } from '../components/reading/TermDwellTracker'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { draftParaGist } from '../lib/aiPresplit'
 import { paragraphStarts, splitParagraph } from '../lib/offsets'
@@ -558,6 +560,7 @@ export function ReadingPage() {
         onOpenShenlun={openShenlun}
       />
       <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
+        <TermDwellTracker articleId={articleId} />
         <article data-study-inline={studyInline ? 'on' : undefined}>
           <header className="article-head">
             <div className="tag">
@@ -585,6 +588,9 @@ export function ReadingPage() {
               </nav>
             )}
           </header>
+
+          {/* 回声条：旧积累作为线索回到眼前（使用即复习） */}
+          <EchoStrip articleId={articleId} topic={article.topic} />
 
           {/* 拆解上屏：全篇拆解卡（核心观点 / 分论点 / 结构骨架）——有全篇层面内容才渲染，纯段意时只显示段意条 */}
           {studyInline && hasOverviewData && (

@@ -13,6 +13,8 @@
 
 .notes-workspace {
   flex: 1;
+  /* 弹性列的子项 margin:auto 会放弃拉伸，必须显式撑满（版心 1920 仍由 max-width 收敛） */
+  width: 100%;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 330px;
   min-height: 670px;

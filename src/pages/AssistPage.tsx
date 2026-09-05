@@ -16,6 +16,8 @@ import {
   type QuestionType,
 } from '../stores/aiAssistStore'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
+import { useLearningEventStore } from '../stores/learningEventStore'
+import { echoCompare } from '../lib/mastery'
 import { draftFramework, type MaterialCandidate } from '../lib/aiAssist'
 import { inferExamCandidates, draftFullExam, type InferExamResult } from '../lib/aiExamGen'
 import type { ArticleTopic } from '../types'
@@ -46,6 +48,8 @@ export function AssistPage() {
 
   /* ---------- 素材候选：素材标注 × 文章 meta，按主题筛选 ---------- */
   const articleById = useMemo(() => new Map(articles.map((a) => [a.id, a] as const)), [articles])
+  const events = useLearningEventStore((s) => s.events)
+  /* 回声排序（使用即复习）：可提取概率低的素材排前，AI 更容易挑中它们——用一次就是复习一次 */
   const materials = useMemo<MaterialCandidate[]>(() => {
     const list: MaterialCandidate[] = []
     for (const a of annotations) {
@@ -54,8 +58,8 @@ export function AssistPage() {
       if (topic && art?.topic !== topic) continue
       list.push({ annotation: a, articleTitle: art?.title ?? a.articleId, articleTopic: art?.topic })
     }
-    return list.sort((x, y) => y.annotation.createdAt.localeCompare(x.annotation.createdAt))
-  }, [annotations, articleById, topic])
+    return list.sort((x, y) => echoCompare(x, y, events))
+  }, [annotations, articleById, topic, events])
 
   /* ---------- AI-4 反向联想：从文章联想到命题角度（?infer=<articleId>，拆解面板入口） ---------- */
   const [searchParams, setSearchParams] = useSearchParams()
@@ -178,6 +182,9 @@ export function AssistPage() {
       void alertDialog('题干不能为空')
       return
     }
+    /* 使用即复习（证据回写）：保存的框架里挂上的每条素材 = 一次真实调用，权重最高的素材证据 */
+    const ev = useLearningEventStore.getState().log
+    for (const item of draft.outline) for (const mid of item.materialIds) ev('material-use', mid)
     upsert(draft)
   }
 
@@ -494,35 +501,40 @@ export function AssistPage() {
                       <p>{r.stance}</p>
                     </div>
                   )}
-                  {r.givenMaterial && (
-                    <div className="assist-detail-sec">
-                      <span className="assist-detail-label">
-                        给定资料
-                        {r.sourceArticleId && (
-                          <Link to={`/reading/${r.sourceArticleId}`} onClick={(e) => e.stopPropagation()}>
-                            　底本《{articleById.get(r.sourceArticleId)?.title ?? '原文'}》
-                          </Link>
-                        )}
-                      </span>
-                      <p className="assist-detail-material">{r.givenMaterial}</p>
-                    </div>
-                  )}
-                  {r.outline.length > 0 && (
-                    <div className="assist-detail-sec">
-                      <span className="assist-detail-label">{r.givenMaterial ? '参考要点' : '作答框架'}</span>
-                      <ol className="assist-detail-points">
-                        {r.outline.map((it) => (
-                          <li key={it.id}>
-                            {it.text || '（空要点）'}
-                            {it.materialIds.length > 0 && (
-                              <span className="assist-detail-mats">　{it.materialIds.length} 条素材</span>
+                  {/* 资料 + 要点双栏并排：左栏读材料、右栏对照要点，宽屏不浪费、窄屏自动堆叠 */}
+                  {(r.givenMaterial || r.outline.length > 0) && (
+                    <div className={`assist-detail-cols${r.givenMaterial && r.outline.length > 0 ? ' two' : ''}`}>
+                      {r.givenMaterial && (
+                        <div className="assist-detail-sec">
+                          <span className="assist-detail-label">
+                            给定资料
+                            {r.sourceArticleId && (
+                              <Link to={`/reading/${r.sourceArticleId}`} onClick={(e) => e.stopPropagation()}>
+                                　底本《{articleById.get(r.sourceArticleId)?.title ?? '原文'}》
+                              </Link>
                             )}
-                          </li>
-                        ))}
-                      </ol>
+                          </span>
+                          <p className="assist-detail-material">{r.givenMaterial}</p>
+                        </div>
+                      )}
+                      {r.outline.length > 0 && (
+                        <div className="assist-detail-sec">
+                          <span className="assist-detail-label">{r.givenMaterial ? '参考要点' : '作答框架'}</span>
+                          <ol className="assist-detail-points">
+                            {r.outline.map((it) => (
+                              <li key={it.id}>
+                                {it.text || '（空要点）'}
+                                {it.materialIds.length > 0 && (
+                                  <span className="assist-detail-mats">　{it.materialIds.length} 条素材</span>
+                                )}
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
                     </div>
                   )}
-                  <p className="assist-record-count">点击收起；修改请点右侧「编辑」</p>
+                  <p className="assist-record-count">点击收起；点「编辑」可修改内容</p>
                 </div>
               )}
             </button>

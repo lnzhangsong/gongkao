@@ -241,7 +241,8 @@
 /* 文章列表行 */
 .article-row {
   display: grid;
-  grid-template-columns: 65px minmax(0, 1fr) 150px 85px;
+  /* 末列 auto：学习徽标 + 素材数 + 日期内容宽不定，固定 85px 会溢出行外 */
+  grid-template-columns: 65px minmax(0, 1fr) 150px auto;
   align-items: center;
   gap: 20px;
   padding: 20px 0;
@@ -290,7 +291,10 @@
 }
 
 .article-time {
-  text-align: right;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font: 12px var(--mono);
   color: var(--muted);
   white-space: nowrap;

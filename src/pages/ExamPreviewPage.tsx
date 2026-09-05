@@ -15,7 +15,7 @@ import { draftMaterialMarks } from '../lib/aiExamTrace'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { ExamQuestionsDrawer } from '../components/exam/ExamQuestionsDrawer'
 import { MarkedParagraph } from '../components/exam/ExamMarkedParagraph'
-import { ExamMaterialFlowMap } from '../components/exam/ExamMaterialFlowMap'
+import { ExamMaterialFlowModal } from '../components/exam/ExamMaterialFlowMap'
 import { YearInput } from '../components/exam/YearInput'
 import { findQuoteInMaterial, type MarkRange } from '../lib/examMarks'
 import { useExamStudyStore, type MaterialMark } from '../stores/examStudyStore'
@@ -286,15 +286,8 @@ export default function ExamPreviewPage() {
   const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
   const [genError, setGenError] = useState('')
   const [matGenIdx, setMatGenIdx] = useState<number | null>(null)
-  /* 材料行文思路导图：按材料开关，展示该材料标注串成的脉络链 */
-  const [flowOpenFor, setFlowOpenFor] = useState<Set<number>>(() => new Set())
-  const toggleFlow = (idx: number) =>
-    setFlowOpenFor((prev) => {
-      const next = new Set(prev)
-      if (next.has(idx)) next.delete(idx)
-      else next.add(idx)
-      return next
-    })
+  /* 材料行文思路导图：弹窗展示该材料标注串成的脉络链，记录材料 idx */
+  const [flowModalIdx, setFlowModalIdx] = useState<number | null>(null)
   /* 各材料的标注按原文出现顺序排好（导图节点顺序 = 材料推进顺序） */
   const flowByMat = useMemo(() => {
     const tmp = new Map<number, { mark: MaterialMark; order: number }[]>()
@@ -659,11 +652,11 @@ export default function ExamPreviewPage() {
                             {matHasMarks.has(m.idx) && (
                               <button
                                 type="button"
-                                className={`text-btn exam-mat-gen${flowOpenFor.has(m.idx) ? ' exam-mat-gen-on' : ''}`}
+                                className="text-btn exam-mat-gen"
                                 title="本则材料行文脉络导图：标注按原文顺序串成节点链"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toggleFlow(m.idx)
+                                  setFlowModalIdx(m.idx)
                                 }}
                               >
                                 导图
@@ -672,9 +665,6 @@ export default function ExamPreviewPage() {
                           </>
                         )}
                       </h3>
-                      {flowOpenFor.has(m.idx) && (flowByMat.get(m.idx)?.length ?? 0) > 0 && (
-                        <ExamMaterialFlowMap marks={flowByMat.get(m.idx)!} />
-                      )}
                       {!collapsed.has(m.idx) &&
                         joinParagraphs(m.content).map((p, i) => (
                           <MarkedParagraph
@@ -798,6 +788,14 @@ export default function ExamPreviewPage() {
             examMarks={{ on: inlineMarks, onToggle: toggleInlineMarks }}
             onOpenQuestions={() => setQuestionsOpen(true)}
           />
+
+          {flowModalIdx != null && (flowByMat.get(flowModalIdx)?.length ?? 0) > 0 && (
+            <ExamMaterialFlowModal
+              label={draft.materials.find((m) => m.idx === flowModalIdx)?.label ?? '材料'}
+              marks={flowByMat.get(flowModalIdx)!}
+              onClose={() => setFlowModalIdx(null)}
+            />
+          )}
         </main>
       </section>
     )

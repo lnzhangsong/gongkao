@@ -1431,26 +1431,59 @@ p mark.exam-mark.lv-useless {
   }
 }
 
-/* —— 材料行文思路导图：标注按原文顺序串成节点链，横向可滚 —— */
-.exam-mat-gen-on {
-  color: var(--accent-text);
-  font-weight: 600;
+/* —— 材料行文思路导图（弹窗）：标注按原文顺序串成节点链，横向可滚 —— */
+.exam-flow-modal {
+  width: min(920px, calc(100vw - 48px));
+  padding: 20px 22px 18px;
+}
+
+.exam-flow-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.exam-flow-head h3 {
+  margin: 0;
+  font: 600 15px/1.6 var(--sans);
+  color: var(--ink);
+}
+
+.exam-flow-head small {
+  margin-left: 8px;
+  font: 400 12px/1.6 var(--sans);
+  color: var(--muted);
+}
+
+.exam-flow-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font: 400 20px/1 var(--sans);
+  color: var(--muted);
+  padding: 2px 6px;
+}
+
+.exam-flow-close:hover {
+  color: var(--ink);
 }
 
 .mat-flow {
   display: flex;
   align-items: stretch;
   overflow-x: auto;
-  padding: 10px 2px 12px;
+  padding: 8px 2px 4px;
 }
 
 .mat-flow-node {
   flex: 0 0 auto;
-  width: 190px;
+  width: 230px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px 9px;
+  gap: 6px;
+  padding: 10px 12px 11px;
   border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   border-radius: 8px;
   background: var(--paper);
@@ -1472,18 +1505,14 @@ p mark.exam-mark.lv-useless {
 
 .mat-flow-quote {
   margin: 0;
-  font: 12px/1.8 var(--serif);
+  font: 12.5px/1.85 var(--serif);
   color: var(--ink);
 }
 
 .mat-flow-use {
   margin: 0;
-  font: 11.5px/1.7 var(--sans);
+  font: 11.5px/1.75 var(--sans);
   color: var(--muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* 节点间箭头连线，与题目推导导图同语言 */

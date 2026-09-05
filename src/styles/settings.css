@@ -46,7 +46,8 @@
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 60px;
-  max-width: var(--container);
+  /* 与其它子页一致：1920 版心 + 38px 内距，左缘和页头分隔线对齐（4K 不再缩在中间） */
+  max-width: 1920px;
   margin: 0 auto;
   padding: 38px 38px 80px;
 }

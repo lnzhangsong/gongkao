@@ -1451,25 +1451,7 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   cursor: default;
 }
 
-/* AI 草稿态：虚线边弱化 + 「采纳」按钮 */
-.para-gist.draft {
-  border-style: dashed;
-  background: transparent;
-  color: var(--muted);
-}
 
-.para-gist-adopt {
-  margin-left: auto;
-  flex: none;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  padding: 4px 12px;
-  cursor: pointer;
-  font: 500 11px/1.4 var(--sans);
-  color: var(--accent-text);
-  transition: background 0.15s ease;
-}
 
 .para-gist-adopt:hover {
   background: color-mix(in srgb, var(--accent) 16%, transparent);

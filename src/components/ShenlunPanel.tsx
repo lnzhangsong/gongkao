@@ -40,14 +40,13 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   const removeSubThesis = useShenlunStore((s) => s.removeSubThesis)
   const setReviewNote = useShenlunStore((s) => s.setReviewNote)
   const setParagraphSummary = useShenlunStore((s) => s.setParagraphSummary)
-  const setParagraphSummaryDraft = useShenlunStore((s) => s.setParagraphSummaryDraft)
   const setSkeleton = useShenlunStore((s) => s.setSkeleton)
   const updateAnnotation = useAnnotationStore((s) => s.update)
 
   const [subDraft, setSubDraft] = useState('')
   const [noteDraft, setNoteDraft] = useState<string | null>(null)
 
-  /* ---------- AI 预拆解：一键生成并直接填入（只填空缺，不覆盖手填；段意按 AI 草稿） ---------- */
+  /* ---------- AI 预拆解：一键生成并直接填入（只填空缺，不覆盖手填） ---------- */
   const aiConfigured = useAiStore((s) => isAiConfigured(s.settings))
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState('')
@@ -61,7 +60,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
     try {
       const d = await draftStudy(article)
       for (const p of d.paragraphSummaries) {
-        setParagraphSummaryDraft(article.id, p.paraIndex, p.summary)
+        setParagraphSummary(article.id, p.paraIndex, p.summary, { origin: 'ai' })
       }
       /* 只填空缺：核心观点 / 分论点（追加去重）/ 骨架各字段 */
       const filled: string[] = []
@@ -86,7 +85,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
         filled.push('骨架')
       }
       if (d.paragraphSummaries.length) filled.push(`段意 ${d.paragraphSummaries.length} 段`)
-      setAiDone(filled.length ? `已填入：${filled.join(' / ')}；段意为 AI 草稿，可逐条编辑或采纳` : '没有新增内容（相关字段已有手填值）')
+      setAiDone(filled.length ? `已填入：${filled.join(' / ')}` : '没有新增内容（相关字段已有手填值）')
     } catch (err) {
       setAiError(err instanceof Error ? err.message : String(err))
     } finally {

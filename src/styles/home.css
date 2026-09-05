@@ -392,3 +392,17 @@
     margin-top: 14px;
   }
 }
+
+/* 首页「今日复习」提醒入口 */
+.review-link,
+.memorize-link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+.review-link:hover,
+.memorize-link:hover {
+  color: var(--ink);
+}

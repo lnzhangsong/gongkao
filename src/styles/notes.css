@@ -599,3 +599,125 @@ span.mat-chip {
   border-radius: 6px;
   padding: 7px 10px;
 }
+
+/* —— 复习翻转卡（学习者数据模型第 4 期）—— */
+.review-entry {
+  color: var(--accent);
+}
+
+.review-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: color-mix(in srgb, var(--ink) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.review-modal {
+  position: relative;
+  width: min(480px, calc(100vw - 48px));
+  background: var(--paper, #fff);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 7px 8px 0 rgba(0, 0, 0, 0.12);
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.review-progress {
+  font: 500 11px/1.6 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.review-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+  min-height: 150px;
+  padding: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: left;
+}
+
+.review-card blockquote {
+  margin: 0;
+  font: 400 16px/1.9 var(--serif, serif);
+  color: var(--ink);
+}
+
+.review-back {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font: 400 13px/1.8 var(--sans);
+  color: var(--ink);
+}
+
+.review-pattern .skeleton-label {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.review-source {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.review-hint {
+  font: 400 11px/1.6 var(--sans);
+  color: var(--muted);
+  text-align: center;
+}
+
+.review-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.review-actions button {
+  padding: 8px 18px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: 500 13px/1 var(--sans);
+  background: none;
+}
+
+.review-actions .primary {
+  background: var(--ink);
+  color: var(--paper, #fff);
+  border-color: var(--ink);
+}
+
+.review-goto {
+  align-self: center;
+}
+
+.review-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0 8px;
+  text-align: center;
+}

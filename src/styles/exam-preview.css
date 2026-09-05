@@ -1470,20 +1470,22 @@ p mark.exam-mark.lv-useless {
   color: var(--ink);
 }
 
+/* 换行网格：长材料（30+ 句）折行铺满，内容区限高滚动 */
 .mat-flow {
-  display: flex;
-  align-items: stretch;
-  overflow-x: auto;
-  padding: 8px 2px 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: 10px;
+  align-items: start;
+  overflow-y: auto;
+  max-height: min(66vh, 640px);
+  padding: 10px 2px 4px;
 }
 
 .mat-flow-node {
-  flex: 0 0 auto;
-  width: 230px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px 11px;
+  gap: 5px;
+  padding: 9px 11px 10px;
   border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   border-radius: 8px;
   background: var(--paper);
@@ -1494,45 +1496,41 @@ p mark.exam-mark.lv-useless {
   background: color-mix(in srgb, var(--accent) 5%, var(--paper));
 }
 
+.mat-flow-cap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mat-flow-no {
+  flex-shrink: 0;
+  font: 500 12px/1.6 var(--mono);
+  font-style: normal;
+  color: var(--muted);
+}
+
 .mat-flow-role {
-  align-self: flex-start;
   font: 600 11px/1.6 var(--sans);
   color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 10%, var(--paper));
   padding: 0 6px;
   border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mat-flow-quote {
   margin: 0;
-  font: 12.5px/1.85 var(--serif);
+  font: 12.5px/1.8 var(--serif);
   color: var(--ink);
 }
 
 .mat-flow-use {
   margin: 0;
-  font: 11.5px/1.75 var(--sans);
+  font: 11.5px/1.7 var(--sans);
   color: var(--muted);
-}
-
-/* 节点间箭头连线，与题目推导导图同语言 */
-.mat-flow-link {
-  flex: 0 0 20px;
-  align-self: center;
-  position: relative;
-  height: 1px;
-  background: color-mix(in srgb, var(--ink) 35%, transparent);
-}
-
-.mat-flow-link::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  border-left: 5px solid color-mix(in srgb, var(--ink) 45%, transparent);
-  border-top: 3.5px solid transparent;
-  border-bottom: 3.5px solid transparent;
 }
 
 /* 加工方式速查：折叠面板，列出六类及判断口诀 */

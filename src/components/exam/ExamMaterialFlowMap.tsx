@@ -7,12 +7,31 @@ const numOf = (i: number) => (i < 10 ? CN_NUM[i] : `${i + 1}`)
 
 interface StageGroup {
   role: string
+  summary?: string
   marks: MaterialMark[]
   from: number
 }
 
-/** 连续同「行文作用」的标注归为一个行文阶段，保持原文顺序 */
+/**
+ * 分组：优先按 AI 产出的行文阶段编号（stage），按首次出现顺序；
+ * 旧数据/手填没有 stage 时，退回「连续同作用归组」。
+ */
 function groupByStage(marks: MaterialMark[]): StageGroup[] {
+  if (marks.some((m) => m.stage != null)) {
+    const groups: StageGroup[] = []
+    const byStage = new Map<number, StageGroup>()
+    marks.forEach((m, i) => {
+      const key = m.stage ?? -1
+      let g = byStage.get(key)
+      if (!g) {
+        g = { role: m.role, summary: m.stageSummary, marks: [], from: i }
+        byStage.set(key, g)
+        groups.push(g)
+      }
+      g.marks.push(m)
+    })
+    return groups
+  }
   const groups: StageGroup[] = []
   for (let i = 0; i < marks.length; i++) {
     const last = groups[groups.length - 1]
@@ -78,6 +97,7 @@ export function ExamMaterialFlowModal({
                     {numOf(g.from)}–{numOf(g.from + g.marks.length - 1)} · {g.marks.length} 句
                   </span>
                 </header>
+                {g.summary && <p className="flow-outline-summary">{g.summary}</p>}
                 {g.marks.map((m, i) => (
                   <div key={m.id} className="flow-outline-sent" title={m.use}>
                     <span className="flow-outline-no">{numOf(g.from + i)}</span>

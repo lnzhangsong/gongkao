@@ -1498,7 +1498,8 @@ p mark.exam-mark.lv-useless {
   background: color-mix(in srgb, var(--accent) 4%, var(--paper));
 }
 
-.flow-outline-stage header {
+.flow-outline-stage header,
+.flow-outline-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -1506,7 +1507,17 @@ p mark.exam-mark.lv-useless {
   margin-bottom: 4px;
 }
 
-.flow-outline-stage h4 {
+/* 整行可点：展开/收起挂在标题行右侧 */
+.flow-outline-head {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: default;
+}
+
+.flow-outline-head h4 {
   margin: 0;
   font: 700 13.5px/1.7 var(--sans);
   color: var(--ink);
@@ -1516,10 +1527,24 @@ p mark.exam-mark.lv-useless {
   color: var(--accent-text);
 }
 
-.flow-outline-stage header span {
+.flow-outline-meta {
   font: 400 11px/1.7 var(--sans);
   color: var(--muted);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.flow-outline-caret {
+  font-style: normal;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.flow-outline-head.open .flow-outline-caret {
+  transform: rotate(90deg);
 }
 
 /* 阶段概括：AI 产出的一句话，卡片的信息主角；旧数据无概括时用首句引句兜底（弱化样式） */
@@ -1536,18 +1561,6 @@ p mark.exam-mark.lv-useless {
 
 .flow-outline-detail {
   margin-top: 4px;
-}
-
-.flow-outline-toggle {
-  border: none;
-  background: transparent;
-  padding: 4px 0 0;
-  font: 400 11.5px/1.7 var(--sans);
-  color: var(--muted);
-}
-
-.flow-outline-toggle:hover {
-  color: var(--ink);
 }
 
 .flow-outline-sent {

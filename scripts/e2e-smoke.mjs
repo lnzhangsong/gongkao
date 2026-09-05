@@ -558,6 +558,14 @@ await page.waitForTimeout(300)
 check('拆解面板打开', (await page.locator('.shenlun-panel').count()) === 1)
 check('面板含每段大意区', (await page.locator('.shenlun-panel .para-summary').count()) >= 3)
 check('面板含结构骨架区', (await page.locator('.shenlun-panel .skeleton-field').count()) >= 3)
+// 学习状态：设为「学习中」并验证持久化（申论链路：标记 → 学习状态）
+await page.evaluate(() => {
+  const btn = [...document.querySelectorAll('.shenlun-panel button')].find((b) => b.textContent.includes('学习中'))
+  if (btn) btn.click()
+})
+await page.waitForTimeout(300)
+const studyRaw = JSON.parse((await idbGet('readbook:shenlun')) ?? '{}')
+check('学习状态持久化', studyRaw.state?.study?.p0001?.status === 'learning', `status=${studyRaw.state?.study?.p0001?.status ?? 'none'}`)
 await page.evaluate(() => document.querySelector('.shenlun-close')?.click())
 await page.waitForTimeout(200)
 check('拆解面板可关闭', (await page.locator('.shenlun-panel').count()) === 0)
@@ -667,6 +675,7 @@ const importPayload = {
   readerSettings: { fontSize: 20, lineHeight: 2.0, fontFamily: 'kaiti', readerTheme: '', reducedMotion: false, showAnnotations: true },
   articles: [{ id: 'a05', title: 'x', topic: '时政评论', source: '申论精读', date: '2024-05-06', progress: { articleId: 'a05', percent: 42, lastPosition: 0, lastReadAt: '2024-06-01T00:00:00.000Z', completed: false, readCount: 1, favorite: false, timeSpentSec: 120 } }],
   annotations: [{ id: 'imp-1', articleId: 'a05', kind: 'highlight', text: '导入测试高亮文字', start: 1, end: 5, createdAt: '2024-06-01T00:00:00.000Z', color: 'green' }],
+  shenlun: [{ articleId: 'a05', status: 'mastered', mastery: 3, coreThesis: '导入测试总论点', subTheses: [], createdAt: '2024-06-01T00:00:00.000Z', updatedAt: '2024-06-01T00:00:00.000Z' }],
 }
 await page.setInputFiles('input[type="file"]', {
   name: 'readbook-import.json',
@@ -684,6 +693,8 @@ const impArt = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
 check('导入进度合并', impArt.state?.progress?.['a05']?.percent === 42, `percent=${impArt.state?.progress?.['a05']?.percent}`)
 const impAnn = JSON.parse((await idbGet('readbook:annotations')) ?? '{}')
 check('导入摘录合并', (impAnn.state?.annotations ?? []).some((a) => a.id === 'imp-1'))
+const impStudy = JSON.parse((await idbGet('readbook:shenlun')) ?? '{}')
+check('导入学习记录合并', impStudy.state?.study?.a05?.status === 'mastered', `status=${impStudy.state?.study?.a05?.status ?? 'none'}`)
 
 // ---------- P0 入口规则 + 本周统计 ----------
 await open('/')
@@ -693,6 +704,9 @@ const homeEyebrow = await page.locator('.eyebrow').first().innerText()
 const today = new Date().toISOString().slice(0, 10)
 check('首页 eyebrow 当日日期', homeEyebrow.includes(today), homeEyebrow)
 check('本周阅读统计卡', (await page.locator('.week-stats').count()) === 1)
+// 申论统计行：拆解/导入产生学习记录 + 素材标记后，首页展示「已拆解 X 篇 · 素材 Y 条」
+const homeStats = await page.locator('.week-stats').innerText()
+check('首页申论统计行', /已拆解 \d+ 篇 · 素材 \d+ 条/.test(homeStats.replace(/\n/g, ' ')), homeStats.replace(/\n/g, ' '))
 
 // ---------- 相邻文章导航（上一篇/下一篇） ----------
 const listRes = await fetch(`http://localhost:${API_PORT}/api/articles`).then((r) => r.json())

@@ -1433,7 +1433,7 @@ p mark.exam-mark.lv-useless {
 
 /* —— 行文思路提纲（弹窗）：阶段卡自上而下箭头推进，文字为主 —— */
 .exam-flow-modal {
-  width: min(680px, calc(100vw - 48px));
+  width: min(860px, calc(100vw - 48px));
   max-height: 88vh;
   overflow-y: auto;
   /* 滚到头不把滚动传给底下页面（滚动链） */

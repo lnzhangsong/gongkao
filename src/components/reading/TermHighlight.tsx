@@ -117,6 +117,7 @@ export const TermText = memo(function TermText({ text }: { text: string }) {
           <span
             key={i}
             className="term-box"
+            data-term-id={seg.hit.id}
             title={`规范词 · ${seg.hit.theme}`}
           >
             {seg.text}

@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useArticleStore } from '../stores/articleStore'
+import { useShenlunStore } from '../stores/shenlunStore'
+import { useAnnotationStore } from '../stores/annotationStore'
 import { loadDisplayFont } from '../lib/fonts'
 import { formatArticleNo } from '../data'
 import { useEffect } from 'react'
@@ -16,6 +18,15 @@ export function HomePage() {
   const articles = useArticleStore((s) => s.articles)
   const progress = useArticleStore((s) => s.progress)
   const navigate = useNavigate()
+
+  /* 申论学习统计：已拆解（学习状态 ≠ 未学）的篇数 + 带素材类型的摘录条数 */
+  const studyMap = useShenlunStore((s) => s.study)
+  const annotations = useAnnotationStore((s) => s.annotations)
+  const shenlunStats = useMemo(() => {
+    const deconstructed = Object.values(studyMap).filter((s) => s.status !== 'new').length
+    const materials = annotations.reduce((n, a) => (a.materialType ? n + 1 : n), 0)
+    return { deconstructed, materials }
+  }, [studyMap, annotations])
 
   /** 进行中的阅读（有进度、未读完、最近读过） */
   const continueList = useMemo(() => {
@@ -110,6 +121,15 @@ export function HomePage() {
               <span>
                 <Ticker value={weekStats.count} /> 篇
               </span>
+              {shenlunStats.deconstructed > 0 && (
+                <>
+                  <span className="week-stats-sep">/</span>
+                  <span>
+                    已拆解 <Ticker value={shenlunStats.deconstructed} /> 篇 · 素材{' '}
+                    <Ticker value={shenlunStats.materials} /> 条
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

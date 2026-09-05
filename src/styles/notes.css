@@ -4,9 +4,15 @@
 
 .notes-page {
   border-top: 1px solid var(--ink);
+  /* 弹性列：工作区撑满首屏剩余高度（减顶栏 76 + 页脚让位 52），
+     4K/短列表时三栏背景与分隔线直达页脚，不留空底 */
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 128px);
 }
 
 .notes-workspace {
+  flex: 1;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 330px;
   min-height: 670px;
@@ -230,10 +236,9 @@
   border-left: 1px solid var(--ink);
   padding: 25px;
   background: var(--soft);
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 700px;
+  /* 随工作区拉伸到整行高（工作区已撑满视口剩余高度），详情少时不再留空底 */
+  align-self: stretch;
+  min-height: 700px;
   overflow-y: auto;
 }
 

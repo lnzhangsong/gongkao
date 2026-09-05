@@ -4,6 +4,9 @@ import { toast } from '../components/ui/Toast'
 import { alertDialog } from '../components/ui/ConfirmDialog'
 import { Pagination } from '../components/ui/Pagination'
 import { ApiLoading } from '../components/ui/ApiLoading'
+import { useAnnotationStore } from '../stores/annotationStore'
+import { useArticleStore } from '../stores/articleStore'
+import { useLearningEventStore } from '../stores/learningEventStore'
 /* .exam-page/.exam-hero 容器版式定义在 exam-preview.css（真题页组件私有的，这里复用需显式引入） */
 import '../styles/exam-preview.css'
 import '../styles/terms.css'
@@ -37,6 +40,11 @@ export default function TermsPage() {
   /* 行内编辑（一次只编一张卡） */
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ theme: '', term: '', example: '' })
+  /* 见过：词面出现在我划过的素材里（学习者数据模型「自己的书桌」） */
+  const [seenOnly, setSeenOnly] = useState(false)
+  const allAnnotations = useAnnotationStore((s) => s.annotations)
+  const getArticle = useArticleStore((s) => s.getArticle)
+  const events = useLearningEventStore((s) => s.events)
 
   const load = () =>
     fetchTerms()
@@ -54,15 +62,46 @@ export default function TermsPage() {
 
   const themes = useMemo(() => (terms ? orderedThemes(terms) : []), [terms])
 
+  /* 见过 map = 两种证据的并集：
+     ① 划线：词面出现在我的划线素材里（强证据，带来源文章）；
+     ② 驻留：阅读时词框在视区累计 ≥8s（term-seen 事件，注意力级） */
+  const seenMap = useMemo(() => {
+    const map = new Map<number, { count: number; articles: string[]; dwell: number }>()
+    if (!terms) return map
+    const texts = allAnnotations
+      .filter((a) => a.kind === 'highlight')
+      .map((a) => ({ text: a.text, title: getArticle(a.articleId)?.title ?? '' }))
+    const bump = (id: number, count: number, title?: string) => {
+      const cur = map.get(id) ?? { count: 0, articles: [], dwell: 0 }
+      cur.count += count
+      if (title && !cur.articles.includes(title)) cur.articles.push(title)
+      map.set(id, cur)
+    }
+    for (const t of terms) {
+      if (!t.term) continue
+      for (const x of texts) {
+        if (x.text.includes(t.term)) bump(t.id, 1, x.title)
+      }
+    }
+    for (const e of events) {
+      if (e.kind !== 'term-seen') continue
+      const termId = Number(e.objectId.split('#')[1])
+      if (Number.isFinite(termId)) bump(termId, 1)
+    }
+    return map
+  }, [terms, allAnnotations, getArticle, events])
+  const seenTotal = seenMap.size
+
   const filtered = useMemo(() => {
     if (!terms) return []
     const kw = q.trim()
     return terms.filter(
       (t) =>
         (!theme || t.theme === theme) &&
+        (!seenOnly || seenMap.has(t.id)) &&
         (!kw || t.term.includes(kw) || t.example.includes(kw)),
     )
-  }, [terms, theme, q])
+  }, [terms, theme, q, seenOnly, seenMap])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const curPage = Math.min(page, totalPages)
@@ -205,6 +244,9 @@ export default function TermsPage() {
           <button className={`terms-chip${theme === '' ? ' active' : ''}`} onClick={() => setTheme('')}>
             全部　{terms.length}
           </button>
+          <button key="seen" className={`terms-chip terms-chip-seen${seenOnly ? ' active' : ''}`} onClick={() => changeFilter(() => setSeenOnly(!seenOnly))} title="词面出现在你划过的素材里">
+            见过　{seenTotal} ✦
+          </button>
           {themes.map(([name, count]) => (
             <button key={name} className={`terms-chip${theme === name ? ' active' : ''}`} onClick={() => changeFilter(() => setTheme(theme === name ? '' : name))}>
               {name}　{count}
@@ -280,7 +322,21 @@ export default function TermsPage() {
                 </article>
               ) : (
                 <article key={t.id} className="terms-card">
-                  <h4>{t.term}</h4>
+                  <h4>
+                    {t.term}
+                    {seenMap.has(t.id) && (
+                      <span
+                        className="term-seen"
+                        title={
+                          seenMap.get(t.id)!.articles.length > 0
+                            ? `在你的素材里出现过 ${seenMap.get(t.id)!.count} 次：${seenMap.get(t.id)!.articles.join('、')}`
+                            : `阅读时驻留见过 ${seenMap.get(t.id)!.count} 次`
+                        }
+                      >
+                        见过 ·{seenMap.get(t.id)!.count}
+                      </span>
+                    )}
+                  </h4>
                   {t.example ? <p className="terms-example">{t.example}</p> : null}
                   <span className="terms-card-tools">
                     <button className="text-btn terms-del-btn" title="修改此词" onClick={() => startEdit(t)}>

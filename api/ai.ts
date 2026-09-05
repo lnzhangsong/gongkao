@@ -30,10 +30,12 @@ export async function POST(request: Request) {
     return json({ error: 'baseUrl / apiKey / model / messages 必填' }, 400)
   }
 
+  // 防呆：baseUrl 填成了完整端点（以 /chat/completions 结尾）时不再追加路径。
+  // root 在 try 外声明：catch 里的错误提示也要用（try 内声明的 let 对 catch 不可见）
+  let root = String(baseUrl).replace(/\/+$/, '')
+  if (root.endsWith('/chat/completions')) root = root.slice(0, -'/chat/completions'.length)
+
   try {
-    // 防呆：baseUrl 填成了完整端点（以 /chat/completions 结尾）时不再追加路径
-    let root = String(baseUrl).replace(/\/+$/, '')
-    if (root.endsWith('/chat/completions')) root = root.slice(0, -'/chat/completions'.length)
     const upstream = await fetch(`${root}/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },

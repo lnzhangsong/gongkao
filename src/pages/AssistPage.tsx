@@ -140,7 +140,7 @@ export function AssistPage() {
     setExpandedId(focusRecordId)
     scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     // 仅在带着 ?record 进入时执行一次
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRecordId])
 
   const runGenerate = async () => {
@@ -472,7 +472,11 @@ export function AssistPage() {
         <h2>已存框架 · {sortedRecords.length}</h2>
         {sortedRecords.length === 0 && <p className="assist-empty">还没有保存的框架记录。</p>}
         {sortedRecords.map((r) => (
-          <div className={`assist-record${expandedId === r.id ? ' expanded' : ''}`} key={r.id} ref={focusRecordId === r.id ? scrollRef : undefined}>
+          <div
+            className={`assist-record${expandedId === r.id ? ' expanded' : ''}`}
+            key={r.id}
+            ref={focusRecordId === r.id ? scrollRef : undefined}
+          >
             <button
               className="assist-record-main"
               title={expandedId === r.id ? '收起详情' : '展开查看完整内容'}

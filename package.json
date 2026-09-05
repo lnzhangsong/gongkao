@@ -5,18 +5,19 @@
   "type": "module",
   "description": "读本 READBOOK — 每日人民日报精读与申论素材阅读应用",
   "scripts": {
-    "dev": "vite",
+    "dev": "vp dev",
     "dev:api": "node scripts/api-server.mjs",
-    "dev:all": "node scripts/kill-port.mjs 8787 5173 && concurrently -n api,web -c blue,green --kill-others \"node scripts/api-server.mjs\" \"vite\"",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "dev:all": "node scripts/kill-port.mjs 8787 5173 && concurrently -n api,web -c blue,green --kill-others \"node scripts/api-server.mjs\" \"vp dev\"",
+    "build": "tsc --noEmit && vp build",
+    "preview": "vp preview",
+    "test": "vp test run",
+    "test:watch": "vp test",
     "test:e2e": "node scripts/e2e.mjs",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,css}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,css}\""
+    "lint": "vp lint .",
+    "lint:fix": "vp lint . --fix",
+    "format": "vp fmt \"**/*.{ts,tsx,js,mjs,json,css}\"",
+    "format:check": "vp fmt --check \"**/*.{ts,tsx,js,mjs,json,css}\"",
+    "prepare": "vp config"
   },
   "dependencies": {
     "lucide-react": "^1.37.0",
@@ -31,15 +32,10 @@
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
-    "eslint": "^10.9.1",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.5",
     "playwright-core": "^1.62.1",
-    "prettier": "^3.9.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.69.0",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
   },
   "devEngines": {
     "packageManager": {

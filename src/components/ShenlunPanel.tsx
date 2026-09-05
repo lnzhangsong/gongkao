@@ -107,10 +107,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   }, [annotations, article.id])
 
   const summaries = study?.paragraphSummaries ?? []
-  const summaryByPara = useMemo(
-    () => new Map(summaries.map((s) => [s.paraIndex, s.summary])),
-    [summaries],
-  )
+  const summaryByPara = useMemo(() => new Map(summaries.map((s) => [s.paraIndex, s.summary])), [summaries])
   const skeleton = study?.skeleton
   const patterns = materialByType.get('pattern') ?? []
 
@@ -187,13 +184,15 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
       paraTimersRef.current.clear()
     }
     // 仅卸载时 flush，不随 paraDrafts 变化重建
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   /** 由逐段大意推导骨架候选：首段=开头，中间=层次，尾段=收尾（覆盖现有骨架，可再手工调整） */
   const deriveSkeleton = () => {
     if (summaries.length === 0) return
-    const body = summaries.filter((s) => s.paraIndex !== summaries[0].paraIndex && s.paraIndex !== summaries[summaries.length - 1].paraIndex)
+    const body = summaries.filter(
+      (s) => s.paraIndex !== summaries[0].paraIndex && s.paraIndex !== summaries[summaries.length - 1].paraIndex,
+    )
     setSkeleton(article.id, {
       opening: summaryByPara.get(summaries[0].paraIndex) ?? '',
       bodyLayers: body.map((s) => s.summary),
@@ -231,7 +230,11 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
                 <button
                   className="text-btn"
                   disabled={aiBusy || !aiConfigured}
-                  title={aiConfigured ? '一键生成并填入：核心观点 / 分论点 / 骨架 / 每段大意（只填空缺，不覆盖手填）' : '先到设置页配置 AI 服务'}
+                  title={
+                    aiConfigured
+                      ? '一键生成并填入：核心观点 / 分论点 / 骨架 / 每段大意（只填空缺，不覆盖手填）'
+                      : '先到设置页配置 AI 服务'
+                  }
                   onClick={runAiPresplit}
                 >
                   {aiBusy ? '生成中…' : '一键填入 ✦'}
@@ -297,10 +300,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             <span className="shenlun-label">分论点</span>
             {(study?.subTheses ?? []).map((t, i) => (
               <div className="sub-thesis" key={i}>
-                <input
-                  value={t}
-                  onChange={(e) => updateSubThesis(article.id, i, e.target.value)}
-                />
+                <input value={t} onChange={(e) => updateSubThesis(article.id, i, e.target.value)} />
                 <button onClick={() => removeSubThesis(article.id, i)} aria-label="删除分论点">
                   <X size={12} />
                 </button>
@@ -385,7 +385,10 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
               value={skeleton?.transitions?.join('\n') ?? ''}
               onChange={(v) =>
                 setSkeleton(article.id, {
-                  transitions: v.split('\n').map((s) => s.trim()).filter(Boolean),
+                  transitions: v
+                    .split('\n')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
                 })
               }
               debounceMs={350}
@@ -408,7 +411,9 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
               if (list.length === 0) return null
               return (
                 <div className="mat-group" key={t}>
-                  <span className={`mat-group-title mat-${t}`}>{MATERIAL_TYPE_LABELS[t]} · {list.length}</span>
+                  <span className={`mat-group-title mat-${t}`}>
+                    {MATERIAL_TYPE_LABELS[t]} · {list.length}
+                  </span>
                   {list.map((m) => (
                     <div className="mat-card" key={m.id}>
                       <button
@@ -443,9 +448,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
                 </div>
               )
             })}
-            {materialByType.size === 0 && (
-              <p className="shenlun-empty">阅读时选中文字标记为素材，会出现在这里。</p>
-            )}
+            {materialByType.size === 0 && <p className="shenlun-empty">阅读时选中文字标记为素材，会出现在这里。</p>}
           </section>
 
           {/* 本文题目：以这篇文章为底本保存的申论题（AI-4 反向出题闭环） */}
@@ -453,7 +456,11 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             <div className="shenlun-sec-row">
               <span className="shenlun-label">本文题目</span>
               {relatedExams.length > 0 && (
-                <button className="text-btn" title="到 AI 辅助页查看与修改" onClick={() => navigate(`/assist?record=${relatedExams[0].id}`)}>
+                <button
+                  className="text-btn"
+                  title="到 AI 辅助页查看与修改"
+                  onClick={() => navigate(`/assist?record=${relatedExams[0].id}`)}
+                >
                   去 AI 辅助 →
                 </button>
               )}
@@ -461,16 +468,19 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
             {relatedExams.length > 0 ? (
               <div className="shenlun-exams">
                 {relatedExams.map((r) => (
-                  <button key={r.id} className="shenlun-exam" title="查看完整题目" onClick={() => navigate(`/assist?record=${r.id}`)}>
+                  <button
+                    key={r.id}
+                    className="shenlun-exam"
+                    title="查看完整题目"
+                    onClick={() => navigate(`/assist?record=${r.id}`)}
+                  >
                     <span className="shenlun-exam-type">{r.questionType}</span>
                     <span className="shenlun-exam-q">{r.question}</span>
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="shenlun-empty">
-                还没有基于本文出题。点上方「考点联想」可反向出题，存题后显示在这里。
-              </p>
+              <p className="shenlun-empty">还没有基于本文出题。点上方「考点联想」可反向出题，存题后显示在这里。</p>
             )}
           </section>
 
@@ -620,10 +630,7 @@ function SkeletonField({
         <span className="skeleton-label">{label}</span>
         {items.map((it, i) => (
           <div className="sub-thesis" key={i}>
-            <input
-              value={it}
-              onChange={(e) => onChangeList(items.map((x, j) => (j === i ? e.target.value : x)))}
-            />
+            <input value={it} onChange={(e) => onChangeList(items.map((x, j) => (j === i ? e.target.value : x)))} />
             <button onClick={() => onChangeList(items.filter((_, j) => j !== i))} aria-label="删除">
               <X size={12} />
             </button>

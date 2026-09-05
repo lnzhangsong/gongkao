@@ -44,7 +44,7 @@ export function ParaGist({
   const [draft, setDraft] = useState('')
   useEffect(() => {
     if (editing) setDraft(entry?.summary ?? '')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [editing])
   if (!editing && !entry) return null
   if (editing) {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { parseTraceResult } from './aiExamTrace'
 
 /** AI 溯源返回解析：mode 枚举容错 + sourceIdx 范围校验（越界/非数字 → null 材料外） */
@@ -47,7 +47,8 @@ describe('parseTraceResult', () => {
   })
 
   it('丢弃空要点；解析代码块包裹与夹带说明文字的返回', () => {
-    const fenced = '解析如下：\n```json\n{"points":[{"text":"x","mode":"提升","sourceIdx":3},{"text":"","mode":"摘抄","sourceIdx":1}]}\n```'
+    const fenced =
+      '解析如下：\n```json\n{"points":[{"text":"x","mode":"提升","sourceIdx":3},{"text":"","mode":"摘抄","sourceIdx":1}]}\n```'
     const out = parseTraceResult(fenced, validIdx)
     expect(out).toHaveLength(1)
     expect(out[0].text).toBe('x')

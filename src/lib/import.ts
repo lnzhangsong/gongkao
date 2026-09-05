@@ -8,6 +8,8 @@ import type {
   ThemeName,
 } from '../types'
 import type { ArticleStudy } from '../stores/shenlunStore'
+import type { LearningEvent } from '../stores/learningEventStore'
+import { EVIDENCE } from './learningEvents'
 import { THEMES } from '../stores/themeStore'
 import { TOPICS, computeReadTime } from '../data'
 
@@ -22,6 +24,8 @@ export interface ParsedImport {
   articles?: Article[]
   /** 学习结构（含范文精读字段，按 articleId 覆盖合并） */
   shenlun?: ArticleStudy[]
+  /** 学习事件流水（按 kind+objectId+at 去重合并） */
+  learningEvents?: LearningEvent[]
 }
 
 export interface ImportFailure {
@@ -182,6 +186,22 @@ export function parseImportData(raw: string): ParsedImport | ImportFailure {
     const study = obj.shenlun.filter(isStudyShape)
     if (study.length > 0) {
       result.shenlun = study
+      recognized = true
+    }
+  }
+
+  // 学习事件流水（学习者数据模型第 1 期）
+  if (Array.isArray(obj.learningEvents)) {
+    const events = obj.learningEvents.filter(
+      (e): e is LearningEvent =>
+        !!e &&
+        typeof e === 'object' &&
+        typeof (e as LearningEvent).objectId === 'string' &&
+        typeof (e as LearningEvent).kind === 'string' &&
+        (e as LearningEvent).kind in EVIDENCE,
+    )
+    if (events.length > 0) {
+      result.learningEvents = events
       recognized = true
     }
   }

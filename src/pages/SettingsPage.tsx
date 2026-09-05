@@ -7,6 +7,7 @@ import { loadFontFamily } from '../lib/fonts'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { useShenlunStore } from '../stores/shenlunStore'
+import { useLearningEventStore } from '../stores/learningEventStore'
 import { useAiStore } from '../stores/aiStore'
 import { aiChat } from '../lib/ai'
 import { Toggle } from '../components/ui/Toggle'
@@ -50,6 +51,7 @@ export function SettingsPage() {
   const clearAnnotations = useAnnotationStore((s) => s.clearAll)
   const importAnnotations = useAnnotationStore((s) => s.importAnnotations)
   const importStudy = useShenlunStore((s) => s.importStudy)
+  const importEvents = useLearningEventStore((s) => s.importEvents)
 
   const articles = useArticleStore((s) => s.articles)
   const progress = useArticleStore((s) => s.progress)
@@ -99,6 +101,7 @@ export function SettingsPage() {
         })),
         annotations: useAnnotationStore.getState().annotations,
         shenlun: Object.values(useShenlunStore.getState().study),
+        learningEvents: useLearningEventStore.getState().events,
       },
     )
   }
@@ -124,8 +127,9 @@ export function SettingsPage() {
       const nAnn = parsed.annotations.length
       const nProg = Object.keys(parsed.progress ?? {}).length
       const nStudy = parsed.shenlun?.length ?? 0
+      const nEvents = parsed.learningEvents?.length ?? 0
       void confirmDialog(
-        `将导入：${parsed.theme ? '主题 1 项，' : ''}${parsed.readerSettings ? '阅读设置 1 项，' : ''}${nProg} 篇文章进度，${nAnn} 条摘录${nStudy ? `，${nStudy} 篇学习记录` : ''}。` +
+        `将导入：${parsed.theme ? '主题 1 项，' : ''}${parsed.readerSettings ? '阅读设置 1 项，' : ''}${nProg} 篇文章进度，${nAnn} 条摘录${nStudy ? `，${nStudy} 篇学习记录` : ''}${nEvents ? `，${nEvents} 条学习事件` : ''}。` +
           '\n阅读进度按文章合并覆盖，摘录按 id 去重合并。确定导入？',
       ).then((ok) => {
         if (!ok) return
@@ -135,8 +139,9 @@ export function SettingsPage() {
         if (parsed.progress) importProgress(parsed.progress)
         if (nAnn > 0) importAnnotations(parsed.annotations)
         if (parsed.shenlun?.length) importStudy(parsed.shenlun)
+        if (nEvents > 0) importEvents(parsed.learningEvents!)
         void alertDialog(
-          `导入完成：${parsed.articles?.length ?? 0} 篇文章、${nProg} 篇进度、${nAnn} 条摘录${nStudy ? `、${nStudy} 篇学习记录` : ''}已合并到本地数据。`,
+          `导入完成：${parsed.articles?.length ?? 0} 篇文章、${nProg} 篇进度、${nAnn} 条摘录${nStudy ? `、${nStudy} 篇学习记录` : ''}${nEvents ? `、${nEvents} 条学习事件` : ''}已合并到本地数据。`,
         )
       })
     }
@@ -154,9 +159,11 @@ export function SettingsPage() {
     clearArticleData()
     clearAnnotations()
     resetSettings()
+    useLearningEventStore.getState().clearAll()
     await idbStorage.removeItem('readbook:articles')
     await idbStorage.removeItem('readbook:annotations')
     await idbStorage.removeItem('readbook:shenlun')
+    await idbStorage.removeItem('readbook:learning-events')
     localStorage.removeItem('readbook:reader')
     localStorage.removeItem('readbook:theme')
     window.location.reload()

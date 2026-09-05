@@ -77,6 +77,13 @@ a {
   background: var(--paper);
   min-height: 100vh;
   position: relative;
+  /* 纵向弹性壳：内容不足一屏时页脚仍钉在视口底部（4K 短页面） */
+  display: flex;
+  flex-direction: column;
+}
+
+.route-fade {
+  flex: 1;
 }
 
 /* ---------- 路由切换过渡 ----------

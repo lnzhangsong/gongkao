@@ -332,20 +332,22 @@ export function LibraryPage() {
           const matCount = matCounts.get(a.id) ?? 0
           return (
             <button className="article-row" key={a.id} onClick={() => open(a)} {...hoverWarm(() => warm(a))}>
-              <span className="article-no">{formatArticleNo(a.id)}</span>
+              <span className="article-no">
+                {formatArticleNo(a.id)}
+                {(study || matCount > 0) && (
+                  <em
+                    className={`study-badge${study?.status === 'mastered' ? ' mastered' : ''}`}
+                    title={matCount > 0 ? `${matCount} 条素材` : undefined}
+                  >
+                    {study ? (study.status === 'learning' ? '学习中' : study.status === 'mastered' ? '已掌握' : '已拆解') : '已标记'}
+                  </em>
+                )}
+              </span>
               <h3 className={`article-title${isRead ? ' is-read' : ''}`}>{a.title}</h3>
               <span className="article-topic">
                 {a.topic} · {a.source}
               </span>
-              <span className="article-time">
-                {(study || matCount > 0) && (
-                  <em className={`study-badge${study?.status === 'mastered' ? ' mastered' : ''}`}>
-                    {study ? (study.status === 'learning' ? '学习中' : study.status === 'mastered' ? '已掌握' : '已拆解') : '已标记'}
-                    {matCount > 0 ? ` · ${matCount} 素材` : ''}
-                  </em>
-                )}
-                {formatDate(a.date)}　↗
-              </span>
+              <span className="article-time">{formatDate(a.date)}　↗</span>
             </button>
           )
         })}

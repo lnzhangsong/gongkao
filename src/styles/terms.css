@@ -224,3 +224,21 @@
     width: 100%;
   }
 }
+
+/* —— 见过：词面出现在我的划线素材里（自己的书桌）—— */
+.term-seen {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--accent-text) 40%, transparent);
+  border-radius: 6px;
+  font: 400 10px/1.8 var(--mono);
+  color: var(--accent-text);
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+
+.terms-chip-seen {
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent-text) 35%, transparent);
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 
 const LINKS = [
@@ -19,8 +19,6 @@ function today(): string {
 }
 
 export function Nav() {
-  const { pathname } = useLocation()
-  const isReading = pathname.startsWith('/reading')
   const [menuOpen, setMenuOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -28,7 +26,7 @@ export function Nav() {
   /* 路由切换后自动收起移动端导航面板 */
   useEffect(() => {
     setMenuOpen(false)
-  }, [pathname])
+  }, [])
 
   /* 打开时：锁定背景滚动 + 点击外部/Esc 关闭 */
   useEffect(() => {
@@ -59,7 +57,7 @@ export function Nav() {
           读本<span className="brand-en">READBOOK</span>
         </NavLink>
       </span>
-      {!isReading && <div className="nav-links">
+      <div className="nav-links">
         {LINKS.map((l) => (
           <NavLink
             key={l.to}
@@ -70,22 +68,18 @@ export function Nav() {
             {l.label}
           </NavLink>
         ))}
-      </div>}
+      </div>
       <div className="nav-right">{today()}</div>
-
-      {/* 移动端：汉堡菜单入口（≤800px 显示；阅读页由阅读辅助菜单替代，隐藏此按钮） */}
-      {!isReading && (
-        <button
-          ref={toggleRef}
-          type="button"
-          className="nav-mobile-toggle"
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label={menuOpen ? '关闭导航菜单' : '打开导航菜单'}
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      )}
+      <button
+        ref={toggleRef}
+        type="button"
+        className="nav-mobile-toggle"
+        onClick={() => setMenuOpen((o) => !o)}
+        aria-label={menuOpen ? '关闭导航菜单' : '打开导航菜单'}
+        aria-expanded={menuOpen}
+      >
+        {menuOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
 
       {menuOpen && (
         <>

@@ -267,8 +267,17 @@
 }
 
 .article-no {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
   font: 12px var(--mono);
   color: var(--accent-text);
+}
+
+/* 学习徽标挂在序号下方（竖排小标签），窄列也放得下 */
+.article-no .study-badge {
+  margin-right: 0;
 }
 
 .article-title {

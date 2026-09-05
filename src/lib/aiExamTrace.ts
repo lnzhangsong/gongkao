@@ -150,7 +150,9 @@ export async function draftMaterialMarks(opts: {
       "quote": "材料原文的重要句（连续片段，10~50 字，不得改写拼接）",
       "level": "core|normal|useless：core=直接服务设问、可提炼得分点的句子；normal=背景/结构/辅助理解的句子；useless=与本题设问无关、答题时可以完全忽略的句子",
       "role": "行文作用，必须从这些值里选一个：${MARK_ROLES.join(' / ')}",
-      "use": "答题思路：每句必填——对回答这道题的用处（服务哪个设问/要点、怎么用进答案）"
+      "use": "答题思路：每句必填——对回答这道题的用处（服务哪个设问/要点、怎么用进答案）",
+      "stage": 行文阶段编号（数字，从 1 递增）,
+      "stageSummary": "该行文阶段的一句话概括（10~20 字，说清这一段在干什么，同一阶段的句子重复填同一条概括）"
     }
   ]
 }
@@ -160,6 +162,7 @@ export async function draftMaterialMarks(opts: {
 - level 三级：core 核心得分句（少量）、normal 辅助句（多数）、useless 无关句（凑字/跑题/与本题设问完全无关的，也要标出来）；
 - useless 的句子 use 必填且写明「为什么没用」：它看似相关为何不采、或它只服务于另一道题等；
 - use 必填且是重点：每句都要写清「这句怎么用进答案」，让读者明白为什么圈它。${q.answer ? '可对照参考答案反推哪些句子是要点来源。' : ''}
+- **行文阶段**：把句子按材料推进分成 4~8 个阶段（如 开篇点题→背景铺垫→案例展开→转折→核心阐释→对策做法→总结收束），每句标 stage 编号；每个阶段给一条 stageSummary 一句话概括，概括的是「这一段在写什么、起什么作用」，不是罗列句子；
 - role/use 都是一两句话，不写空话（禁止「重要」「关键」这类无信息量的词）。
 
 【题目】${q.stem}${q.requirement ? `\n要求：${q.requirement}` : ''}${q.type ? `\n题型：${q.type}` : ''}
@@ -176,7 +179,7 @@ ${buildMaterialBlock(opts.materials)}`
     maxTokens: 8000,
     signal: opts.signal,
   })
-  const out = extractJson<{ marks?: { matIdx?: unknown; quote?: unknown; role?: unknown; use?: unknown; level?: unknown }[] }>(raw)
+  const out = extractJson<{ marks?: { matIdx?: unknown; quote?: unknown; role?: unknown; use?: unknown; level?: unknown; stage?: unknown; stageSummary?: unknown }[] }>(raw)
   const marks = (Array.isArray(out.marks) ? out.marks : [])
     .map((m): MaterialMark | null => {
       const quote = typeof m?.quote === 'string' ? m.quote.trim() : ''
@@ -208,6 +211,9 @@ ${buildMaterialBlock(opts.materials)}`
         /* 每句必有解释：AI 漏填 use 时按辅助句兜底 */
         use: typeof m?.use === 'string' && m.use.trim() ? m.use.trim() : '辅助句：帮助理解材料脉络，一般不直接进答案',
         level,
+        /* 行文阶段（提纲用）：AI 未产出则缺省，展示端按连续同作用兜底分组 */
+        stage: typeof m?.stage === 'number' && Number.isFinite(m.stage) ? m.stage : parseInt(String(m?.stage ?? ''), 10) || undefined,
+        stageSummary: typeof m?.stageSummary === 'string' && m.stageSummary.trim() ? m.stageSummary.trim() : undefined,
       }
     })
     .filter((m): m is MaterialMark => m !== null)

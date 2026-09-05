@@ -1522,6 +1522,13 @@ p mark.exam-mark.lv-useless {
   flex-shrink: 0;
 }
 
+/* 阶段概括：AI 产出的一句话，卡片的信息主角 */
+.flow-outline-summary {
+  margin: 0 0 2px;
+  font: 600 13px/1.8 var(--sans);
+  color: var(--ink);
+}
+
 .flow-outline-sent {
   display: flex;
   gap: 8px;

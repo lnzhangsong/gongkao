@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { ArticleTopic } from '../types'
 import { idbStorage } from '../lib/idbStorage'
+import { useLearningEventStore } from './learningEventStore'
 
 /**
  * AI 审题立意 + 作答框架（申论写作AI辅助设计方案 §6.2，决策 D14）：
@@ -66,10 +67,15 @@ export const useAiAssistStore = create<AiAssistState>()(
   persist(
     (set) => ({
       records: {},
-      upsert: (rec) =>
-        set((s) => ({
+      upsert: (rec) => {
+        /* 证据采集（事件层，输出端回流）：存题/立意 = 能力证据；
+           以文章为底本出题时，同时给该文章记一条加工证据（双向回流） */
+        useLearningEventStore.getState().log('infer-answer', rec.id)
+        if (rec.sourceArticleId) useLearningEventStore.getState().log('deconstruct', rec.sourceArticleId)
+        return set((s) => ({
           records: { ...s.records, [rec.id]: { ...rec, updatedAt: new Date().toISOString() } },
-        })),
+        }))
+      },
       remove: (id) =>
         set((s) => {
           if (!s.records[id]) return s

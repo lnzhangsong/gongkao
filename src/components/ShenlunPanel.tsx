@@ -33,6 +33,7 @@ interface ShenlunPanelProps {
 export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotation }: ShenlunPanelProps) {
   const study = useShenlunStore((s) => s.study[article.id])
   const setStatus = useShenlunStore((s) => s.setStatus)
+  const unpin = useShenlunStore((s) => s.unpin)
   const setMastery = useShenlunStore((s) => s.setMastery)
   const setCoreThesis = useShenlunStore((s) => s.setCoreThesis)
   const addSubThesis = useShenlunStore((s) => s.addSubThesis)
@@ -248,16 +249,27 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
           <section className="shenlun-sec">
             <div className="shenlun-sec-row">
               <span className="shenlun-label">学习状态</span>
-              <div className="seg">
-                {STATUS_OPTIONS.map((o) => (
+              <div className="shenlun-sec-btns">
+                {study?.pinned && (
                   <button
-                    key={o.key}
-                    className={(study?.status ?? 'new') === o.key ? 'active' : ''}
-                    onClick={() => setStatus(article.id, o.key)}
+                    className="text-btn"
+                    title="状态为手动设置（钉住）。点此恢复自动推进：有实质加工内容时自动升级。"
+                    onClick={() => unpin(article.id)}
                   >
-                    {o.label}
+                    恢复自动
                   </button>
-                ))}
+                )}
+                <div className="seg">
+                  {STATUS_OPTIONS.map((o) => (
+                    <button
+                      key={o.key}
+                      className={(study?.status ?? 'new') === o.key ? 'active' : ''}
+                      onClick={() => setStatus(article.id, o.key)}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="shenlun-sec-row">

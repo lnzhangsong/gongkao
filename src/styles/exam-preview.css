@@ -53,7 +53,8 @@
 /* 试卷卡：与首页 .item 同语言（1px 墨框直角卡，hover 位移 + 硬阴影 + ↗） */
 .exam-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* auto-fit：卷数不足一行时空轨道塌缩、卡片均分整行（4K 版心下不留大片空白） */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 14px;
   margin-top: 28px;
 }

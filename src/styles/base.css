@@ -104,7 +104,9 @@ a {
 .toolbar,
 .library-content,
 .notes-workspace,
-.settings-header {
+.settings-header,
+/* 真题/规范词/AI 助手三页共用 .exam-page 根（页头自身另有 1920 限宽，内容区随根收敛） */
+.exam-page {
   max-width: 1920px;
   margin-left: auto;
   margin-right: auto;

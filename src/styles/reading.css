@@ -1433,17 +1433,17 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-/* 主按钮（保存）：强调底 + accent-text 配字（对比恒定，不随主题翻转） */
+/* 主按钮（保存）：强调底 + 纸色配字（--paper 随主题反转，深浅主题对比都成立） */
 .para-gist-btn.primary {
   border-color: transparent;
   background: var(--accent);
-  color: var(--accent-text);
+  color: var(--paper);
   font-weight: 600;
 }
 
 .para-gist-btn.primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 85%, var(--ink));
-  color: var(--accent-text);
+  color: var(--paper);
 }
 
 .para-gist-btn:disabled {

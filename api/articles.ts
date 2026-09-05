@@ -29,7 +29,7 @@ function openDb(): DatabaseSync {
 }
 
 /** 列表 meta 查询（不含正文，轻量）；kw 非空时全文搜索（标题/摘要/正文） */
-function queryMetaList(kw?: string) {
+function queryMetaList(kw?: string): ArticleMeta[] {
   const d = openDb()
   if (kw) {
     const like = `%${kw}%`
@@ -53,7 +53,20 @@ function queryMetaList(kw?: string) {
     .map(mapMetaRow)
 }
 
-function mapMetaRow(r: any) {
+interface ArticleMeta {
+  id: string
+  title: string
+  summary: string
+  source: string
+  topic: string
+  date: string
+  readTime: number
+  featured?: boolean
+  pullquote?: string
+  finishNote?: string
+}
+
+function mapMetaRow(r: any): ArticleMeta {
   return {
       id: r.id,
       title: r.title,

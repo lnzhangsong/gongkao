@@ -1278,6 +1278,159 @@ p mark.exam-mark.lv-useless {
   color: var(--accent-text);
 }
 
+/* 导图 / 文字 视图切换 */
+.trace-view-toggle {
+  display: inline-flex;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.trace-view-toggle button {
+  border: none;
+  background: transparent;
+  padding: 2px 10px;
+  font: 11.5px/1.7 var(--sans);
+  color: var(--muted);
+}
+
+.trace-view-toggle button.on {
+  background: color-mix(in srgb, var(--ink) 8%, var(--paper));
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* —— 思维导图视图：定位/材料/加工 各为节点卡，箭头连线指向要点句 —— */
+.trace-map {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.trace-map-node {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  border-radius: 8px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+/* 节点身份用顶部色条区分：定位=浅墨、材料=纸灰、加工=强调色 */
+.trace-map-node.n-locate {
+  border-top: 3px solid color-mix(in srgb, var(--ink) 55%, var(--paper));
+}
+
+.trace-map-node.n-mat {
+  border-top: 3px solid color-mix(in srgb, var(--ink) 25%, var(--paper));
+}
+
+.trace-map-node.n-mode {
+  border-top: 3px solid var(--accent);
+}
+
+.trace-map-cap {
+  padding: 4px 10px 3px;
+  font: 700 11px/1.5 var(--sans);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.n-mode .trace-map-cap {
+  color: var(--accent-text);
+}
+
+.trace-map-body {
+  flex: 1;
+  padding: 6px 10px 9px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font: 12.5px/1.85 var(--sans);
+  color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+}
+
+/* 节点间连线：带箭头的水平线，撑满间隙 */
+.trace-map-link {
+  flex: 0 0 22px;
+  align-self: center;
+  position: relative;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.trace-map-link::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left: 5px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+}
+
+/* 终点要点句：答案 serif + 强调边，视觉上明显重于过程节点 */
+.trace-map-point {
+  flex: 1.15 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  font: 500 13.5px/1.85 var(--serif);
+  color: var(--ink);
+}
+
+.trace-map-point p {
+  margin: 0;
+}
+
+.trace-map-point .draw-no {
+  flex-shrink: 0;
+  font: 500 12px/1.9 var(--mono);
+  color: var(--accent-text);
+}
+
+/* 窄屏放不下横排：导图转纵向，连线转竖向箭头 */
+@media (max-width: 640px) {
+  .trace-map {
+    flex-direction: column;
+  }
+
+  /* 纵向下 flex-basis:0 会把节点压成 0 高，改为按内容撑开 */
+  .trace-map-node,
+  .trace-map-point {
+    flex: 0 0 auto;
+  }
+
+  .trace-map-link {
+    flex: 0 0 16px;
+    align-self: flex-start;
+    margin-left: 22px;
+    width: 1px;
+    height: 16px;
+  }
+
+  .trace-map-link::after {
+    right: auto;
+    top: auto;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent;
+    border-top: 5px solid color-mix(in srgb, var(--ink) 45%, transparent);
+    border-bottom: none;
+  }
+}
+
 /* 加工方式速查：折叠面板，列出六类及判断口诀 */
 .trace-mode-guide {
   margin: 0 0 12px;

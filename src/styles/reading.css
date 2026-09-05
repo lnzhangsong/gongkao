@@ -1411,36 +1411,39 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   font: 400 10px/1 var(--mono);
   letter-spacing: 0.04em;
   color: var(--muted);
-  opacity: 0.7;
   white-space: nowrap;
 }
 
+/* 副按钮：文字用正文墨色（muted 在暗色主题下压深底看不清），悬停点亮强调色 */
 .para-gist-btn {
-  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
   border-radius: 999px;
   background: none;
-  padding: 4px 14px;
+  padding: 5px 16px;
   cursor: pointer;
-  font: 500 11px/1.4 var(--sans);
-  color: var(--muted);
+  font: 500 11.5px/1.4 var(--sans);
+  color: color-mix(in srgb, var(--ink) 82%, transparent);
   white-space: nowrap;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .para-gist-btn:hover:not(:disabled) {
   color: var(--accent-text);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
+/* 主按钮（保存）：强调底 + accent-text 配字（对比恒定，不随主题翻转） */
 .para-gist-btn.primary {
   border-color: transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
 .para-gist-btn.primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 85%, #000);
-  color: #fff;
+  background: color-mix(in srgb, var(--accent) 85%, var(--ink));
+  color: var(--accent-text);
 }
 
 .para-gist-btn:disabled {

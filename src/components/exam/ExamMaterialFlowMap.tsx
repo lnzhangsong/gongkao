@@ -1,4 +1,4 @@
-import { Fragment, useEffect } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { MaterialMark } from '../../stores/examStudyStore'
 
@@ -64,6 +64,15 @@ export function ExamMaterialFlowModal({
   }, [onClose])
 
   const groups = groupByStage(marks)
+  /* 提纲态：句子默认收起（有概括的自动展开第一条作为示例？不——全部收起，保持一眼读完） */
+  const [openSet, setOpenSet] = useState<Set<number>>(() => new Set())
+  const toggle = (i: number) =>
+    setOpenSet((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
 
   return createPortal(
     <div className="exam-modal-mask" onClick={onClose}>
@@ -97,16 +106,31 @@ export function ExamMaterialFlowModal({
                     {numOf(g.from)}–{numOf(g.from + g.marks.length - 1)} · {g.marks.length} 句
                   </span>
                 </header>
-                {g.summary && <p className="flow-outline-summary">{g.summary}</p>}
-                {g.marks.map((m, i) => (
-                  <div key={m.id} className="flow-outline-sent" title={m.use}>
-                    <span className="flow-outline-no">{numOf(g.from + i)}</span>
-                    <div>
-                      <p className="flow-outline-quote">「{m.quote.replace(/\s+/g, ' ').trim()}」</p>
-                      {m.use && <p className="flow-outline-use">{m.use}</p>}
-                    </div>
+                {g.summary ? (
+                  <p className="flow-outline-summary">{g.summary}</p>
+                ) : (
+                  <p className="flow-outline-summary is-fallback">{g.marks[0]?.quote.replace(/\s+/g, ' ').trim()}</p>
+                )}
+                {openSet.has(gi) && (
+                  <div className="flow-outline-detail">
+                    {g.marks.map((m, i) => (
+                      <div key={m.id} className="flow-outline-sent" title={m.use}>
+                        <span className="flow-outline-no">{numOf(g.from + i)}</span>
+                        <div>
+                          <p className="flow-outline-quote">「{m.quote.replace(/\s+/g, ' ').trim()}」</p>
+                          {m.use && <p className="flow-outline-use">{m.use}</p>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                <button
+                  type="button"
+                  className="flow-outline-toggle"
+                  onClick={() => toggle(gi)}
+                >
+                  {openSet.has(gi) ? '收起句子' : `展开 ${g.marks.length} 句`}
+                </button>
               </section>
             </Fragment>
           ))}

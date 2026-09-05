@@ -1522,10 +1522,31 @@ p mark.exam-mark.lv-useless {
   flex-shrink: 0;
 }
 
-/* 阶段概括：AI 产出的一句话，卡片的信息主角 */
+/* 阶段概括：AI 产出的一句话，卡片的信息主角；旧数据无概括时用首句引句兜底（弱化样式） */
 .flow-outline-summary {
   margin: 0 0 2px;
   font: 600 13px/1.8 var(--sans);
+  color: var(--ink);
+}
+
+.flow-outline-summary.is-fallback {
+  font-weight: 400;
+  color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+}
+
+.flow-outline-detail {
+  margin-top: 4px;
+}
+
+.flow-outline-toggle {
+  border: none;
+  background: transparent;
+  padding: 4px 0 0;
+  font: 400 11.5px/1.7 var(--sans);
+  color: var(--muted);
+}
+
+.flow-outline-toggle:hover {
   color: var(--ink);
 }
 

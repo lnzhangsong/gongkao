@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { flatText, paragraphStarts, splitParagraph } from './offsets'
 import type { Annotation } from '../types'
 
@@ -29,9 +29,7 @@ describe('splitParagraph', () => {
   const starts = paragraphStarts(content)
 
   it('无标注时整段单片段', () => {
-    expect(splitParagraph(content[0], starts[0], [])).toEqual([
-      { text: 'hello world', annotations: [] },
-    ])
+    expect(splitParagraph(content[0], starts[0], [])).toEqual([{ text: 'hello world', annotations: [] }])
   })
 
   it('按标注边界切段并标注覆盖片段', () => {
@@ -60,8 +58,6 @@ describe('splitParagraph', () => {
 
   it('与段落不相交的标注被忽略', () => {
     const a = ann({ id: '1', start: 100, end: 200 })
-    expect(splitParagraph(content[0], 0, [a])).toEqual([
-      { text: 'hello world', annotations: [] },
-    ])
+    expect(splitParagraph(content[0], 0, [a])).toEqual([{ text: 'hello world', annotations: [] }])
   })
 })

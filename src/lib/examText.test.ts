@@ -1,26 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { extractPoints, extractWordLimit, joinParagraphs, questionMaterials } from './examText'
 
 describe('joinParagraphs', () => {
   it('普通续行拼回一段，空行分段', () => {
-    expect(joinParagraphs('第一行\n接第二行\n\n新的一段')).toEqual([
-      '第一行接第二行',
-      '新的一段',
-    ])
+    expect(joinParagraphs('第一行\n接第二行\n\n新的一段')).toEqual(['第一行接第二行', '新的一段'])
   })
 
   it('段首命中标题模式时强制分段（全角空格归一为半角）', () => {
-    expect(joinParagraphs('前一句没有句号\n材料二　开始新段')).toEqual([
-      '前一句没有句号',
-      '材料二 开始新段',
-    ])
+    expect(joinParagraphs('前一句没有句号\n材料二　开始新段')).toEqual(['前一句没有句号', '材料二 开始新段'])
   })
 
   it('前句以句末标点收尾时，下一行另起一段（行内句号不切分）', () => {
-    expect(joinParagraphs('完整的一句。\n下一句另起')).toEqual([
-      '完整的一句。',
-      '下一句另起',
-    ])
+    expect(joinParagraphs('完整的一句。\n下一句另起')).toEqual(['完整的一句。', '下一句另起'])
     expect(joinParagraphs('行内的句号。不切分')).toEqual(['行内的句号。不切分'])
   })
 })
@@ -64,16 +55,12 @@ describe('questionMaterials', () => {
   })
 
   it('区间端点各自命中（「至材料N」不展开中段，两端独立提取）', () => {
-    expect(
-      questionMaterials({ stem: '材料一至材料三都提到', requirement: '' }),
-    ).toEqual([1, 3])
+    expect(questionMaterials({ stem: '材料一至材料三都提到', requirement: '' })).toEqual([1, 3])
     expect(questionMaterials({ stem: '材料1-3都提到', requirement: '' })).toEqual([1, 2, 3])
   })
 
   it('题干与要求合并去重', () => {
-    expect(
-      questionMaterials({ stem: '给定资料2', requirement: '结合资料3' }),
-    ).toEqual([2, 3])
+    expect(questionMaterials({ stem: '给定资料2', requirement: '结合资料3' })).toEqual([2, 3])
   })
 
   it('无引用返回空数组', () => {

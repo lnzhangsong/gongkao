@@ -1,12 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { Highlighter, StickyNote, Underline as UnderlineIcon, BookPlus } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
@@ -210,31 +202,28 @@ export function ReadingPage() {
   /* 全篇层面的拆解内容（观点/分论点/骨架）有任意一项非空——只有段意时全篇卡不渲染 */
   const hasOverviewData = Boolean(
     (shenlunStudy?.coreThesis ?? '').trim() ||
-      (shenlunStudy?.subTheses?.length ?? 0) > 0 ||
-      (shenlunStudy?.skeleton &&
-        ((shenlunStudy.skeleton.opening ?? '').trim() ||
-          (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
-          (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
-          (shenlunStudy.skeleton.closing ?? '').trim())),
+    (shenlunStudy?.subTheses?.length ?? 0) > 0 ||
+    (shenlunStudy?.skeleton &&
+      ((shenlunStudy.skeleton.opening ?? '').trim() ||
+        (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
+        (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
+        (shenlunStudy.skeleton.closing ?? '').trim())),
   )
   const hasStudyData = Boolean(
     shenlunStudy &&
-      ((shenlunStudy.paragraphSummaries?.length ?? 0) > 0 ||
-        (shenlunStudy.coreThesis ?? '').trim() ||
-        (shenlunStudy.subTheses?.length ?? 0) > 0 ||
-        (shenlunStudy.skeleton &&
-          ((shenlunStudy.skeleton.opening ?? '').trim() ||
-            (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
-            (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
-            (shenlunStudy.skeleton.closing ?? '').trim())) ||
-        (shenlunStudy.reviewNote ?? '').trim()),
+    ((shenlunStudy.paragraphSummaries?.length ?? 0) > 0 ||
+      (shenlunStudy.coreThesis ?? '').trim() ||
+      (shenlunStudy.subTheses?.length ?? 0) > 0 ||
+      (shenlunStudy.skeleton &&
+        ((shenlunStudy.skeleton.opening ?? '').trim() ||
+          (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
+          (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
+          (shenlunStudy.skeleton.closing ?? '').trim())) ||
+      (shenlunStudy.reviewNote ?? '').trim()),
   )
   const allAnnotations = useAnnotationStore((s) => s.annotations)
   const shenlunMaterialCount = useMemo(
-    () =>
-      allAnnotations.filter(
-        (a) => a.articleId === articleId && a.kind === 'highlight' && a.materialType,
-      ).length,
+    () => allAnnotations.filter((a) => a.articleId === articleId && a.kind === 'highlight' && a.materialType).length,
     [allAnnotations, articleId],
   )
   const scrollToPara = useCallback((paraIndex: number) => {
@@ -331,8 +320,7 @@ export function ReadingPage() {
   /* 段落切分与标注匹配只在正文/标注变化时重算一次：
      滚动、弹层、笔记编辑等高频 state 变化不再触发全正文 O(段落数×标注数) 重算 */
   const allSegments = useMemo(
-    () =>
-      (article?.content ?? []).map((text, i) => splitParagraph(text, starts[i] ?? 0, displayAnnotations)),
+    () => (article?.content ?? []).map((text, i) => splitParagraph(text, starts[i] ?? 0, displayAnnotations)),
     [article, starts, displayAnnotations],
   )
   /** 段落 index → 该段的笔记标注（渲染行内笔记用，免去每段每次渲染全量 filter） */
@@ -359,22 +347,27 @@ export function ReadingPage() {
     return () => {
       /* 卸载时取最新 store 状态恢复（避免用过期闭包里的主题覆盖用户中途的切换） */
       const st = useThemeStore.getState()
-      document.documentElement.dataset.theme = resolveTheme(st.theme, st.autoDark, window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.dataset.theme = resolveTheme(
+        st.theme,
+        st.autoDark,
+        window.matchMedia('(prefers-color-scheme: dark)').matches,
+      )
     }
   }, [activeTheme])
 
   /* ---------- 阅读器 CSS 变量 ---------- */
   const bodyStyle = useMemo<CSSProperties>(
-    () => ({
-      '--reader-font-size': `${settings.fontSize}px`,
-      '--reader-line-height': String(settings.lineHeight),
-      '--reader-font-family': fontFamilyCss(settings.fontFamily),
-      '--gist-font-size': `${settings.gistFontSize}px`,
-      '--gist-font-family':
-        settings.gistFontFamily === 'sans'
-          ? "'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif"
-          : fontFamilyCss(settings.fontFamily),
-    }) as CSSProperties,
+    () =>
+      ({
+        '--reader-font-size': `${settings.fontSize}px`,
+        '--reader-line-height': String(settings.lineHeight),
+        '--reader-font-family': fontFamilyCss(settings.fontFamily),
+        '--gist-font-size': `${settings.gistFontSize}px`,
+        '--gist-font-family':
+          settings.gistFontFamily === 'sans'
+            ? "'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif"
+            : fontFamilyCss(settings.fontFamily),
+      }) as CSSProperties,
     [settings.fontSize, settings.lineHeight, settings.fontFamily, settings.gistFontSize, settings.gistFontFamily],
   )
 
@@ -426,7 +419,7 @@ export function ReadingPage() {
       window.clearTimeout(saveTimerRef.current)
       flush()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId, computePercent])
 
   /* 待执行的阅读位置恢复（等正文 + 字体就绪后执行，见下方 effect） */
@@ -448,7 +441,7 @@ export function ReadingPage() {
     }
     percentRef.current = p?.percent ?? 0
     if (progressBarRef.current) progressBarRef.current.style.width = `${percentRef.current}%`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId, article, storeHydrated, annAnchorId])
 
   /* 正文 + 字体就绪后执行位置恢复 / 摘录定位。
@@ -484,7 +477,7 @@ export function ReadingPage() {
       }
       if (pr.y > 0) window.scrollTo({ top: pr.y, behavior: 'instant' })
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [contentReady, fontReady, annAnchorId])
 
   const percentRef = useRef(0)
@@ -576,12 +569,16 @@ export function ReadingPage() {
             {(prevArticle || nextArticle) && (
               <nav className="article-pager-top" aria-label="相邻文章">
                 {prevArticle ? (
-                  <Link to={`/reading/${prevArticle.id}`} {...hoverWarm(() => void ensureContent(prevArticle.id))}>←　上一篇</Link>
+                  <Link to={`/reading/${prevArticle.id}`} {...hoverWarm(() => void ensureContent(prevArticle.id))}>
+                    ←　上一篇
+                  </Link>
                 ) : (
                   <span aria-hidden="true" />
                 )}
                 {nextArticle ? (
-                  <Link to={`/reading/${nextArticle.id}`} {...hoverWarm(() => void ensureContent(nextArticle.id))}>下一篇　→</Link>
+                  <Link to={`/reading/${nextArticle.id}`} {...hoverWarm(() => void ensureContent(nextArticle.id))}>
+                    下一篇　→
+                  </Link>
                 ) : (
                   <span aria-hidden="true" />
                 )}
@@ -597,15 +594,21 @@ export function ReadingPage() {
             <aside className="study-overview" aria-label="全篇拆解">
               <div className="study-overview-head">
                 <span className="study-overview-title">拆解 · 全篇</span>
-                <button className="study-collapse" onClick={() => {
-                  writeStudyInline(articleId, false)
-                  setStudyInline(false)
-                }} aria-label="收起拆解上屏">
+                <button
+                  className="study-collapse"
+                  onClick={() => {
+                    writeStudyInline(articleId, false)
+                    setStudyInline(false)
+                  }}
+                  aria-label="收起拆解上屏"
+                >
                   收起
                 </button>
               </div>
               {(shenlunStudy?.coreThesis ?? '').trim() && (
-                <p className="study-thesis" style={{ marginTop: 8 }}>{shenlunStudy!.coreThesis}</p>
+                <p className="study-thesis" style={{ marginTop: 8 }}>
+                  {shenlunStudy!.coreThesis}
+                </p>
               )}
               {(shenlunStudy?.subTheses?.length ?? 0) > 0 && (
                 <ol className="study-subs">
@@ -614,26 +617,43 @@ export function ReadingPage() {
                   ))}
                 </ol>
               )}
-              {(shenlunStudy?.skeleton && (
+              {shenlunStudy?.skeleton &&
                 ((shenlunStudy.skeleton.opening ?? '').trim() ||
                   (shenlunStudy.skeleton.bodyLayers ?? []).some((s) => s.trim()) ||
                   (shenlunStudy.skeleton.transitions ?? []).some((s) => s.trim()) ||
-                  (shenlunStudy.skeleton.closing ?? '').trim())
-              )) && (
-                <details className="study-skeleton-details">
-                  <summary>结构骨架</summary>
-                  <div className="study-skeleton">
-                    {(shenlunStudy!.skeleton!.opening ?? '').trim() && <p><b>开头</b>{shenlunStudy!.skeleton!.opening}</p>}
-                    {(shenlunStudy!.skeleton!.bodyLayers ?? []).filter((s) => s.trim()).map((l, i) => (
-                      <p key={i}><b>层次{i + 1}</b>{l}</p>
-                    ))}
-                    {(shenlunStudy!.skeleton!.transitions ?? []).filter((s) => s.trim()).length > 0 && (
-                      <p><b>过渡</b>{shenlunStudy!.skeleton!.transitions!.filter((s) => s.trim()).join(' / ')}</p>
-                    )}
-                    {(shenlunStudy!.skeleton!.closing ?? '').trim() && <p><b>收尾</b>{shenlunStudy!.skeleton!.closing}</p>}
-                  </div>
-                </details>
-              )}
+                  (shenlunStudy.skeleton.closing ?? '').trim()) && (
+                  <details className="study-skeleton-details">
+                    <summary>结构骨架</summary>
+                    <div className="study-skeleton">
+                      {(shenlunStudy!.skeleton!.opening ?? '').trim() && (
+                        <p>
+                          <b>开头</b>
+                          {shenlunStudy!.skeleton!.opening}
+                        </p>
+                      )}
+                      {(shenlunStudy!.skeleton!.bodyLayers ?? [])
+                        .filter((s) => s.trim())
+                        .map((l, i) => (
+                          <p key={i}>
+                            <b>层次{i + 1}</b>
+                            {l}
+                          </p>
+                        ))}
+                      {(shenlunStudy!.skeleton!.transitions ?? []).filter((s) => s.trim()).length > 0 && (
+                        <p>
+                          <b>过渡</b>
+                          {shenlunStudy!.skeleton!.transitions!.filter((s) => s.trim()).join(' / ')}
+                        </p>
+                      )}
+                      {(shenlunStudy!.skeleton!.closing ?? '').trim() && (
+                        <p>
+                          <b>收尾</b>
+                          {shenlunStudy!.skeleton!.closing}
+                        </p>
+                      )}
+                    </div>
+                  </details>
+                )}
             </aside>
           )}
 
@@ -647,7 +667,8 @@ export function ReadingPage() {
             {article.content.map((text, i) => {
               const paraStart = starts[i]
               const segments = allSegments[i] ?? splitParagraph(text, paraStart, displayAnnotations)
-              const hasPending = pendingNote && paraStart <= pendingNote.start && pendingNote.start < paraStart + text.length
+              const hasPending =
+                pendingNote && paraStart <= pendingNote.start && pendingNote.start < paraStart + text.length
               const openNotes = notesByPara.get(i) ?? []
               return (
                 <Fragment key={i}>
@@ -783,9 +804,7 @@ export function ReadingPage() {
               )
             })}
 
-            {article.pullquote && (
-              <blockquote className="pullquote">“{article.pullquote}”</blockquote>
-            )}
+            {article.pullquote && <blockquote className="pullquote">“{article.pullquote}”</blockquote>}
 
             {/* 选择弹出工具栏（位于 article-body 内，坐标相对正文）— 分两行：标注行 + 素材/动作行，避免 17 个按钮挤一行 */}
             <div
@@ -830,7 +849,12 @@ export function ReadingPage() {
                 <span className="popover-row-label">素材</span>
                 <div className="mat-row">
                   {MATERIAL_TYPES.map((t) => (
-                    <button key={t} className={`mat-btn mat-btn-${t}`} onClick={() => applyMaterial(t)} title={MATERIAL_TYPE_HINTS[t]}>
+                    <button
+                      key={t}
+                      className={`mat-btn mat-btn-${t}`}
+                      onClick={() => applyMaterial(t)}
+                      title={MATERIAL_TYPE_HINTS[t]}
+                    >
                       {MATERIAL_TYPE_LABELS[t]}
                     </button>
                   ))}
@@ -843,7 +867,13 @@ export function ReadingPage() {
                 title="把选中词存入规范词库"
               >
                 <BookPlus size={12} />
-                {termSaved === 'ok' ? '已入词库' : termSaved === 'dup' ? '已在词库' : termSaved === 'busy' ? '存入中…' : '存规范词'}
+                {termSaved === 'ok'
+                  ? '已入词库'
+                  : termSaved === 'dup'
+                    ? '已在词库'
+                    : termSaved === 'busy'
+                      ? '存入中…'
+                      : '存规范词'}
               </button>
             </div>
 
@@ -868,9 +898,7 @@ export function ReadingPage() {
                       <button
                         key={c}
                         className={`hl-dot ${c}${has && cur === c ? ' active' : ''}`}
-                        onClick={() =>
-                          has ? switchAnnColor(c) : addKindToAnn('highlight', { color: c })
-                        }
+                        onClick={() => (has ? switchAnnColor(c) : addKindToAnn('highlight', { color: c }))}
                         title={has ? `切换高亮颜色 · ${HL_COLOR_LABELS[c]}` : `添加高亮 · ${HL_COLOR_LABELS[c]}`}
                         aria-label={has ? `切换高亮颜色 · ${HL_COLOR_LABELS[c]}` : `添加高亮 · ${HL_COLOR_LABELS[c]}`}
                       />
@@ -905,7 +933,11 @@ export function ReadingPage() {
                         key={t}
                         className={`mat-btn mat-btn-${t}${cur === t ? ' active' : ''}`}
                         onClick={() => (cur === t ? removeMaterialFromAnn() : addMaterialToAnn(t))}
-                        title={cur === t ? `取消「${MATERIAL_TYPE_LABELS[t]}」标记` : `标记为${MATERIAL_TYPE_LABELS[t]} · ${MATERIAL_TYPE_HINTS[t]}`}
+                        title={
+                          cur === t
+                            ? `取消「${MATERIAL_TYPE_LABELS[t]}」标记`
+                            : `标记为${MATERIAL_TYPE_LABELS[t]} · ${MATERIAL_TYPE_HINTS[t]}`
+                        }
                       >
                         {MATERIAL_TYPE_LABELS[t]}
                       </button>
@@ -922,21 +954,15 @@ export function ReadingPage() {
                   }}
                 />
               )}
-              {annPopover && (
-                <button onClick={() => addKindToAnn('note')}>加笔记</button>
-              )}
-              {annPopover && annPopoverHas('note') && (
-                <button onClick={viewAnnNote}>查看/编辑笔记</button>
-              )}
+              {annPopover && <button onClick={() => addKindToAnn('note')}>加笔记</button>}
+              {annPopover && annPopoverHas('note') && <button onClick={viewAnnNote}>查看/编辑笔记</button>}
               {annPopover && annPopoverHas('highlight') && (
                 <button onClick={() => deleteAnnKind('highlight')}>删除高亮</button>
               )}
               {annPopover && annPopoverHas('underline') && (
                 <button onClick={() => deleteAnnKind('underline')}>删除下划线</button>
               )}
-              {annPopover && annPopoverHas('note') && (
-                <button onClick={() => deleteAnnKind('note')}>删除笔记</button>
-              )}
+              {annPopover && annPopoverHas('note') && <button onClick={() => deleteAnnKind('note')}>删除笔记</button>}
             </div>
           </div>
 
@@ -952,7 +978,11 @@ export function ReadingPage() {
           {(prevArticle || nextArticle) && (
             <nav className="article-pager" aria-label="相邻文章">
               {prevArticle ? (
-                <Link className="pager-item prev" to={`/reading/${prevArticle.id}`} {...hoverWarm(() => void ensureContent(prevArticle.id))}>
+                <Link
+                  className="pager-item prev"
+                  to={`/reading/${prevArticle.id}`}
+                  {...hoverWarm(() => void ensureContent(prevArticle.id))}
+                >
                   <small>←　上一篇</small>
                   <span>{prevArticle.title}</span>
                 </Link>
@@ -960,7 +990,11 @@ export function ReadingPage() {
                 <span />
               )}
               {nextArticle ? (
-                <Link className="pager-item next" to={`/reading/${nextArticle.id}`} {...hoverWarm(() => void ensureContent(nextArticle.id))}>
+                <Link
+                  className="pager-item next"
+                  to={`/reading/${nextArticle.id}`}
+                  {...hoverWarm(() => void ensureContent(nextArticle.id))}
+                >
                   <small>下一篇　↗</small>
                   <span>{nextArticle.title}</span>
                 </Link>

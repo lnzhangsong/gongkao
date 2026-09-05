@@ -5,6 +5,7 @@ import { computeReadTime } from '../data'
 import { fetchMetaList, fetchArticle } from '../lib/api'
 import { idbStorage } from '../lib/idbStorage'
 import { useAnnotationStore } from './annotationStore'
+import { useLearningEventStore } from './learningEventStore'
 
 interface ArticleState {
   /**
@@ -227,6 +228,8 @@ export const useArticleStore = create<ArticleState>()(
           const prev = s.progress[id] ?? empty(id)
           const clamped = Math.max(0, Math.min(100, Math.round(percent)))
           const completed = prev.completed || clamped >= 95
+          /* 证据采集（事件层）：首次读完记一条弱证据，同日自动去重 */
+          if (completed && !prev.completed) useLearningEventStore.getState().log('read-finish', id)
           return {
             progress: {
               ...s.progress,

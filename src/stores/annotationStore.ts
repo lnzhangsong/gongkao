@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Annotation } from '../types'
 import { idbStorage } from '../lib/idbStorage'
+import { useLearningEventStore } from './learningEventStore'
 
 interface AnnotationState {
   annotations: Annotation[]
@@ -41,9 +42,19 @@ export const useAnnotationStore = create<AnnotationState>()(
       },
 
       update: (id, patch) =>
-        set((s) => ({
-          annotations: s.annotations.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-        })),
+        set((s) => {
+          const target = s.annotations.find((a) => a.id === id)
+          /* 证据采集（事件层）：素材标注/背记/掌握度自评，对象为该条标注，同日自动去重 */
+          if (target) {
+            const ev = useLearningEventStore.getState().log
+            if (patch.materialType && !target.materialType) ev('tag-material', target.id)
+            if (patch.memorized === true && !target.memorized) ev('memorize', target.id)
+            if (patch.mastery != null) ev('mastery-self', target.id)
+          }
+          return {
+            annotations: s.annotations.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+          }
+        }),
 
       remove: (id) =>
         set((s) => ({ annotations: s.annotations.filter((a) => a.id !== id) })),

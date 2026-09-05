@@ -1485,6 +1485,7 @@ p mark.exam-mark.lv-useless {
   flex-shrink: 0;
   margin-top: auto;
   margin-bottom: auto;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1494,6 +1495,17 @@ p mark.exam-mark.lv-useless {
   border-radius: 10px;
   background: color-mix(in srgb, var(--ink) 4%, var(--paper));
   box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
+/* 根节点 → 主干的水平引线 */
+.flow-root::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  width: 26px;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
 }
 
 .flow-root-label {
@@ -1507,39 +1519,16 @@ p mark.exam-mark.lv-useless {
   color: var(--muted);
 }
 
-/* 分支列：左侧主干竖线 + 每支进线 */
+/* 分支列：分支间不留缝（gap:0，靠分支自身 padding 撑开），
+   让每支的垂直线段首尾相接拼成主干 */
 .flow-branches {
   flex: 1;
   min-width: 0;
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
   margin-left: 26px;
-  padding: 4px 0;
-}
-
-/* 主干：从根节点引出的竖线，贯穿首末分支 */
-.flow-branches::before {
-  content: '';
-  position: absolute;
-  left: -26px;
-  top: 50%;
-  height: calc(100% - 72px);
-  transform: translateY(-50%);
-  width: 1px;
-  background: color-mix(in srgb, var(--ink) 30%, transparent);
-}
-
-/* 根节点 → 主干的横线 */
-.flow-branches::after {
-  content: '';
-  position: absolute;
-  left: -26px;
-  top: 50%;
-  width: 26px;
-  height: 1px;
-  background: color-mix(in srgb, var(--ink) 30%, transparent);
 }
 
 .flow-branch {
@@ -1547,7 +1536,31 @@ p mark.exam-mark.lv-useless {
   display: flex;
   align-items: center;
   gap: 0;
-  padding-left: 26px;
+  padding: 8px 0;
+}
+
+/* 主干竖线段：贯穿本支全高，首支裁上半、末支裁下半，相邻支自然衔接 */
+.flow-branch::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.flow-branch:first-child::after {
+  top: 50%;
+}
+
+.flow-branch:last-child::after {
+  bottom: 50%;
+}
+
+/* 单支分支（树只有一段）时不出竖线 */
+.flow-branch:only-child::after {
+  display: none;
 }
 
 /* 主干 → 阶段的进线 */

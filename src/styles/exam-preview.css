@@ -1431,50 +1431,13 @@ p mark.exam-mark.lv-useless {
   }
 }
 
-/* —— 材料行文思路导图（弹窗）：标注按原文顺序串成节点链，横向可滚 —— */
-.exam-flow-modal {
-  width: min(920px, calc(100vw - 48px));
-  padding: 20px 22px 18px;
-}
-
-.exam-flow-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.exam-flow-head h3 {
-  margin: 0;
-  font: 600 15px/1.6 var(--sans);
-  color: var(--ink);
-}
-
-.exam-flow-head small {
-  margin-left: 8px;
-  font: 400 12px/1.6 var(--sans);
-  color: var(--muted);
-}
-
-.exam-flow-close {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  font: 400 20px/1 var(--sans);
-  color: var(--muted);
-  padding: 2px 6px;
-}
-
-.exam-flow-close:hover {
-  color: var(--ink);
-}
-
 /* —— 行文思路提纲（弹窗）：阶段卡自上而下箭头推进，文字为主 —— */
 .exam-flow-modal {
   width: min(680px, calc(100vw - 48px));
   max-height: 88vh;
   overflow-y: auto;
+  /* 滚到头不把滚动传给底下页面（滚动链） */
+  overscroll-behavior: contain;
   padding: 20px 22px 18px;
 }
 

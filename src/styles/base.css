@@ -77,13 +77,8 @@ a {
   background: var(--paper);
   min-height: 100vh;
   position: relative;
-  /* 纵向弹性壳：内容不足一屏时页脚仍钉在视口底部（4K 短页面） */
-  display: flex;
-  flex-direction: column;
-}
-
-.route-fade {
-  flex: 1;
+  /* 给常驻底部页脚让位 */
+  padding-bottom: 52px;
 }
 
 /* ---------- 路由切换过渡 ----------
@@ -266,7 +261,14 @@ a {
 
 /* ---------- 页脚 ---------- */
 .footer {
+  /* 常驻视口底部（与顶栏对称）；内容区由 .page 的 padding-bottom 让位 */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-nav, 40);
   border-top: 1px solid var(--ink);
+  background: var(--paper);
   padding: 14px 38px;
   display: flex;
   justify-content: space-between;

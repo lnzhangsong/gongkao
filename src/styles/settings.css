@@ -55,6 +55,10 @@
 .settings-nav {
   font: 12px var(--sans);
   color: var(--muted);
+  /* 粘性侧栏：长设置页滚动时导航留在视口内（顶栏 76 + 间距） */
+  position: sticky;
+  top: 100px;
+  align-self: start;
 }
 
 .settings-nav button {

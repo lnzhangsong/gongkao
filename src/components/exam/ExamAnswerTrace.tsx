@@ -79,14 +79,14 @@ export function ExamAnswerTrace({
   useEffect(() => {
     if (autoToken > 0) void runAi()
     // 仅响应一键解析令牌
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [autoToken])
 
   /* AI 草稿生成后自动进入编辑态（顶部按钮变「完成编辑」），由顶部操作保存 */
   useEffect(() => {
     if (draft && !editingProp) onToggleEditing?.()
     // 仅响应草稿生成
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [draft])
 
   /* 顶部「完成编辑」= 保存入库：把草稿写入 store */
@@ -95,7 +95,7 @@ export function ExamAnswerTrace({
       setPoints(paperId, q.idx, draft, 'ai')
       setDraft(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [editingProp])
 
   const runAi = async () => {

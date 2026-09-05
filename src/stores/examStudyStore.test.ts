@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vite-plus/test'
 import { useExamStudyStore, type AnswerPointTrace, type MaterialMark } from './examStudyStore'
 
 /** 答案溯源/原文标注 store：删卷清理、行级增删改 */

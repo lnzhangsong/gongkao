@@ -45,7 +45,7 @@ export function useReadingTimer(articleId: string) {
       document.removeEventListener('visibilitychange', onVis)
       flushTime()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId])
 
   return { sessionSec }

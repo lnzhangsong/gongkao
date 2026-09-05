@@ -32,7 +32,7 @@ export function RichNoteEditor({ initialHtml, onChange, placeholder, autoFocus }
       sel?.removeAllRanges()
       sel?.addRange(range)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const emit = () => {
@@ -58,13 +58,34 @@ export function RichNoteEditor({ initialHtml, onChange, placeholder, autoFocus }
   return (
     <div className="rich-note">
       <div className="rich-note-toolbar">
-        <button type="button" title="加粗" onMouseDown={(e) => { e.preventDefault(); exec('bold') }}>
+        <button
+          type="button"
+          title="加粗"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            exec('bold')
+          }}
+        >
           <Bold size={13} />
         </button>
-        <button type="button" title="斜体" onMouseDown={(e) => { e.preventDefault(); exec('italic') }}>
+        <button
+          type="button"
+          title="斜体"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            exec('italic')
+          }}
+        >
           <Italic size={13} />
         </button>
-        <button type="button" title="下划线" onMouseDown={(e) => { e.preventDefault(); exec('underline') }}>
+        <button
+          type="button"
+          title="下划线"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            exec('underline')
+          }}
+        >
           <UnderlineIcon size={13} />
         </button>
         <button
@@ -77,13 +98,34 @@ export function RichNoteEditor({ initialHtml, onChange, placeholder, autoFocus }
         >
           <Highlighter size={13} />
         </button>
-        <button type="button" title="无序列表" onMouseDown={(e) => { e.preventDefault(); exec('insertUnorderedList') }}>
+        <button
+          type="button"
+          title="无序列表"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            exec('insertUnorderedList')
+          }}
+        >
           <List size={13} />
         </button>
-        <button type="button" title="有序列表" onMouseDown={(e) => { e.preventDefault(); exec('insertOrderedList') }}>
+        <button
+          type="button"
+          title="有序列表"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            exec('insertOrderedList')
+          }}
+        >
           <ListOrdered size={13} />
         </button>
-        <button type="button" title="插入图片（也可直接粘贴）" onMouseDown={(e) => { e.preventDefault(); imgInputRef.current?.click() }}>
+        <button
+          type="button"
+          title="插入图片（也可直接粘贴）"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            imgInputRef.current?.click()
+          }}
+        >
           <ImagePlus size={13} />
         </button>
         <input

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { findQuoteInMaterial, splitParagraphByMarks } from './examMarks'
 import type { MaterialMark } from '../stores/examStudyStore'
 
@@ -32,11 +32,7 @@ describe('splitParagraphByMarks', () => {
 
   it('按区间切段，区间外为普通片段', () => {
     const segs = splitParagraphByMarks(para, [{ mark: mark('a'), paraIndex: 0, start: 1, end: 6 }])
-    expect(segs).toEqual([
-      { text: ' ' },
-      { text: 'Alpha', mark: segs[1].mark },
-      { text: ' Beta Gamma ' },
-    ])
+    expect(segs).toEqual([{ text: ' ' }, { text: 'Alpha', mark: segs[1].mark }, { text: ' Beta Gamma ' }])
   })
 
   it('无区间时原样返回', () => {

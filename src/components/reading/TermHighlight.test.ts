@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { splitTermSegments } from './TermHighlight'
 import type { GuiFanTerm } from '../../lib/api'
 import { formatArticleNo, formatLocalDate } from '../../data'
@@ -14,10 +14,7 @@ describe('splitTermSegments', () => {
 
   it('命中词切分并附带词条', () => {
     const segs = splitTermSegments('打通服务群众的最后一公里', terms)
-    expect(segs).toEqual([
-      { text: '打通服务群众的' },
-      { text: '最后一公里', hit: terms[0] },
-    ])
+    expect(segs).toEqual([{ text: '打通服务群众的' }, { text: '最后一公里', hit: terms[0] }])
   })
 
   it('同起点最长匹配优先', () => {
@@ -30,9 +27,7 @@ describe('splitTermSegments', () => {
   })
 
   it('少于一字的泛词被忽略（MIN_TERM_LEN=3）', () => {
-    expect(splitTermSegments('企业发展', [term(9, 'x', '企业')])).toEqual([
-      { text: '企业发展' },
-    ])
+    expect(splitTermSegments('企业发展', [term(9, 'x', '企业')])).toEqual([{ text: '企业发展' }])
   })
 })
 

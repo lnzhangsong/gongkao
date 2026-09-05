@@ -12,3 +12,4 @@ data/*.db-wal
 
 # Command Code 工具自身配置（taste / settings / plans 等，不随项目提交）
 .commandcode/
+.zcode/

@@ -15,9 +15,10 @@ import { draftMaterialMarks } from '../lib/aiExamTrace'
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { ExamQuestionsDrawer } from '../components/exam/ExamQuestionsDrawer'
 import { MarkedParagraph } from '../components/exam/ExamMarkedParagraph'
+import { ExamMaterialFlowMap } from '../components/exam/ExamMaterialFlowMap'
 import { YearInput } from '../components/exam/YearInput'
 import { findQuoteInMaterial, type MarkRange } from '../lib/examMarks'
-import { useExamStudyStore } from '../stores/examStudyStore'
+import { useExamStudyStore, type MaterialMark } from '../stores/examStudyStore'
 import {
   joinParagraphs,
   reflowParagraphs,
@@ -285,6 +286,34 @@ export default function ExamPreviewPage() {
   const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
   const [genError, setGenError] = useState('')
   const [matGenIdx, setMatGenIdx] = useState<number | null>(null)
+  /* 材料行文思路导图：按材料开关，展示该材料标注串成的脉络链 */
+  const [flowOpenFor, setFlowOpenFor] = useState<Set<number>>(() => new Set())
+  const toggleFlow = (idx: number) =>
+    setFlowOpenFor((prev) => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  /* 各材料的标注按原文出现顺序排好（导图节点顺序 = 材料推进顺序） */
+  const flowByMat = useMemo(() => {
+    const tmp = new Map<number, { mark: MaterialMark; order: number }[]>()
+    const map = new Map<number, MaterialMark[]>()
+    if (!draft) return map
+    for (const record of Object.values(allMarks)) {
+      if (record.paperId !== draft.id) continue
+      for (const mark of record.marks) {
+        const mat = draft.materials.find((x) => x.idx === mark.matIdx)
+        if (!mat) continue
+        const hit = findQuoteInMaterial(joinParagraphs(mat.content), mark.quote)
+        const list = tmp.get(mark.matIdx) ?? []
+        list.push({ mark, order: hit ? hit.paraIndex * 1e6 + hit.start : Number.MAX_SAFE_INTEGER })
+        tmp.set(mark.matIdx, list)
+      }
+    }
+    for (const [k, list] of tmp) map.set(k, list.sort((a, b) => a.order - b.order).map((x) => x.mark))
+    return map
+  }, [draft, allMarks])
   /** 单则材料生成：忽略具体题目，逐句梳理本则行文脉络；存 qIdx = -材料idx（材料级，不入任何题的解析） */
   const generateMaterialMarks = async (m: { idx: number; label: string; content: string }) => {
     if (!draft || matGenIdx != null) return
@@ -610,24 +639,42 @@ export default function ExamPreviewPage() {
                           {m.content.length} 字　{collapsed.has(m.idx) ? '▸' : '▾'}
                         </span>
                         {!editing && (
-                          <button
-                            type="button"
-                            className="text-btn exam-mat-gen"
-                            disabled={matGenIdx != null}
-                            title="AI 逐句梳理本则材料的行文脉络（标注显示在正文中）"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void generateMaterialMarks(m)
-                            }}
-                          >
-                            {matGenIdx === m.idx
-                              ? '生成中…'
-                              : matHasMarks.has(m.idx)
-                                ? '重新生成思路 ✦'
-                                : '生成思路 ✦'}
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="text-btn exam-mat-gen"
+                              disabled={matGenIdx != null}
+                              title="AI 逐句梳理本则材料的行文脉络（标注显示在正文中）"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void generateMaterialMarks(m)
+                              }}
+                            >
+                              {matGenIdx === m.idx
+                                ? '生成中…'
+                                : matHasMarks.has(m.idx)
+                                  ? '重新生成思路 ✦'
+                                  : '生成思路 ✦'}
+                            </button>
+                            {matHasMarks.has(m.idx) && (
+                              <button
+                                type="button"
+                                className={`text-btn exam-mat-gen${flowOpenFor.has(m.idx) ? ' exam-mat-gen-on' : ''}`}
+                                title="本则材料行文脉络导图：标注按原文顺序串成节点链"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleFlow(m.idx)
+                                }}
+                              >
+                                导图
+                              </button>
+                            )}
+                          </>
                         )}
                       </h3>
+                      {flowOpenFor.has(m.idx) && (flowByMat.get(m.idx)?.length ?? 0) > 0 && (
+                        <ExamMaterialFlowMap marks={flowByMat.get(m.idx)!} />
+                      )}
                       {!collapsed.has(m.idx) &&
                         joinParagraphs(m.content).map((p, i) => (
                           <MarkedParagraph

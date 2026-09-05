@@ -1431,6 +1431,81 @@ p mark.exam-mark.lv-useless {
   }
 }
 
+/* —— 材料行文思路导图：标注按原文顺序串成节点链，横向可滚 —— */
+.exam-mat-gen-on {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.mat-flow {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  padding: 10px 2px 12px;
+}
+
+.mat-flow-node {
+  flex: 0 0 auto;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 9px;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.mat-flow-node.core {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--paper));
+}
+
+.mat-flow-role {
+  align-self: flex-start;
+  font: 600 11px/1.6 var(--sans);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  padding: 0 6px;
+  border-radius: 999px;
+}
+
+.mat-flow-quote {
+  margin: 0;
+  font: 12px/1.8 var(--serif);
+  color: var(--ink);
+}
+
+.mat-flow-use {
+  margin: 0;
+  font: 11.5px/1.7 var(--sans);
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 节点间箭头连线，与题目推导导图同语言 */
+.mat-flow-link {
+  flex: 0 0 20px;
+  align-self: center;
+  position: relative;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.mat-flow-link::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left: 5px solid color-mix(in srgb, var(--ink) 45%, transparent);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+}
+
 /* 加工方式速查：折叠面板，列出六类及判断口诀 */
 .trace-mode-guide {
   margin: 0 0 12px;

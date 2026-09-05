@@ -78,6 +78,13 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle) {
   box-shadow: none !important;
 }
 
+/* 方框语言下不再位移（原硬阴影配的 hover 平移已无意义） */
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):hover,
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):focus-visible,
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
+  transform: none !important;
+}
+
 /* ---------- 页面外壳 ---------- */
 /* 通栏铺满（纸色覆盖全屏，宽屏/4K 无深色留白条）；内容分区各自限宽居中 */
 .page {

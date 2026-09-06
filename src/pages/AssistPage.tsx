@@ -19,6 +19,7 @@ import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { useLearningEventStore } from '../stores/learningEventStore'
 import { echoCompare } from '../lib/mastery'
 import { draftFramework, type MaterialCandidate } from '../lib/aiAssist'
+import { track } from '../lib/analytics'
 import { inferExamCandidates, draftFullExam, type InferExamResult } from '../lib/aiExamGen'
 import type { ArticleTopic } from '../types'
 import { alertDialog } from '../components/ui/ConfirmDialog'
@@ -103,6 +104,7 @@ export function AssistPage() {
     if (!inferArticle || l2Busy) return
     setL2Busy(c.question)
     try {
+      track('assist_full_exam')
       const d = await draftFullExam({
         article: inferArticle,
         question: c.question,
@@ -155,6 +157,7 @@ export function AssistPage() {
     }
     setBusy(true)
     try {
+      track('assist_framework')
       const d = await draftFramework({
         question: question.trim(),
         questionType: qType,

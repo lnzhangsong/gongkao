@@ -80,3 +80,49 @@ begin
     );
   end loop;
 end $$;
+
+-- ---------- v2 补充：全量数据同步 ----------
+
+-- 7) AI 审题/作答框架：每条记录一行（AssistRecord 原样，含 updatedAt）
+create table if not exists public.ai_assists (
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  assist_id  text not null,
+  data       jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, assist_id)
+);
+
+-- 8) 文章本地编辑（管理端改写/新增的文章全文）
+create table if not exists public.article_edits (
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  article_id text not null,
+  data       jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, article_id)
+);
+
+-- 9) AI 服务配置（BYOK：baseUrl / apiKey / model 整包）
+--    ⚠️ apiKey 明文存于本表，受 RLS 保护仅本人可读；不需要同步 key 时删掉本表并在
+--    src/lib/cloudSync.ts 里移除 user_ai_config 的 push/pull 即可
+create table if not exists public.user_ai_config (
+  user_id    uuid primary key references auth.users (id) on delete cascade,
+  data       jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.ai_assists     enable row level security;
+alter table public.article_edits  enable row level security;
+alter table public.user_ai_config enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['ai_assists', 'article_edits', 'user_ai_config']
+  loop
+    execute format('drop policy if exists %I on public.%I', t || '_own', t);
+    execute format(
+      'create policy %I on public.%I for all using (auth.uid() = user_id) with check (auth.uid() = user_id)',
+      t || '_own', t
+    );
+  end loop;
+end $$;

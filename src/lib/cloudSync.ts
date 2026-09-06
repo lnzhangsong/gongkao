@@ -2,11 +2,13 @@ import { create } from 'zustand'
 import { supabase } from './supabase'
 import { diffRows, shouldApply, sameJSON, mergePages, type CloudRow } from './cloudSyncCore'
 import { useArticleStore } from '../stores/articleStore'
-import type { ReadingProgress } from '../types'
+import type { Article, ReadingProgress } from '../types'
 import { useAnnotationStore } from '../stores/annotationStore'
 import type { Annotation } from '../types'
 import { useShenlunStore, type ArticleStudy } from '../stores/shenlunStore'
 import { useExamStudyStore, type QuestionTrace, type QuestionMarks } from '../stores/examStudyStore'
+import { useAiAssistStore, type AssistRecord } from '../stores/aiAssistStore'
+import { useAiStore } from '../stores/aiStore'
 import { useLearningEventStore, type LearningEvent } from '../stores/learningEventStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useThemeStore } from '../stores/themeStore'
@@ -116,6 +118,34 @@ const examStudyAdapter: TableAdapter<QuestionTrace | QuestionMarks> = {
   },
 }
 
+const assistsAdapter: TableAdapter<AssistRecord> = {
+  allowTombstone: true,
+  getRows: () => useAiAssistStore.getState().records,
+  apply: (_k, rec) => {
+    useAiAssistStore.setState((s) => (s.records[rec.id] ? {} : { records: { ...s.records, [rec.id]: rec } }))
+  },
+  applyTombstone: (k) =>
+    useAiAssistStore.setState((s) => {
+      if (!s.records[k]) return s
+      const records = { ...s.records }
+      delete records[k]
+      return { records }
+    }),
+  payload: (k, data, updatedAt) => ({ assist_id: k, data, updated_at: updatedAt }),
+}
+
+const editsAdapter: TableAdapter<Article> = {
+  getRows: () => useArticleStore.getState().localEdits,
+  apply: (k, article) =>
+    useArticleStore.setState((s) => ({
+      localEdits: { ...s.localEdits, [k]: article },
+      articles: s.articles.some((a) => a.id === k)
+        ? s.articles.map((a) => (a.id === k ? article : a))
+        : [...s.articles, article],
+    })),
+  payload: (k, data, updatedAt) => ({ article_id: k, data, updated_at: updatedAt }),
+}
+
 const eventsAdapter: TableAdapter<LearningEvent> = {
   getRows: () => Object.fromEntries(useLearningEventStore.getState().events.map((e) => [e.id, e])),
   apply: (_k, ev) => {
@@ -128,12 +158,30 @@ const eventsAdapter: TableAdapter<LearningEvent> = {
 function currentPrefs(): Record<string, unknown> {
   const reader = useReaderStore.getState().settings
   const { theme, autoDark } = useThemeStore.getState()
-  return { reader, theme: { theme, autoDark } }
+  return { reader, theme: { theme, autoDark }, deletedIds: useArticleStore.getState().deletedIds }
 }
 function applyPrefs(data: Record<string, unknown>) {
-  const d = data as { reader?: Record<string, unknown>; theme?: { theme?: never; autoDark?: boolean } }
+  const d = data as {
+    reader?: Record<string, unknown>
+    theme?: { theme?: never; autoDark?: boolean }
+    deletedIds?: string[]
+  }
   if (d.reader) useReaderStore.setState((s) => ({ settings: { ...s.settings, ...d.reader } }))
   if (d.theme?.theme) useThemeStore.setState({ theme: d.theme.theme as never, autoDark: !!d.theme.autoDark })
+  if (Array.isArray(d.deletedIds) && d.deletedIds.length > 0) {
+    const cloudDeleted = d.deletedIds
+    useArticleStore.setState((s) => ({
+      deletedIds: [...new Set([...s.deletedIds, ...cloudDeleted])],
+    }))
+  }
+}
+
+/** AI 服务配置整包（BYOK，同步后新设备免配置；RLS 限本人可读） */
+function aiConfig(): Record<string, unknown> {
+  return useAiStore.getState().settings as unknown as Record<string, unknown>
+}
+function applyAiConfig(data: Record<string, unknown>) {
+  useAiStore.setState((s) => ({ settings: { ...s.settings, ...data } }))
 }
 
 const ADAPTERS = {
@@ -142,6 +190,8 @@ const ADAPTERS = {
   article_study: studyAdapter,
   exam_study: examStudyAdapter,
   learning_events: eventsAdapter,
+  ai_assists: assistsAdapter,
+  article_edits: editsAdapter,
 } as const
 
 // ---------- 引擎 ----------
@@ -164,6 +214,7 @@ function resetSnapshot() {
     snapshot[table] = ad.getRows()
   }
   snapshot.user_prefs = currentPrefs()
+  snapshot.user_ai_config = aiConfig()
 }
 
 async function pullTable(table: string, ad: TableAdapter<unknown>): Promise<boolean> {
@@ -255,35 +306,40 @@ async function pushTable(table: string, ad: TableAdapter<unknown>, userId: strin
   return true
 }
 
-/** 偏好整包 push（单行，无快照逐行 diff） */
-async function pushPrefs(): Promise<boolean> {
-  if (!supabase) return false
-  const data = currentPrefs()
-  if (sameJSON(data, snapshot.user_prefs)) return false
+/** 整包单行表（user_prefs / user_ai_config）push：行级 LWW */
+async function pushWhole(
+  table: 'user_prefs' | 'user_ai_config',
+  data: Record<string, unknown>,
+  userId: string,
+): Promise<boolean> {
+  if (!supabase || sameJSON(data, snapshot[table])) return false
   const now = nowISO()
-  const { error } = await supabase
-    .from('user_prefs')
-    .upsert({ user_id: (await supabase.auth.getSession()).data.session?.user.id, data, updated_at: now })
-  if (error) throw new Error(`user_prefs: ${error.message}`)
-  snapshot.user_prefs = data
-  meta.user_prefs = { me: now }
+  const { error } = await supabase.from(table).upsert({ user_id: userId, data, updated_at: now })
+  if (error) throw new Error(`${table}: ${error.message}`)
+  snapshot[table] = data
+  ;(meta[table] ??= {}).me = now
   return true
 }
 
-async function pullPrefs(): Promise<boolean> {
+/** 整包单行表 pull */
+async function pullWhole(
+  table: 'user_prefs' | 'user_ai_config',
+  current: () => Record<string, unknown>,
+  apply: (data: Record<string, unknown>) => void,
+): Promise<boolean> {
   if (!supabase) return false
-  const { data, error } = await supabase.from('user_prefs').select('data, updated_at').maybeSingle()
-  if (error) throw new Error(`user_prefs: ${error.message}`)
+  const { data, error } = await supabase.from(table).select('data, updated_at').maybeSingle()
+  if (error) throw new Error(`${table}: ${error.message}`)
   if (!data) return false
   const updatedAt = String(data.updated_at ?? '')
-  if (!shouldApply(updatedAt, meta.user_prefs?.me)) return false
-  if (!sameJSON(currentPrefs(), data.data)) {
-    applyPrefs(data.data as Record<string, unknown>)
-    meta.user_prefs = { me: updatedAt }
-    snapshot.user_prefs = data.data as Record<string, unknown>
+  if (!shouldApply(updatedAt, meta[table]?.me)) return false
+  if (!sameJSON(current(), data.data)) {
+    apply(data.data as Record<string, unknown>)
+    meta[table] = { me: updatedAt }
+    snapshot[table] = data.data as Record<string, unknown>
     return true
   }
-  meta.user_prefs = { me: updatedAt }
+  meta[table] = { me: updatedAt }
   return false
 }
 
@@ -297,7 +353,8 @@ async function runSync(): Promise<void> {
     for (const [table, ad] of Object.entries(ADAPTERS)) {
       if (await pushTable(table, ad, userId)) snapshot[table] = ad.getRows()
     }
-    await pushPrefs()
+    await pushWhole('user_prefs', currentPrefs(), userId)
+    await pushWhole('user_ai_config', aiConfig(), userId)
     let changed = false
     for (const [table, ad] of Object.entries(ADAPTERS)) {
       if (await pullTable(table, ad)) {
@@ -305,7 +362,8 @@ async function runSync(): Promise<void> {
         snapshot[table] = ad.getRows()
       }
     }
-    if (await pullPrefs()) changed = true
+    if (await pullWhole('user_prefs', currentPrefs, applyPrefs)) changed = true
+    if (await pullWhole('user_ai_config', aiConfig, applyAiConfig)) changed = true
     saveMeta(meta)
     if (changed) setSync({ lastSyncAt: nowISO() })
     else setSync({ lastSyncAt: useSyncStore.getState().lastSyncAt ?? nowISO() })
@@ -340,6 +398,7 @@ export function startCloudSync(): void {
   useLearningEventStore.subscribe(() => watch('learning_events'))
   useReaderStore.subscribe(() => watch('user_prefs'))
   useThemeStore.subscribe(() => watch('user_prefs'))
+  useAiStore.subscribe(() => watch('user_ai_config'))
 
   const onFocus = () => {
     if (Date.now() - lastPullAt > PULL_MIN_INTERVAL_MS) void runSync()

@@ -216,7 +216,13 @@ async function pullTable(table: string, ad: TableAdapter<unknown>): Promise<bool
   return applied > 0
 }
 
-async function pushTable(table: string, ad: TableAdapter<unknown>): Promise<boolean> {
+/** 当前登录用户 id（RLS 要求每行携带 user_id，缺省即被 with check 拒绝） */
+async function currentUserId(): Promise<string | null> {
+  if (!supabase) return null
+  return (await supabase.auth.getSession()).data.session?.user.id ?? null
+}
+
+async function pushTable(table: string, ad: TableAdapter<unknown>, userId: string): Promise<boolean> {
   if (!supabase) return false
   const current = ad.getRows()
   const now = nowISO()
@@ -225,14 +231,22 @@ async function pushTable(table: string, ad: TableAdapter<unknown>): Promise<bool
   const tableMeta = (meta[table] ??= {})
 
   for (let i = 0; i < upserts.length; i += UPSERT_BATCH) {
-    const batch = upserts.slice(i, i + UPSERT_BATCH).map((u) => ad.payload(u.k, u.data, u.updatedAt))
+    const batch = upserts
+      .slice(i, i + UPSERT_BATCH)
+      .map((u) => ({ user_id: userId, ...ad.payload(u.k, u.data, u.updatedAt) }))
     const { error } = await supabase.from(table).upsert(batch, { defaultToNull: false })
     if (error) throw new Error(`${table}: ${error.message}`)
     for (const u of upserts.slice(i, i + UPSERT_BATCH)) tableMeta[u.k] = u.updatedAt
   }
   if (tombstones.length > 0) {
     const { error } = await supabase.from(table).upsert(
-      tombstones.map((t) => ({ ann_id: t.k, data: null, deleted: true, updated_at: t.updatedAt })),
+      tombstones.map((t) => ({
+        user_id: userId,
+        ann_id: t.k,
+        data: null,
+        deleted: true,
+        updated_at: t.updatedAt,
+      })),
       { defaultToNull: false },
     )
     if (error) throw new Error(`${table}: ${error.message}`)
@@ -278,8 +292,10 @@ async function runSync(): Promise<void> {
   setSync({ syncing: true, error: null })
   try {
     /* 先 push 后 pull：本地未推送修改先占住本机时间戳，LWW 才不会被旧云行反压 */
+    const userId = await currentUserId()
+    if (!userId) return
     for (const [table, ad] of Object.entries(ADAPTERS)) {
-      if (await pushTable(table, ad)) snapshot[table] = ad.getRows()
+      if (await pushTable(table, ad, userId)) snapshot[table] = ad.getRows()
     }
     await pushPrefs()
     let changed = false

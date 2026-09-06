@@ -5,6 +5,7 @@ dist
 .DS_Store
 .vercel
 .env*
+!.env.example
 
 # SQLite WAL 临时文件
 data/*.db-shm

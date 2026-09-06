@@ -133,3 +133,22 @@ node scripts/e2e-smoke.mjs
 ```
 
 覆盖：五个路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、刷新后数据仍在。
+
+## 账号体系（Supabase Auth + Vercel Postgres）
+
+- 认证：Supabase Auth（邮箱密码 + 魔法链接免密登录），前端 SDK `@supabase/supabase-js`，session 由 SDK 持久化在 localStorage
+- 页面：`/login`（登录/注册）、`/account`（资料与退出登录）；导航栏「ACCOUNT」入口未登录时自动指向登录页
+- 服务端：`/api/me`（Vercel Function）用 Bearer token 向 Supabase `/auth/v1/user` 校验身份后，upsert `profiles` 表（Vercel Postgres）；未配置 `DATABASE_URL` 时优雅降级为仅返回身份信息
+- 定位：当前阶段仅登录身份（各 store 本地数据不动），`profiles.id` 即 Supabase `auth.users.id`，为后续按用户同步阅读进度/笔记预留关联键
+
+### 开通步骤
+
+1. 创建 [Supabase](https://supabase.com) 项目，拿到 Project URL 与 anon key；如需免邮箱确认，在 Auth → Providers → Email 关闭 "Confirm email"
+2. Vercel 项目 → Storage → Create Database（Postgres），自动注入 `DATABASE_URL`
+3. 执行 `sql/profiles.sql` 建表（psql 或 Vercel 控制台）
+4. 配置环境变量（参考 `.env.example`）：
+   - 前端（构建期）：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`
+   - 服务端（api/me.ts）：`SUPABASE_URL`、`SUPABASE_ANON_KEY`（缺省回落 `VITE_` 前缀）、`DATABASE_URL`
+5. Supabase Auth → URL Configuration 里把站点域名（本地 `http://localhost:5173` 与线上域名）加入 Redirect URLs，魔法链接与邮箱确认链接才能回跳
+
+两项 Supabase 环境变量缺省时，登录入口仅显示「未配置」提示，站点其余功能完全不受影响。

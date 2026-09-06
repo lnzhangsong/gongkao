@@ -67,8 +67,6 @@ export function prefetchIdle(): void {
   warm(() => cachedGet('/api/terms', () => request('/api/terms')))
 }
 
-
-
 /**
  * 统一请求封装：
  * - 超时中断（AbortController），避免离线时请求悬挂
@@ -81,7 +79,7 @@ async function request<T>(url: string, init?: RequestInit, label?: string): Prom
   const timer = window.setTimeout(() => ctrl.abort(), DEFAULT_TIMEOUT_MS)
   try {
     const method = (init?.method ?? 'GET').toUpperCase()
-    const extra = method === 'GET' ? {} : { headers: { ...writeToken(), ...(init?.headers ?? {}) } }
+    const extra = method === 'GET' ? {} : { headers: { ...writeToken(), ...init?.headers } }
     const res = await fetch(url, { ...init, ...extra, signal: init?.signal ?? ctrl.signal })
     const body = await res.text()
     if (!res.ok) {
@@ -100,7 +98,13 @@ async function request<T>(url: string, init?: RequestInit, label?: string): Prom
 }
 
 /** 全部文章 meta（不含正文） */
-export function fetchMetaList(params?: { q?: string; topic?: string; source?: string; sort?: string; limit?: number }): Promise<MetaListResponse> {
+export function fetchMetaList(params?: {
+  q?: string
+  topic?: string
+  source?: string
+  sort?: string
+  limit?: number
+}): Promise<MetaListResponse> {
   const sp = new URLSearchParams()
   if (params?.q) sp.set('q', params.q)
   if (params?.topic) sp.set('topic', params.topic)
@@ -151,7 +155,10 @@ export interface ExamDetail {
 }
 
 /** 申论真题试卷列表（按年份倒序；cache:'reload' 绕过 HTTP 缓存，会话缓存由 cachedGet 负责） */
-export function fetchExamList(params?: { year?: number; level?: string }): Promise<{ papers: ExamPaperMeta[]; total: number }> {
+export function fetchExamList(params?: {
+  year?: number
+  level?: string
+}): Promise<{ papers: ExamPaperMeta[]; total: number }> {
   const sp = new URLSearchParams()
   if (params?.year) sp.set('year', String(params.year))
   if (params?.level) sp.set('level', params.level)
@@ -184,16 +191,65 @@ export function fetchTerms(params?: { theme?: string; q?: string }): Promise<{ t
   return cachedGet(url, () => request(url))
 }
 
+// —— 账号（/api/me）——
+
+/** 服务端 profiles 表中的一行 */
+export interface Profile {
+  id: string
+  email: string | null
+  nickname: string | null
+  createdAt?: string
+  lastSeenAt?: string
+}
+
+/** 取当前会话的 access token（未登录或未配置 Supabase 时为 null） */
+export async function accessToken(): Promise<string | null> {
+  const { supabase } = await import('./supabase')
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? null
+}
+
+/** 拉取/创建当前用户 profile（服务端校验 token 后 upsert） */
+export function fetchMe(token: string): Promise<{ profile: Profile | null }> {
+  return request('/api/me', { headers: { authorization: `Bearer ${token}` } })
+}
+
+/** 更新昵称 */
+export function updateNickname(token: string, nickname: string): Promise<{ profile: Profile }> {
+  invalidateCache(['/api/me'])
+  return request(
+    '/api/me',
+    {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ nickname }),
+    },
+    '保存失败',
+  )
+}
+
 /** 新增规范词（仅本地 api-server 提供写入） */
 export function addTerm(data: { theme: string; term: string; example?: string }): Promise<{ ok: boolean; id: number }> {
   invalidateCache(['/api/terms'])
-  return request('/api/terms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
+  return request(
+    '/api/terms',
+    { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) },
+    '保存失败',
+  )
 }
 
 /** 修改规范词（部分更新；仅本地 api-server 提供写入） */
-export function updateTerm(id: number, data: { theme?: string; term?: string; example?: string }): Promise<{ ok: boolean }> {
+export function updateTerm(
+  id: number,
+  data: { theme?: string; term?: string; example?: string },
+): Promise<{ ok: boolean }> {
   invalidateCache(['/api/terms'])
-  return request(`/api/terms/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
+  return request(
+    `/api/terms/${id}`,
+    { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) },
+    '保存失败',
+  )
 }
 
 /** 删除规范词（仅本地 api-server 提供写入） */
@@ -207,17 +263,37 @@ export function saveExam(
   id: string,
   data: Pick<ExamDetail, 'year' | 'level' | 'title'> & {
     materials: { idx: number; content: string }[]
-    questions: { idx: number; type: string | null; stem: string; requirement: string; wordLimit: number | null; points: number | null; answer: string | null }[]
+    questions: {
+      idx: number
+      type: string | null
+      stem: string
+      requirement: string
+      wordLimit: number | null
+      points: number | null
+      answer: string | null
+    }[]
   },
 ): Promise<{ ok: boolean; id: string }> {
   invalidateCache(['/api/exams'])
-  return request(`/api/exams/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }, '保存失败')
+  return request(
+    `/api/exams/${encodeURIComponent(id)}`,
+    { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) },
+    '保存失败',
+  )
 }
 
 /** 新增空白试卷（仅本地 api-server） */
-export function createExam(paper: { year: number; level: string; title: string }): Promise<{ ok: boolean; id: string }> {
+export function createExam(paper: {
+  year: number
+  level: string
+  title: string
+}): Promise<{ ok: boolean; id: string }> {
   invalidateCache(['/api/exams'])
-  return request('/api/exams', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(paper) }, '创建失败')
+  return request(
+    '/api/exams',
+    { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(paper) },
+    '创建失败',
+  )
 }
 
 /** 删除试卷（连同材料与题目，仅本地 api-server） */

@@ -1,0 +1,109 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
+import { useAuthStore } from '../stores/authStore'
+import { toast } from '../components/ui/Toast'
+import { confirmDialog } from '../components/ui/ConfirmDialog'
+import '../styles/auth.css'
+
+/** 账号页（/account）：资料展示、昵称修改、退出登录 */
+export function AccountPage() {
+  const navigate = useNavigate()
+  const status = useAuthStore((s) => s.status)
+  const user = useAuthStore((s) => s.user)
+  const profile = useAuthStore((s) => s.profile)
+  const rename = useAuthStore((s) => s.rename)
+  const signOut = useAuthStore((s) => s.signOut)
+
+  const [nickname, setNickname] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (status === 'out') navigate('/login', { replace: true })
+  }, [status, navigate])
+
+  useEffect(() => {
+    setNickname(profile?.nickname ?? '')
+  }, [profile?.nickname])
+
+  if (status !== 'in' || !user) return null
+
+  const email = user.email ?? profile?.email ?? '（无邮箱）'
+  const dirty = nickname.trim() !== (profile?.nickname ?? '')
+
+  const save = async () => {
+    if (busy || !dirty) return
+    setBusy(true)
+    try {
+      await rename(nickname.trim())
+      toast('昵称已更新')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '保存失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const logout = async () => {
+    const ok = await confirmDialog('退出登录后，本机数据仍会保留，确认退出吗？')
+    if (!ok) return
+    await signOut()
+    toast('已退出登录')
+    navigate('/')
+  }
+
+  return (
+    <section className="auth-page">
+      <header className="subpage-header">
+        <div>
+          <div className="eyebrow">READBOOK ACCOUNT</div>
+          <h1>
+            欢迎回来，
+            <br />
+            <span>{profile?.nickname || '读者'}。</span>
+          </h1>
+        </div>
+        <p className="subpage-copy">登录身份仅用于标识你；阅读进度与摘录仍保存在本机浏览器中。</p>
+      </header>
+      <div className="auth-body">
+        <div className="auth-card auth-account">
+          <div className="auth-identity">
+            <div className="auth-avatar" aria-hidden>
+              {(profile?.nickname || email).slice(0, 1).toUpperCase()}
+            </div>
+            <div className="auth-identity-text">
+              <strong>{profile?.nickname || '我的账号'}</strong>
+              <span>{email}</span>
+            </div>
+          </div>
+
+          <label className="auth-field">
+            <span>昵称</span>
+            <input
+              value={nickname}
+              maxLength={24}
+              placeholder="给自己起个名字"
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void save()
+              }}
+            />
+          </label>
+          <button type="button" className="auth-submit" disabled={busy || !dirty} onClick={save}>
+            {busy ? '保存中…' : '保存昵称'}
+          </button>
+
+          <hr className="auth-divider" />
+          <div className="auth-actions">
+            <button type="button" className="auth-logout" onClick={logout}>
+              <LogOut size={15} /> 退出登录
+            </button>
+            <Link className="auth-back" to="/">
+              返回首页
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}

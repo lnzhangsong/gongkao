@@ -12,7 +12,10 @@ const AdminEditPage = lazy(() => import('./pages/AdminEditPage').then((m) => ({ 
 const ExamPreviewPage = lazy(() => import('./pages/ExamPreviewPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const AssistPage = lazy(() => import('./pages/AssistPage').then((m) => ({ default: m.AssistPage })))
+const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
+const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
+import { useAuthStore } from './stores/authStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
 import { prefetchIdle } from './lib/api'
@@ -65,10 +68,11 @@ function App() {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
   }, [])
 
-  /* 启动时从 API 加载文章列表（meta，不含正文） */
+  /* 启动时从 API 加载文章列表（meta，不含正文）；同时恢复登录会话 */
   useEffect(() => {
     mountAtRef.current = Date.now()
     void useArticleStore.getState().hydrate()
+    useAuthStore.getState().init()
     // 首屏动画最短展示时长：即使 API 秒回，也让 loading 完整呈现
     const t = window.setTimeout(() => setMinElapsed(true), LOADING_MIN_MS)
     return () => window.clearTimeout(t)
@@ -114,35 +118,38 @@ function App() {
 
   return (
     <ErrorBoundary>
-    <BrowserRouter>
-      {/* 浏览器原生的 popstate 滚动恢复与 SPA 异步渲染不合拍，统一由 ScrollToTop 接管 */}
-      <ScrollToTop />
-      {/* chunk 加载间隙不渲染任何内容（页面级骨架已由各页面/启动 loading 覆盖） */}
-      <Suspense fallback={null}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/library" element={<LibraryPage />} />
-            <Route path="/reading/:articleId" element={<ReadingPage />} />
-            <Route path="/notes" element={<NotesPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/new" element={<AdminEditPage />} />
-            {/* 申论真题预览（临时路由，未入导航）；详情走子路由，浏览器后退可回列表 */}
-            <Route path="/exams" element={<ExamPreviewPage />} />
-            <Route path="/exams/:examId" element={<ExamPreviewPage />} />
-            {/* 申论规范词 */}
-            <Route path="/terms" element={<TermsPage />} />
-            {/* AI 审题 + 作答框架 */}
-            <Route path="/assist" element={<AssistPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Suspense>
-      {/* 全站确认/提示弹窗宿主（confirmDialog / alertDialog） */}
-      <ConfirmHost />
-      <ToastHost />
-    </BrowserRouter>
+      <BrowserRouter>
+        {/* 浏览器原生的 popstate 滚动恢复与 SPA 异步渲染不合拍，统一由 ScrollToTop 接管 */}
+        <ScrollToTop />
+        {/* chunk 加载间隙不渲染任何内容（页面级骨架已由各页面/启动 loading 覆盖） */}
+        <Suspense fallback={null}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/library" element={<LibraryPage />} />
+              <Route path="/reading/:articleId" element={<ReadingPage />} />
+              <Route path="/notes" element={<NotesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/new" element={<AdminEditPage />} />
+              {/* 申论真题预览（临时路由，未入导航）；详情走子路由，浏览器后退可回列表 */}
+              <Route path="/exams" element={<ExamPreviewPage />} />
+              <Route path="/exams/:examId" element={<ExamPreviewPage />} />
+              {/* 申论规范词 */}
+              <Route path="/terms" element={<TermsPage />} />
+              {/* AI 审题 + 作答框架 */}
+              <Route path="/assist" element={<AssistPage />} />
+              {/* 账号：登录/注册 与 个人资料 */}
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/account" element={<AccountPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
+        {/* 全站确认/提示弹窗宿主（confirmDialog / alertDialog） */}
+        <ConfirmHost />
+        <ToastHost />
+      </BrowserRouter>
     </ErrorBoundary>
   )
 }

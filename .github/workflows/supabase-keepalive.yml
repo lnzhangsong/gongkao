@@ -1,8 +1,7 @@
 # Supabase 免费版保活：项目 7 天无 API 请求会被暂停（pause），
 # 数据变只读、登录全挂。此工作流每天用 anon key 打一次 REST，保持项目活跃。
-# 前置：仓库 Settings → Secrets and variables → Actions 添加：
-#   SUPABASE_URL       （如 https://xxx.supabase.co）
-#   SUPABASE_ANON_KEY  （anon 角色 JWT）
+# anon key 是「公开密钥」（与浏览器内使用一致，权限由 RLS 控制），可直接入库；
+# 若将来切换项目，改下面两个常量即可。
 name: Supabase Keepalive
 
 on:
@@ -15,11 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST
+        env:
+          SUPABASE_URL: 'https://yxyuaybgmoszmmeshiut.supabase.co'
+          SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4eXVheWJnbW9zem1tZXNoaXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MDk0MDcsImV4cCI6MjEwNDI4NTQwN30.hUpEToRaieSUZkNhykUR2LB-uPj5syIzNpeG7uZqevY'
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/profiles?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "authorization: Bearer $SUPABASE_ANON_KEY")
           echo "HTTP $code"
           # 200（表在）或 401（key 失效）都算连通；只有连不上才算失败
           if [ "$code" = "000" ]; then echo "Supabase unreachable"; exit 1; fi

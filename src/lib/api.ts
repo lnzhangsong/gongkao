@@ -191,44 +191,6 @@ export function fetchTerms(params?: { theme?: string; q?: string }): Promise<{ t
   return cachedGet(url, () => request(url))
 }
 
-// —— 账号（/api/me）——
-
-/** 服务端 profiles 表中的一行 */
-export interface Profile {
-  id: string
-  email: string | null
-  nickname: string | null
-  createdAt?: string
-  lastSeenAt?: string
-}
-
-/** 取当前会话的 access token（未登录或未配置 Supabase 时为 null） */
-export async function accessToken(): Promise<string | null> {
-  const { supabase } = await import('./supabase')
-  if (!supabase) return null
-  const { data } = await supabase.auth.getSession()
-  return data.session?.access_token ?? null
-}
-
-/** 拉取/创建当前用户 profile（服务端校验 token 后 upsert） */
-export function fetchMe(token: string): Promise<{ profile: Profile | null }> {
-  return request('/api/me', { headers: { authorization: `Bearer ${token}` } })
-}
-
-/** 更新昵称 */
-export function updateNickname(token: string, nickname: string): Promise<{ profile: Profile }> {
-  invalidateCache(['/api/me'])
-  return request(
-    '/api/me',
-    {
-      method: 'PATCH',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ nickname }),
-    },
-    '保存失败',
-  )
-}
-
 /** 新增规范词（仅本地 api-server 提供写入） */
 export function addTerm(data: { theme: string; term: string; example?: string }): Promise<{ ok: boolean; id: number }> {
   invalidateCache(['/api/terms'])

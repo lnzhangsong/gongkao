@@ -6,7 +6,6 @@ import { useAuthStore } from '../stores/authStore'
 import { toast } from '../components/ui/Toast'
 import '../styles/auth.css'
 
-type Mode = 'signin' | 'signup'
 type Notice = { kind: 'info' | 'error'; text: string } | null
 
 /** 登录 / 注册页（/login）。未配置 Supabase 时给出提示并保留返回入口 */
@@ -14,10 +13,8 @@ export function AuthPage() {
   const navigate = useNavigate()
   const status = useAuthStore((s) => s.status)
   const signIn = useAuthStore((s) => s.signIn)
-  const signUp = useAuthStore((s) => s.signUp)
   const signInWithMagicLink = useAuthStore((s) => s.signInWithMagicLink)
 
-  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -28,22 +25,18 @@ export function AuthPage() {
     if (status === 'in') navigate('/account', { replace: true })
   }, [status, navigate])
 
-  /* 子页页头：与文库/规范词等 subpage-header 同语言，文案随登录/注册切换 */
+  /* 子页页头：与文库/规范词等 subpage-header 同语言（注册已关闭，仅登录） */
   const header = (
     <header className="subpage-header">
       <div>
         <div className="eyebrow">READBOOK ACCOUNT</div>
         <h1>
-          {mode === 'signin' ? '回到读本，' : '初次见面，'}
+          回到读本，
           <br />
-          <span>{mode === 'signin' ? '接着读。' : '请多指教。'}</span>
+          <span>接着读。</span>
         </h1>
       </div>
-      <p className="subpage-copy">
-        {mode === 'signin'
-          ? '登录后，阅读足迹与摘录将跟着账号走（多端同步即将支持）。'
-          : '仅需邮箱和密码。所有内容功能匿名同样可用，注册只为走得更远。'}
-      </p>
+      <p className="subpage-copy">登录后，阅读进度与摘录自动同步云端，多设备保持一致。</p>
     </header>
   )
 
@@ -73,20 +66,9 @@ export function AuthPage() {
     setBusy(true)
     setNotice(null)
     try {
-      if (mode === 'signin') {
-        await signIn(email.trim(), password)
-        toast('已登录')
-        navigate('/account')
-      } else {
-        const { needsConfirm } = await signUp(email.trim(), password)
-        if (needsConfirm) {
-          setMode('signin')
-          setNotice({ kind: 'info', text: '确认邮件已发送，请到邮箱点击链接完成激活后再登录。' })
-        } else {
-          toast('注册成功')
-          navigate('/account')
-        }
-      }
+      await signIn(email.trim(), password)
+      toast('已登录')
+      navigate('/account')
     } catch (err) {
       setNotice({ kind: 'error', text: err instanceof Error ? err.message : '操作失败，请重试' })
     } finally {
@@ -114,28 +96,10 @@ export function AuthPage() {
       <div className="auth-body">
         <div className="auth-card">
           <div className="auth-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'signin'}
-              className={mode === 'signin' ? 'active' : ''}
-              onClick={() => {
-                setMode('signin')
-                setNotice(null)
-              }}
-            >
+            <button type="button" role="tab" aria-selected className="active">
               登录
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'signup'}
-              className={mode === 'signup' ? 'active' : ''}
-              onClick={() => {
-                setMode('signup')
-                setNotice(null)
-              }}
-            >
+            <button type="button" role="tab" aria-selected={false} title="注册已关闭" disabled>
               注册
             </button>
           </div>
@@ -158,14 +122,14 @@ export function AuthPage() {
                 type="password"
                 required
                 minLength={6}
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="至少 6 位"
               />
             </label>
             <button type="submit" className="auth-submit" disabled={busy}>
-              {busy ? '请稍候…' : mode === 'signin' ? '登录' : '注册'}
+              {busy ? '请稍候…' : '登录'}
             </button>
           </form>
 

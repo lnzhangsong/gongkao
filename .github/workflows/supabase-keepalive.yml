@@ -1,0 +1,25 @@
+# Supabase 免费版保活：项目 7 天无 API 请求会被暂停（pause），
+# 数据变只读、登录全挂。此工作流每天用 anon key 打一次 REST，保持项目活跃。
+# 前置：仓库 Settings → Secrets and variables → Actions 添加：
+#   SUPABASE_URL       （如 https://xxx.supabase.co）
+#   SUPABASE_ANON_KEY  （anon 角色 JWT）
+name: Supabase Keepalive
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # 每天 UTC 3:17（北京时间 11:17）
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "HTTP $code"
+          # 200（表在）或 401（key 失效）都算连通；只有连不上才算失败
+          if [ "$code" = "000" ]; then echo "Supabase unreachable"; exit 1; fi

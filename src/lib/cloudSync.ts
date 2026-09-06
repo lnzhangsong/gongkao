@@ -207,14 +207,9 @@ function nowISO() {
   return new Date().toISOString()
 }
 
-/** 初始化快照 = 当前本地状态（登录后首个 push 周期的基线，避免全量重推） */
+/** 登录后快照置空：首轮 push 以空为基线，把登录前（匿名期间）产生的本地数据全部推上云 */
 function resetSnapshot() {
   snapshot = {}
-  for (const [table, ad] of Object.entries(ADAPTERS)) {
-    snapshot[table] = ad.getRows()
-  }
-  snapshot.user_prefs = currentPrefs()
-  snapshot.user_ai_config = aiConfig()
 }
 
 async function pullTable(table: string, ad: TableAdapter<unknown>): Promise<boolean> {
@@ -347,23 +342,26 @@ async function runSync(): Promise<void> {
   if (!running || !supabase) return
   setSync({ syncing: true, error: null })
   try {
-    /* 先 push 后 pull：本地未推送修改先占住本机时间戳，LWW 才不会被旧云行反压 */
+    let changedPref = false
     const userId = await currentUserId()
     if (!userId) return
+    /* 整包类（偏好/AI 配置）先拉后推：登录首轮先吃云上较新的一份，避免本机旧配置盖掉其他设备的新配置 */
+    if (await pullWhole('user_prefs', currentPrefs, applyPrefs)) changedPref = true
+    if (await pullWhole('user_ai_config', aiConfig, applyAiConfig)) changedPref = true
+    /* 行表先 push 后 pull：本地未推送修改先占住本机时间戳，LWW 才不会被旧云行反压。
+     * 首轮快照为空 → 登录前匿名期间产生的本地数据也会全部推送 */
     for (const [table, ad] of Object.entries(ADAPTERS)) {
       if (await pushTable(table, ad, userId)) snapshot[table] = ad.getRows()
     }
-    await pushWhole('user_prefs', currentPrefs(), userId)
-    await pushWhole('user_ai_config', aiConfig(), userId)
-    let changed = false
+    let changed = changedPref
     for (const [table, ad] of Object.entries(ADAPTERS)) {
       if (await pullTable(table, ad)) {
         changed = true
         snapshot[table] = ad.getRows()
       }
     }
-    if (await pullWhole('user_prefs', currentPrefs, applyPrefs)) changed = true
-    if (await pullWhole('user_ai_config', aiConfig, applyAiConfig)) changed = true
+    if (await pushWhole('user_prefs', currentPrefs(), userId)) changed = true
+    if (await pushWhole('user_ai_config', aiConfig(), userId)) changed = true
     saveMeta(meta)
     if (changed) setSync({ lastSyncAt: nowISO() })
     else setSync({ lastSyncAt: useSyncStore.getState().lastSyncAt ?? nowISO() })

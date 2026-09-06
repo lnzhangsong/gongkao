@@ -1,0 +1,243 @@
+/* ============================================================
+   登录/注册页 与 账号页（/login、/account）
+   页头复用全站 .subpage-header；卡片遵循 Paper OS：
+   1px 墨线 + radius-sm(10) + 7px 8px 硬阴影
+   ============================================================ */
+
+.auth-body {
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 56px 38px 96px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-card {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  box-shadow: var(--shadow-hard);
+  padding: 28px;
+}
+
+.auth-card h2 {
+  margin: 0;
+  font: 400 24px / 1.4 var(--display);
+}
+
+.auth-tabs {
+  display: flex;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+
+.auth-tabs button {
+  flex: 1;
+  padding: 10px 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: 13px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.auth-tabs button + button {
+  border-left: 1px solid var(--ink);
+}
+
+.auth-tabs button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.auth-field span {
+  font: 12px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.auth-field input {
+  padding: 11px 13px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: 15px var(--sans);
+  color: inherit;
+}
+
+.auth-field input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 12px 0;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--paper);
+  font: 14px var(--sans);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.auth-submit:not(:disabled):hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.auth-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.auth-magic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0;
+  border: 1px dashed var(--muted);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: 13px var(--sans);
+  cursor: pointer;
+}
+
+.auth-magic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-info,
+.auth-error {
+  margin: 0;
+  font: 13px / 1.8 var(--sans);
+  padding: 10px 13px;
+  border-radius: var(--radius-xs);
+}
+
+.auth-info {
+  color: var(--ink);
+  background: var(--pick-b);
+}
+
+.auth-error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.auth-back {
+  font: 13px var(--mono);
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.auth-back:hover {
+  color: var(--ink);
+}
+
+.auth-card code {
+  font: 12px var(--mono);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+
+/* —— 账号页 —— */
+
+.auth-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.auth-avatar {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 24px var(--display);
+  background: var(--pick-b);
+}
+
+.auth-identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.auth-identity-text strong {
+  font: 500 16px var(--sans);
+}
+
+.auth-identity-text span {
+  font: 12px var(--mono);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-divider {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  margin: 4px 0;
+}
+
+.auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--danger);
+  font: 13px var(--sans);
+  cursor: pointer;
+}
+
+.auth-logout:hover {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+@media (max-width: 720px) {
+  .auth-body {
+    padding: 32px 20px 72px;
+  }
+
+  .auth-card {
+    padding: 20px;
+  }
+}

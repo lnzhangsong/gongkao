@@ -38,8 +38,14 @@ function openDb() {
 }
 function mapMetaRow(r) {
   return {
-    id: r.id, title: r.title, summary: r.summary, source: r.source, topic: r.topic,
-    date: r.date, readTime: r.read_time, featured: Boolean(r.featured),
+    id: r.id,
+    title: r.title,
+    summary: r.summary,
+    source: r.source,
+    topic: r.topic,
+    date: r.date,
+    readTime: r.read_time,
+    featured: Boolean(r.featured),
     ...(r.pullquote ? { pullquote: r.pullquote } : {}),
     ...(r.finish_note ? { finishNote: r.finish_note } : {}),
   }
@@ -70,17 +76,29 @@ function queryMetaList(kw) {
       .map(mapMetaRow)
   }
   return d
-    .prepare('SELECT id, title, summary, source, topic, date, read_time, featured, pullquote, finish_note FROM articles ORDER BY date DESC, id')
+    .prepare(
+      'SELECT id, title, summary, source, topic, date, read_time, featured, pullquote, finish_note FROM articles ORDER BY date DESC, id',
+    )
     .all()
     .map(mapMetaRow)
 }
 function queryArticle(id) {
   const d = openDb()
-  const r = d.prepare('SELECT id, title, summary, source, topic, date, read_time, content_json, pullquote, finish_note FROM articles WHERE id = ?').get(id)
+  const r = d
+    .prepare(
+      'SELECT id, title, summary, source, topic, date, read_time, content_json, pullquote, finish_note FROM articles WHERE id = ?',
+    )
+    .get(id)
   if (!r) return null
   return {
-    id: r.id, title: r.title, summary: r.summary, content: JSON.parse(r.content_json),
-    source: r.source, topic: r.topic, date: r.date, readTime: r.read_time,
+    id: r.id,
+    title: r.title,
+    summary: r.summary,
+    content: JSON.parse(r.content_json),
+    source: r.source,
+    topic: r.topic,
+    date: r.date,
+    readTime: r.read_time,
     ...(r.pullquote ? { pullquote: r.pullquote } : {}),
     ...(r.finish_note ? { finishNote: r.finish_note } : {}),
   }
@@ -104,22 +122,44 @@ function queryExamList() {
                      (SELECT COUNT(*) FROM materials m WHERE m.paper_id = p.id) AS material_count
               FROM papers p ORDER BY p.year DESC, p.level`)
     .all()
-    .map((r) => ({ id: r.id, year: r.year, level: r.level, title: r.title, hasAnswer: Boolean(r.has_answer), questionCount: r.question_count, materialCount: r.material_count }))
+    .map((r) => ({
+      id: r.id,
+      year: r.year,
+      level: r.level,
+      title: r.title,
+      hasAnswer: Boolean(r.has_answer),
+      questionCount: r.question_count,
+      materialCount: r.material_count,
+    }))
 }
 function queryExam(id) {
   const d = openExamDb()
-  const p = d.prepare('SELECT id, year, level, title, has_answer, answers_raw, warnings FROM papers WHERE id = ?').get(id)
+  const p = d
+    .prepare('SELECT id, year, level, title, has_answer, answers_raw, warnings FROM papers WHERE id = ?')
+    .get(id)
   if (!p) return null
   const materials = d.prepare('SELECT idx, label, content FROM materials WHERE paper_id = ? ORDER BY idx').all(id)
-  const questions = d.prepare('SELECT idx, type, stem, requirement, word_limit, word_limit_json, points, answer, answer_matched FROM questions WHERE paper_id = ? ORDER BY idx').all(id)
+  const questions = d
+    .prepare(
+      'SELECT idx, type, stem, requirement, word_limit, word_limit_json, points, answer, answer_matched FROM questions WHERE paper_id = ? ORDER BY idx',
+    )
+    .all(id)
   return {
-    id: p.id, year: p.year, level: p.level, title: p.title,
+    id: p.id,
+    year: p.year,
+    level: p.level,
+    title: p.title,
     ...(p.warnings ? { warnings: p.warnings } : {}),
     materials: materials.map((m) => ({ idx: m.idx, label: m.label, content: m.content })),
     questions: questions.map((q) => ({
-      idx: q.idx, type: q.type, stem: q.stem, requirement: q.requirement,
-      wordLimit: q.word_limit, points: q.points,
-      answer: q.answer, answerMatched: Boolean(q.answer_matched),
+      idx: q.idx,
+      type: q.type,
+      stem: q.stem,
+      requirement: q.requirement,
+      wordLimit: q.word_limit,
+      points: q.points,
+      answer: q.answer,
+      answerMatched: Boolean(q.answer_matched),
     })),
     ...(p.answers_raw ? { answersRaw: p.answers_raw } : {}),
   }
@@ -178,6 +218,74 @@ const server = createServer((req, res) => {
     res.end(await resp.text())
   }
 
+  // —— /api/me：登录用户 profile（与 api/me.ts 同逻辑；无 DATABASE_URL 时降级为仅身份） ——
+  if (url.pathname === '/api/me' && (req.method === 'GET' || req.method === 'PATCH')) {
+    void (async () => {
+      const auth = req.headers.authorization ?? ''
+      const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+      const sbUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+      const sbKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+      let user = null
+      if (token && sbUrl && sbKey) {
+        try {
+          const r = await fetch(`${sbUrl}/auth/v1/user`, {
+            headers: { authorization: `Bearer ${token}`, apikey: sbKey },
+          })
+          if (r.ok) {
+            const u = await r.json()
+            if (u.id) user = { id: u.id, email: u.email ?? null }
+          }
+        } catch {
+          /* fallthrough */
+        }
+      }
+      if (!user) {
+        respond(json({ error: 'unauthorized' }, 401))
+        return
+      }
+      let row = null
+      if (process.env.DATABASE_URL) {
+        try {
+          const { sql } = await import('@vercel/postgres')
+          if (req.method === 'PATCH') {
+            const body = await new Promise((resolve, reject) => {
+              let data = ''
+              req.on('data', (c) => (data += c))
+              req.on('end', () => {
+                try {
+                  resolve(JSON.parse(data || '{}'))
+                } catch (e) {
+                  reject(e)
+                }
+              })
+            })
+            const clean = String(body.nickname ?? '')
+              .trim()
+              .slice(0, 24)
+            if (!clean) {
+              respond(json({ error: 'nickname required' }, 400))
+              return
+            }
+            const { rows } = await sql`
+              UPDATE profiles SET nickname = ${clean}, last_seen_at = now() WHERE id = ${user.id}
+              RETURNING id, email, nickname, created_at, last_seen_at`
+            row = rows[0] ?? null
+          } else {
+            const { rows } = await sql`
+              INSERT INTO profiles (id, email, last_seen_at) VALUES (${user.id}, ${user.email}, now())
+              ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, last_seen_at = now()
+              RETURNING id, email, nickname, created_at, last_seen_at`
+            row = rows[0] ?? null
+          }
+        } catch {
+          row = null
+        }
+      }
+      respond(json({ profile: row ?? { id: user.id, email: user.email, nickname: null } }))
+    })()
+    return
+  }
+
   if (url.pathname === '/api/articles' && req.method === 'GET') {
     // 单篇全文：?id=p0001
     const singleId = url.searchParams.get('id')
@@ -232,7 +340,9 @@ const server = createServer((req, res) => {
           return
         }
         const d = openExamDb({ write: true })
-        const { lastInsertRowid } = d.prepare('INSERT INTO guifan_terms (theme, term, example) VALUES (?, ?, ?)').run(theme, term, example)
+        const { lastInsertRowid } = d
+          .prepare('INSERT INTO guifan_terms (theme, term, example) VALUES (?, ?, ?)')
+          .run(theme, term, example)
         void respond(json({ ok: true, id: Number(lastInsertRowid) }))
       } catch (err) {
         void respond(json({ error: String(err) }, 400))
@@ -389,16 +499,22 @@ const server = createServer((req, res) => {
           void respond(json({ error: `已存在同年份同层级的试卷：${newId}` }, 409))
           return
         }
-        const updPaper = d.prepare('UPDATE papers SET id = ?, year = ?, level = ?, title = ?, warnings = ? WHERE id = ?')
+        const updPaper = d.prepare(
+          'UPDATE papers SET id = ?, year = ?, level = ?, title = ?, warnings = ? WHERE id = ?',
+        )
         const delMats = d.prepare('DELETE FROM materials WHERE paper_id = ?')
-        const insMat = d.prepare('INSERT INTO materials (id, paper_id, idx, label, content, chars) VALUES (?, ?, ?, ?, ?, ?)')
+        const insMat = d.prepare(
+          'INSERT INTO materials (id, paper_id, idx, label, content, chars) VALUES (?, ?, ?, ?, ?, ?)',
+        )
         const delQs = d.prepare('DELETE FROM questions WHERE paper_id = ?')
         const insQ = d.prepare(
           'INSERT INTO questions (id, paper_id, idx, type, stem, requirement, word_limit, word_limit_json, points, answer, answer_matched) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         )
         d.exec('BEGIN')
         updPaper.run(
-          newId, newYear, newLevel,
+          newId,
+          newYear,
+          newLevel,
           typeof data.title === 'string' ? data.title : '',
           typeof data.warnings === 'string' ? data.warnings : null,
           id,
@@ -418,16 +534,25 @@ const server = createServer((req, res) => {
           if (typeof q.stem !== 'string') continue
           const wl = q.wordLimit ?? null
           insQ.run(
-            `${newId}-q${i + 1}`, newId, i + 1,
-            q.type || null, q.stem, q.requirement || '', wl,
+            `${newId}-q${i + 1}`,
+            newId,
+            i + 1,
+            q.type || null,
+            q.stem,
+            q.requirement || '',
+            wl,
             wl ? JSON.stringify({ max: wl }) : null,
-            q.points ?? null, q.answer ?? null, q.answer ? 1 : 0,
+            q.points ?? null,
+            q.answer ?? null,
+            q.answer ? 1 : 0,
           )
         }
         d.exec('COMMIT')
         void respond(json({ ok: true, id: newId }))
       } catch (err) {
-        try { d.exec('ROLLBACK') } catch {}
+        try {
+          d.exec('ROLLBACK')
+        } catch {}
         void respond(json({ error: String(err) }, 400))
       }
     })
@@ -455,7 +580,9 @@ const server = createServer((req, res) => {
       d.exec('COMMIT')
       void respond(json({ ok: true }))
     } catch (err) {
-      try { d.exec('ROLLBACK') } catch {}
+      try {
+        d.exec('ROLLBACK')
+      } catch {}
       void respond(json({ error: String(err) }, 400))
     }
     return
@@ -493,7 +620,9 @@ const server = createServer((req, res) => {
         const data = await upstream.json().catch(() => null)
         if (!upstream.ok || !data) {
           const msg = data?.error?.message || data?.error || `上游返回 ${upstream.status}`
-          void respond(json({ error: `[上游 ${upstream.status}] ${typeof msg === 'string' ? msg : JSON.stringify(msg)}` }, 502))
+          void respond(
+            json({ error: `[上游 ${upstream.status}] ${typeof msg === 'string' ? msg : JSON.stringify(msg)}` }, 502),
+          )
           return
         }
         const content = data.choices?.[0]?.message?.content

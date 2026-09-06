@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { CircleUserRound, Menu, X } from 'lucide-react'
+import { useAuthStore } from '../../stores/authStore'
 
 const LINKS = [
   { to: '/', label: 'READ', end: true },
@@ -22,6 +23,9 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
+  /* 账号入口：已登录指向 /account，未登录指向 /login（统一用「ACCOUNT」，页面内部再分流） */
+  const authed = useAuthStore((s) => s.status === 'in')
+  const accountTo = authed ? '/account' : '/login'
 
   /* 路由切换后自动收起移动端导航面板 */
   useEffect(() => {
@@ -59,15 +63,14 @@ export function Nav() {
       </span>
       <div className="nav-links">
         {LINKS.map((l) => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            end={l.end}
-            className={({ isActive }) => (isActive ? 'active' : '')}
-          >
+          <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => (isActive ? 'active' : '')}>
             {l.label}
           </NavLink>
         ))}
+        <NavLink to={accountTo} className={({ isActive }) => (isActive ? 'active' : '')} aria-label="账号">
+          <CircleUserRound size={15} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+          ACCOUNT
+        </NavLink>
       </div>
       <div className="nav-right">{today()}</div>
       <button
@@ -96,6 +99,14 @@ export function Nav() {
                 {l.label}
               </NavLink>
             ))}
+            <NavLink
+              to={accountTo}
+              className={({ isActive }) => (isActive ? 'active' : '')}
+              onClick={() => setMenuOpen(false)}
+            >
+              <CircleUserRound size={15} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+              ACCOUNT
+            </NavLink>
           </div>
         </>
       )}

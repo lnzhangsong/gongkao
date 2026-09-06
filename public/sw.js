@@ -35,9 +35,7 @@ self.addEventListener('fetch', (event) => {
         const res = await fetch(req)
         const cacheable =
           res.ok &&
-          (req.mode === 'navigate' ||
-            url.pathname.startsWith('/assets/') ||
-            url.pathname.startsWith('/fonts/'))
+          (req.mode === 'navigate' || url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/'))
         if (cacheable) {
           const cache = await caches.open(CACHE)
           cache.put(req, res.clone())

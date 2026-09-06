@@ -133,7 +133,9 @@
   flex-direction: column;
   justify-content: space-between;
   border: 1px solid var(--ink);
-  transition: transform 0.35s, box-shadow 0.35s;
+  transition:
+    transform 0.35s,
+    box-shadow 0.35s;
   text-align: left;
   cursor: pointer;
   font-family: inherit;
@@ -248,7 +250,9 @@
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  transition: transform 0.35s, box-shadow 0.35s;
+  transition:
+    transform 0.35s,
+    box-shadow 0.35s;
   text-align: left;
   cursor: pointer;
   font-family: inherit;

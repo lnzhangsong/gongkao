@@ -22,7 +22,10 @@
   border-radius: 2px;
   padding: 5px 12px;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .terms-chip:hover {
@@ -213,7 +216,6 @@
   font: 14px/1.9 var(--serif);
   color: var(--muted);
 }
-
 
 @media (max-width: 640px) {
   .terms-grid {

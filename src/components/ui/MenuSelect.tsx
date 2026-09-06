@@ -45,7 +45,7 @@ export function MenuSelect({ value, options, onChange, ariaLabel, placeholder, c
       }
       /* 上下键在选项间移动焦点（选项是真实 button，Enter/Space 原生激活） */
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        const items = [...ref.current?.querySelectorAll<HTMLButtonElement>('.menu-select-item') ?? []]
+        const items = [...(ref.current?.querySelectorAll<HTMLButtonElement>('.menu-select-item') ?? [])]
         if (items.length === 0) return
         e.preventDefault()
         const idx = items.indexOf(document.activeElement as HTMLButtonElement)
@@ -67,7 +67,7 @@ export function MenuSelect({ value, options, onChange, ariaLabel, placeholder, c
   }, [open])
 
   const current = options.find((o) => o.key === value)
-  const label = current?.label ?? (value ? value : placeholder ?? '')
+  const label = current?.label ?? (value ? value : (placeholder ?? ''))
 
   return (
     <div className={`menu-select${compact ? ' compact' : ''}${form ? ' form' : ''}`} ref={ref}>

@@ -165,7 +165,9 @@
   border-top: 1px solid var(--line);
   padding: 12px 0;
   cursor: pointer;
-  transition: background 0.2s, padding 0.2s;
+  transition:
+    background 0.2s,
+    padding 0.2s;
 }
 
 .note-row:hover,
@@ -529,11 +531,31 @@
   color: var(--accent-text, var(--accent));
 }
 
-.mat-chip-thesis.active { background: var(--hl-blue); border-color: transparent; color: var(--ink); }
-.mat-chip-evidence.active { background: var(--hl-violet); border-color: transparent; color: var(--ink); }
-.mat-chip-quote.active { background: var(--hl-yellow); border-color: transparent; color: var(--ink); }
-.mat-chip-measure.active { background: var(--hl-green); border-color: transparent; color: var(--ink); }
-.mat-chip-pattern.active { background: var(--hl-orange); border-color: transparent; color: var(--ink); }
+.mat-chip-thesis.active {
+  background: var(--hl-blue);
+  border-color: transparent;
+  color: var(--ink);
+}
+.mat-chip-evidence.active {
+  background: var(--hl-violet);
+  border-color: transparent;
+  color: var(--ink);
+}
+.mat-chip-quote.active {
+  background: var(--hl-yellow);
+  border-color: transparent;
+  color: var(--ink);
+}
+.mat-chip-measure.active {
+  background: var(--hl-green);
+  border-color: transparent;
+  color: var(--ink);
+}
+.mat-chip-pattern.active {
+  background: var(--hl-orange);
+  border-color: transparent;
+  color: var(--ink);
+}
 
 /* 列表行内徽标（非按钮态） */
 i.mat-chip,

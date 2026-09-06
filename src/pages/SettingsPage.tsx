@@ -89,21 +89,18 @@ export function SettingsPage() {
   }
 
   const exportAll = () => {
-    downloadJSON(
-      `readbook-data-${new Date().toISOString().slice(0, 10)}.json`,
-      {
-        exportedAt: new Date().toISOString(),
-        theme,
-        readerSettings: settings,
-        articles: articles.map((a) => ({
-          ...a,
-          progress: progress[a.id] ?? null,
-        })),
-        annotations: useAnnotationStore.getState().annotations,
-        shenlun: Object.values(useShenlunStore.getState().study),
-        learningEvents: useLearningEventStore.getState().events,
-      },
-    )
+    downloadJSON(`readbook-data-${new Date().toISOString().slice(0, 10)}.json`, {
+      exportedAt: new Date().toISOString(),
+      theme,
+      readerSettings: settings,
+      articles: articles.map((a) => ({
+        ...a,
+        progress: progress[a.id] ?? null,
+      })),
+      annotations: useAnnotationStore.getState().annotations,
+      shenlun: Object.values(useShenlunStore.getState().study),
+      learningEvents: useLearningEventStore.getState().events,
+    })
   }
 
   /** 导入数据（支持设置页整包导出 + 摘录页导出两种格式） */
@@ -193,18 +190,20 @@ export function SettingsPage() {
       <main className="settings">
         <nav className="settings-nav">
           {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              className={active === s.id ? 'active' : ''}
-              onClick={() => scrollTo(s.id)}
-            >
+            <button key={s.id} className={active === s.id ? 'active' : ''} onClick={() => scrollTo(s.id)}>
               {s.label}
             </button>
           ))}
         </nav>
 
         <section>
-          <div className="settings-section" id="reading" ref={(el) => { sectionRefs.current.reading = el }}>
+          <div
+            className="settings-section"
+            id="reading"
+            ref={(el) => {
+              sectionRefs.current.reading = el
+            }}
+          >
             <h2>阅读偏好</h2>
             <div className="setting-row">
               <div>
@@ -299,11 +298,7 @@ export function SettingsPage() {
                 <div className="setting-desc">在文章中显示保存的高亮与划线内容</div>
               </div>
               <div className="setting-control">
-                <Toggle
-                  on={annotationsVisible}
-                  onChange={setAnnotationsVisible}
-                  label="显示划线"
-                />
+                <Toggle on={annotationsVisible} onChange={setAnnotationsVisible} label="显示划线" />
               </div>
             </div>
 
@@ -358,7 +353,13 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="settings-section" id="display" ref={(el) => { sectionRefs.current.display = el }}>
+          <div
+            className="settings-section"
+            id="display"
+            ref={(el) => {
+              sectionRefs.current.display = el
+            }}
+          >
             <h2>显示与主题</h2>
             <div className="setting-row">
               <div>
@@ -417,7 +418,13 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="settings-section" id="data" ref={(el) => { sectionRefs.current.data = el }}>
+          <div
+            className="settings-section"
+            id="data"
+            ref={(el) => {
+              sectionRefs.current.data = el
+            }}
+          >
             <h2>数据与隐私</h2>
             <div className="setting-row">
               <div>
@@ -475,12 +482,24 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="settings-section" id="ai" ref={(el) => { sectionRefs.current.ai = el }}>
+          <div
+            className="settings-section"
+            id="ai"
+            ref={(el) => {
+              sectionRefs.current.ai = el
+            }}
+          >
             <h2>AI 服务</h2>
             <AiSection />
           </div>
 
-          <div className="settings-section" id="about" ref={(el) => { sectionRefs.current.about = el }}>
+          <div
+            className="settings-section"
+            id="about"
+            ref={(el) => {
+              sectionRefs.current.about = el
+            }}
+          >
             <h2>关于读本</h2>
             <div className="about-line" style={{ paddingBottom: 16 }}>
               <strong className="about-brand">读本</strong> <span className="about-en">READBOOK</span> v0.1.0
@@ -491,8 +510,7 @@ export function SettingsPage() {
               <div>
                 <div className="setting-title">本地数据统计</div>
                 <div className="setting-desc">
-                  文章 {stats.articles} 篇 · 已读完 {stats.read} 篇 · 收藏 {stats.favorites} 篇 · 摘录{' '}
-                  {stats.notes} 条
+                  文章 {stats.articles} 篇 · 已读完 {stats.read} 篇 · 收藏 {stats.favorites} 篇 · 摘录 {stats.notes} 条
                 </div>
               </div>
             </div>
@@ -536,8 +554,8 @@ function AiSection() {
         <div>
           <div className="setting-title">AI 功能</div>
           <div className="setting-desc">
-            AI 预拆解 / 大意起草：填入你自己的 OpenAI 兼容接口（DeepSeek、GLM、OpenAI 等）。
-            Key 只保存在本机浏览器，请求经服务端纯转发，不留存。
+            AI 预拆解 / 大意起草：填入你自己的 OpenAI 兼容接口（DeepSeek、GLM、OpenAI 等）。 Key
+            只保存在本机浏览器，请求经服务端纯转发，不留存。
           </div>
         </div>
       </div>
@@ -577,9 +595,7 @@ function AiSection() {
           <button className="ghost" onClick={runTest} disabled={testing}>
             {testing ? '测试中…' : '测试连通'}
           </button>
-          {result && (
-            <span className={`ai-status ${result.ok ? 'ok' : 'err'}`}>{result.text}</span>
-          )}
+          {result && <span className={`ai-status ${result.ok ? 'ok' : 'err'}`}>{result.text}</span>}
         </div>
       </div>
     </>

@@ -129,9 +129,7 @@ export function ExamAnalysisDrawer({
             >
               {running > 0 ? '解析中…' : 'AI 解析本题 ✦'}
             </button>
-            <span className="draw-run-hint">
-              {running > 0 ? '解析中…' : '只生成本题要点，约需十几秒'}
-            </span>
+            <span className="draw-run-hint">{running > 0 ? '解析中…' : '只生成本题要点，约需十几秒'}</span>
           </div>
           <ExamAnswerTrace
             paperId={paperId}
@@ -148,7 +146,7 @@ export function ExamAnalysisDrawer({
           />
         </div>
       </aside>
-      </>,
+    </>,
     document.body,
   )
 }

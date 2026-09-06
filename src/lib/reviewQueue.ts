@@ -13,10 +13,7 @@ import type { LearningEvent } from '../stores/learningEventStore'
 
 const RE_REVIEW_DAYS = 7
 
-export function reviewQueue(
-  annotations: Annotation[],
-  events: LearningEvent[],
-): Annotation[] {
+export function reviewQueue(annotations: Annotation[], events: LearningEvent[]): Annotation[] {
   const lastAt = new Map<string, string>()
   for (const e of events) {
     const prev = lastAt.get(e.objectId)
@@ -25,9 +22,7 @@ export function reviewQueue(
   const now = Date.now()
   const pool = annotations.filter(
     (a) =>
-      a.kind === 'highlight' &&
-      (a.materialType === 'quote' || a.materialType === 'pattern') &&
-      a.memorized === true,
+      a.kind === 'highlight' && (a.materialType === 'quote' || a.materialType === 'pattern') && a.memorized === true,
   )
   const due = pool.filter((a) => {
     if (a.mastery !== 2) return true

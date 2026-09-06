@@ -60,7 +60,9 @@ export function HomePage() {
   const entry = useMemo(() => {
     const inProgress = continueList[0]
     if (inProgress) return { article: inProgress.article, mode: 'continue' as const }
-    const unread = articles.filter((a) => !progress[a.id]?.completed && !(progress[a.id] && progress[a.id].percent >= 95))
+    const unread = articles.filter(
+      (a) => !progress[a.id]?.completed && !(progress[a.id] && progress[a.id].percent >= 95),
+    )
     if (unread.length > 0) return { article: unread[Math.abs(daySeed) % unread.length], mode: 'start' as const }
     const read = articles.filter((a) => progress[a.id]?.completed)
     if (read.length === 0) return null
@@ -107,7 +109,8 @@ export function HomePage() {
   const entryNo = entry ? formatArticleNo(entry.article.id) : '000'
   /* eyebrow 展示当日日期 */
   const today = new Date().toISOString().slice(0, 10)
-  const entryFooter = entry?.mode === 'continue' ? 'CONTINUE READING' : entry?.mode === 'review' ? 'REVIEW TODAY' : "TODAY'S ENTRY"
+  const entryFooter =
+    entry?.mode === 'continue' ? 'CONTINUE READING' : entry?.mode === 'review' ? 'REVIEW TODAY' : "TODAY'S ENTRY"
 
   return (
     <section id="home" className="page-section">
@@ -120,9 +123,7 @@ export function HomePage() {
             <span>写好答案。</span>
           </h1>
           <div className="hero-foot">
-            <p>
-              每日精选人民日报深度内容与申论素材。不追热点，只留下值得反复阅读的文字。
-            </p>
+            <p>每日精选人民日报深度内容与申论素材。不追热点，只留下值得反复阅读的文字。</p>
             <div className="week-stats">
               <span>
                 本周阅读 <Ticker value={weekStats.minutes} /> 分钟
@@ -153,7 +154,13 @@ export function HomePage() {
         </div>
         <div className="stage">
           <div className="halo" />
-          <button className="entry" onClick={() => entry && open(entry.article)} {...(entry ? hoverWarm(() => warm(entry.article)) : {})} disabled={!entry} aria-disabled={!entry}>
+          <button
+            className="entry"
+            onClick={() => entry && open(entry.article)}
+            {...(entry ? hoverWarm(() => warm(entry.article)) : {})}
+            disabled={!entry}
+            aria-disabled={!entry}
+          >
             <small>READBOOK / NO. {entryNo}</small>
             <strong>
               开始
@@ -201,7 +208,12 @@ export function HomePage() {
             </div>
           ) : (
             <div className="reading">
-              <article className="main-card" style={{ cursor: 'pointer' }} onClick={() => open(entry.article)} {...hoverWarm(() => warm(entry.article))}>
+              <article
+                className="main-card"
+                style={{ cursor: 'pointer' }}
+                onClick={() => open(entry.article)}
+                {...hoverWarm(() => warm(entry.article))}
+              >
                 <span className="tag">
                   {entry.article.source} · {entry.article.topic}
                 </span>
@@ -233,7 +245,11 @@ export function HomePage() {
                 </div>
               </div>
             </div>
-            <button className="ghost" onClick={() => open(recentList[0].article)} {...hoverWarm(() => warm(recentList[0].article))}>
+            <button
+              className="ghost"
+              onClick={() => open(recentList[0].article)}
+              {...hoverWarm(() => warm(recentList[0].article))}
+            >
               继续阅读　↗
             </button>
           </div>

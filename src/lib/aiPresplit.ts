@@ -23,9 +23,7 @@ const SYSTEM = '你是申论范文精读助手，熟悉人民日报评论员文�
 
 /** 整篇预拆解：观点 / 分论点 / 段意 / 骨架候选 */
 export async function draftStudy(article: Article, signal?: AbortSignal): Promise<StudyDraft> {
-  const paras = (article.content ?? [])
-    .map((t, i) => `【第${i}段】${t}`)
-    .join('\n')
+  const paras = (article.content ?? []).map((t, i) => `【第${i}段】${t}`).join('\n')
   const user = `下面是一篇人民日报时评《${article.title}》，请做范文精读预拆解，输出 JSON 对象：
 {
   "coreThesis": "核心观点，一两句话",
@@ -57,7 +55,15 @@ ${paras}`
       : [],
     paragraphSummaries: Array.isArray(out.paragraphSummaries)
       ? out.paragraphSummaries
-          .filter((p) => p && Number.isInteger(p.paraIndex) && p.paraIndex >= 0 && p.paraIndex < count && typeof p.summary === 'string' && p.summary.trim())
+          .filter(
+            (p) =>
+              p &&
+              Number.isInteger(p.paraIndex) &&
+              p.paraIndex >= 0 &&
+              p.paraIndex < count &&
+              typeof p.summary === 'string' &&
+              p.summary.trim(),
+          )
           .map((p) => ({ paraIndex: p.paraIndex, summary: p.summary.trim() }))
       : [],
     skeleton: {

@@ -5,7 +5,10 @@
  */
 import { execSync } from 'node:child_process'
 
-const ports = process.argv.slice(2).map(Number).filter((n) => Number.isInteger(n) && n > 0)
+const ports = process.argv
+  .slice(2)
+  .map(Number)
+  .filter((n) => Number.isInteger(n) && n > 0)
 if (ports.length === 0) {
   console.error('用法: node scripts/kill-port.mjs <port> [port...]')
   process.exit(1)
@@ -18,10 +21,24 @@ for (const port of ports) {
     let pids
     if (isWin) {
       const out = execSync(`netstat -ano | findstr "LISTENING" | findstr ":${port} "`, { encoding: 'utf8' })
-      pids = [...new Set(out.split('\n').map((l) => l.trim().split(/\s+/).at(-1)).filter(Boolean))]
+      pids = [
+        ...new Set(
+          out
+            .split('\n')
+            .map((l) => l.trim().split(/\s+/).at(-1))
+            .filter(Boolean),
+        ),
+      ]
     } else {
       const out = execSync(`lsof -ti tcp:${port} -sTCP:LISTEN`, { encoding: 'utf8' })
-      pids = [...new Set(out.split('\n').map((l) => l.trim()).filter(Boolean))]
+      pids = [
+        ...new Set(
+          out
+            .split('\n')
+            .map((l) => l.trim())
+            .filter(Boolean),
+        ),
+      ]
     }
     if (pids.length === 0) continue
     for (const pid of pids) {

@@ -19,9 +19,7 @@ export function AdminPage() {
     const kw = q.trim().toLowerCase()
     const list = [...articles].sort((a, b) => (b.date < a.date ? -1 : 1))
     if (!kw) return list
-    return list.filter((a) =>
-      `${a.title} ${a.summary} ${a.topic} ${a.source} ${a.date}`.toLowerCase().includes(kw),
-    )
+    return list.filter((a) => `${a.title} ${a.summary} ${a.topic} ${a.source} ${a.date}`.toLowerCase().includes(kw))
   }, [articles, q])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -45,9 +43,7 @@ export function AdminPage() {
         <div className="filters">
           {/* 计数展示，非交互（原为假按钮，点击无反应） */}
           <span className="filter-pill active">{filtered.length} 篇文章</span>
-          <span className="filter-pill">
-            {filtered.filter((a) => a.id.startsWith('u')).length} 本地录入
-          </span>
+          <span className="filter-pill">{filtered.filter((a) => a.id.startsWith('u')).length} 本地录入</span>
         </div>
         <div className="toolbar-tools">
           <label className="search-box">

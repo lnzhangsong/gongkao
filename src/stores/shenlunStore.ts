@@ -27,7 +27,8 @@ export interface ArticleStudy {
   updatedAt: string
 }
 
-interface ArticleState {  study: Record<string, ArticleStudy>
+interface ArticleState {
+  study: Record<string, ArticleStudy>
   _hasHydrated: boolean
 
   getStudy: (articleId: string) => ArticleStudy | undefined
@@ -136,10 +137,9 @@ export const useShenlunStore = create<ArticleState>()(
 
       /** AI 草稿：写入 origin=ai 未确认；采纳/编辑走 setParagraphSummary 转正 */
 
-
       setSkeleton: (articleId, patch) => {
         const cur = get().study[articleId]
-        get().upsert(articleId, { skeleton: { ...(cur?.skeleton ?? {}), ...patch } })
+        get().upsert(articleId, { skeleton: { ...cur?.skeleton, ...patch } })
       },
 
       removeForArticle: (articleId) =>

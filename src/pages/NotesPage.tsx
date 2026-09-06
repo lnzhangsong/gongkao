@@ -142,7 +142,14 @@ export function NotesPage() {
   const rowKinds = (r: Row) => new Set(r.anns.map((a) => a.kind))
 
   const quickCounts = useMemo(() => {
-    const m: Record<QuickKey, number> = { all: rows.length, recent: 0, highlight: 0, underline: 0, note: 0, memorize: 0 }
+    const m: Record<QuickKey, number> = {
+      all: rows.length,
+      recent: 0,
+      highlight: 0,
+      underline: 0,
+      note: 0,
+      memorize: 0,
+    }
     const sevenDays = Date.now() - 7 * 24 * 3600 * 1000
     for (const r of rows) {
       if (new Date(r.date).getTime() > sevenDays) m.recent += 1
@@ -169,7 +176,8 @@ export function NotesPage() {
       if (mat && mat !== 'none' && r.materialType !== mat) return false
       if (topic && r.topic !== topic) return false
       if (kw) {
-        const hay = `${r.text} ${r.notes.map((n) => n.noteText ?? '').join(' ')} ${r.title} ${r.topic} ${r.source}`.toLowerCase()
+        const hay =
+          `${r.text} ${r.notes.map((n) => n.noteText ?? '').join(' ')} ${r.title} ${r.topic} ${r.source}`.toLowerCase()
         if (!hay.includes(kw)) return false
       }
       return true
@@ -189,7 +197,11 @@ export function NotesPage() {
     if (checked.size === 0) return
     const visible = new Set(filtered.map((r) => r.key))
     let changed = false
-    for (const k of checked) if (!visible.has(k)) { changed = true; break }
+    for (const k of checked)
+      if (!visible.has(k)) {
+        changed = true
+        break
+      }
     if (!changed) return
     setChecked((prev) => {
       const next = new Set<string>()
@@ -262,10 +274,7 @@ export function NotesPage() {
   /** 导出 Markdown：申论素材合集格式（类型固定顺序 + 句式带模板，可直接当写作参考） */
   const exportMarkdown = () => {
     const data = checked.size > 0 ? filtered.filter((r) => checked.has(r.key)) : filtered
-    downloadText(
-      `readbook-materials-${new Date().toISOString().slice(0, 10)}.md`,
-      buildMaterialMarkdown(data),
-    )
+    downloadText(`readbook-materials-${new Date().toISOString().slice(0, 10)}.md`, buildMaterialMarkdown(data))
   }
 
   /** 删除摘录：不弹确认，5 秒内可撤销（误触一键恢复整段标注与笔记） */
@@ -406,7 +415,12 @@ export function NotesPage() {
                 <button
                   className="text-btn"
                   style={{ color: 'var(--muted)', display: 'inline-flex' }}
-                  onClick={() => applyParams((n) => { n.delete('q'); n.delete('page') })}
+                  onClick={() =>
+                    applyParams((n) => {
+                      n.delete('q')
+                      n.delete('page')
+                    })
+                  }
                   aria-label="清除搜索"
                 >
                   <X size={12} />
@@ -417,10 +431,7 @@ export function NotesPage() {
 
           {/* 素材类型筛选（含未标记素材） */}
           <div className="mat-filter">
-            <button
-              className={`mat-chip${!mat ? ' active' : ''}`}
-              onClick={() => setParam('mat', '')}
-            >
+            <button className={`mat-chip${!mat ? ' active' : ''}`} onClick={() => setParam('mat', '')}>
               全部
             </button>
             {MATERIAL_TYPES.map((t) => (
@@ -442,7 +453,12 @@ export function NotesPage() {
 
           <div className="batch-bar">
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-              <input type="checkbox" checked={pageItems.length > 0 && pageItems.every((r) => checked.has(r.key))} onChange={toggleAll} style={{ accentColor: 'var(--accent)' }} />
+              <input
+                type="checkbox"
+                checked={pageItems.length > 0 && pageItems.every((r) => checked.has(r.key))}
+                onChange={toggleAll}
+                style={{ accentColor: 'var(--accent)' }}
+              />
               全选本页
             </label>
             {checked.size > 0 && <span>已选 {checked.size} 条</span>}
@@ -502,11 +518,7 @@ export function NotesPage() {
                     }}
                   >
                     <span className="note-check" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={checked.has(r.key)}
-                        onChange={() => toggleChecked(r.key)}
-                      />
+                      <input type="checkbox" checked={checked.has(r.key)} onChange={() => toggleChecked(r.key)} />
                     </span>
                     <span className="note-no">{String(i + 1).padStart(2, '0')}</span>
                     <span className="note-text">
@@ -538,9 +550,7 @@ export function NotesPage() {
         </section>
 
         {/* 移动端：详情收进底部抽屉，需要先点列表行打开；桌面端此遮罩不渲染交互层 */}
-        {mobileDetailOpen && (
-          <div className="note-detail-backdrop" onClick={() => setMobileDetailOpen(false)} />
-        )}
+        {mobileDetailOpen && <div className="note-detail-backdrop" onClick={() => setMobileDetailOpen(false)} />}
 
         <aside className={`note-detail${mobileDetailOpen ? ' mobile-open' : ''}`}>
           {selectedRow ? (
@@ -562,7 +572,9 @@ export function NotesPage() {
               <div className="detail-content">
                 <div className="detail-topic">
                   {rowKinds(selectedRow).has('highlight') && (
-                    <i className={`hl-swatch ${selectedRow.anns.find((a) => a.kind === 'highlight')?.color ?? 'yellow'}`} />
+                    <i
+                      className={`hl-swatch ${selectedRow.anns.find((a) => a.kind === 'highlight')?.color ?? 'yellow'}`}
+                    />
                   )}
                   {rowKinds(selectedRow).has('underline') && <i className="ul-swatch" />}
                   {rowKinds(selectedRow).has('note') && <i className="note-swatch">✦</i>}
@@ -641,16 +653,20 @@ export function NotesPage() {
                       <div className="detail-note" key={n.id}>
                         {editNoteId === n.id ? (
                           <>
-                            <textarea
-                              value={noteDraft}
-                              onChange={(e) => setNoteDraft(e.target.value)}
-                              autoFocus
-                            />
+                            <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} autoFocus />
                             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                              <button className="ghost" style={{ padding: '6px 10px' }} onClick={() => saveNoteEdit(n.id)}>
+                              <button
+                                className="ghost"
+                                style={{ padding: '6px 10px' }}
+                                onClick={() => saveNoteEdit(n.id)}
+                              >
                                 保存
                               </button>
-                              <button className="ghost" style={{ padding: '6px 10px' }} onClick={() => setEditNoteId(null)}>
+                              <button
+                                className="ghost"
+                                style={{ padding: '6px 10px' }}
+                                onClick={() => setEditNoteId(null)}
+                              >
                                 取消
                               </button>
                             </div>
@@ -697,7 +713,9 @@ export function NotesPage() {
                 <div className="detail-source">
                   来源：{selectedRow.source} · {selectedRow.title}
                   <br />
-                  <Link to={`/reading/${selectedRow.anns[0].articleId}?ann=${selectedRow.anns[0].id}`}>打开原文　↗</Link>
+                  <Link to={`/reading/${selectedRow.anns[0].articleId}?ann=${selectedRow.anns[0].id}`}>
+                    打开原文　↗
+                  </Link>
                   <br />
                   保存时间：{formatDateTime(selectedRow.date)}
                 </div>

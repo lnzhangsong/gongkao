@@ -5,7 +5,8 @@
 
 /** 段内硬换行拼接：返回重排后的段落数组 */
 export function joinParagraphs(text: string): string[] {
-  const HEAD = /^(?:材料\s*[0-9一二三四五六七八九十]+|【[^】]*】|问题\s*[一二三四五六七八九十1-9]+[：:：]?|[一二三四五六七八九十]+[、.]|\d{1,2}[、.．]|要求[（(:：]|答卷|参考答案)/
+  const HEAD =
+    /^(?:材料\s*[0-9一二三四五六七八九十]+|【[^】]*】|问题\s*[一二三四五六七八九十1-9]+[：:：]?|[一二三四五六七八九十]+[、.]|\d{1,2}[、.．]|要求[（(:：]|答卷|参考答案)/
   const paras: string[] = []
   let cur = ''
   for (const raw of text.split('\n')) {
@@ -34,10 +35,16 @@ export const reflowParagraphs = (text: string) => joinParagraphs(text).join('\n\
 export const reflowInline = (text: string) => text.replace(/\s+/g, '')
 
 /* 从题干自动读取字数限制与分值（“不超过300字”“250-300字”“（15分）”等） */
-const toAsciiNum = (s: string) => parseInt(s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)), 10)
+const toAsciiNum = (s: string) =>
+  parseInt(
+    s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)),
+    10,
+  )
 
 export function extractWordLimit(text: string): number | null {
-  for (const [, a, b] of text.matchAll(/(?:不超过|不多于|不多于|不超过|不得超过|字数\s*(?:在|为)?|控制在)?\s*([0-9０-９]{2,4})\s*(?:[-—~至]\s*([0-9０-９]{2,4}))?\s*字/g)) {
+  for (const [, a, b] of text.matchAll(
+    /(?:不超过|不多于|不多于|不超过|不得超过|字数\s*(?:在|为)?|控制在)?\s*([0-9０-９]{2,4})\s*(?:[-—~至]\s*([0-9０-９]{2,4}))?\s*字/g,
+  )) {
     const hi = b ? toAsciiNum(b) : toAsciiNum(a)
     if (hi >= 20 && hi <= 5000) return hi
   }
@@ -56,13 +63,15 @@ export function extractPoints(text: string): number | null {
 const CN_NUM: Record<string, number> = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
 const toNum = (num: string): number => {
   const ascii = num.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248))
-  return /^[0-9]+$/.test(ascii) ? parseInt(ascii, 10) : CN_NUM[num] ?? 0
+  return /^[0-9]+$/.test(ascii) ? parseInt(ascii, 10) : (CN_NUM[num] ?? 0)
 }
 
 export function questionMaterials(q: { stem: string; requirement: string }): number[] {
   const text = `${q.stem}\n${q.requirement}`
   const found = new Set<number>()
-  for (const [, a, b] of text.matchAll(/(?:给定)?[材资]料?\s*([0-9０-９]+|[一二三四五六七八九十]+)(?:\s*[-—~至]\s*([0-9０-９]+|[一二三四五六七八九十]+))?/g)) {
+  for (const [, a, b] of text.matchAll(
+    /(?:给定)?[材资]料?\s*([0-9０-９]+|[一二三四五六七八九十]+)(?:\s*[-—~至]\s*([0-9０-９]+|[一二三四五六七八九十]+))?/g,
+  )) {
     const start = toNum(a)
     const end = b ? toNum(b) : start
     for (let n = start; n >= 1 && n <= end && n - start < 12; n++) found.add(n)

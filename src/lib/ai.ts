@@ -67,7 +67,10 @@ function findJsonSpan(text: string): { start: number; end: number } | null {
 function repairTruncatedJson(text: string): string | null {
   let start = -1
   for (let i = 0; i < text.length; i++) {
-    if (text[i] === '{' || text[i] === '[') { start = i; break }
+    if (text[i] === '{' || text[i] === '[') {
+      start = i
+      break
+    }
   }
   if (start < 0) return null
 
@@ -96,7 +99,7 @@ function repairTruncatedJson(text: string): string | null {
   s = s.replace(/,\s*$/, '')
   if (inStr) {
     s += '"' // 补上未闭合的字符串引号
-  } else if (/:$/.test(s)) {
+  } else if (s.endsWith(':')) {
     s += 'null' // 截断在键值冒号后（如 `...", "points":`），补一个占位值才有合法 JSON
   }
   while (stack.length) {
@@ -130,11 +133,17 @@ function repairMismatchedQuotes(text: string): string | null {
     // 找前后第一个非空白字符，判断当前引号是否处于结构性位置
     let prev = ''
     for (let j = i - 1; j >= 0; j--) {
-      if (text[j] !== ' ' && text[j] !== '\n' && text[j] !== '\t') { prev = text[j]; break }
+      if (text[j] !== ' ' && text[j] !== '\n' && text[j] !== '\t') {
+        prev = text[j]
+        break
+      }
     }
     let next = ''
     for (let j = i + 1; j < text.length; j++) {
-      if (text[j] !== ' ' && text[j] !== '\n' && text[j] !== '\t') { next = text[j]; break }
+      if (text[j] !== ' ' && text[j] !== '\n' && text[j] !== '\t') {
+        next = text[j]
+        break
+      }
     }
     const structOpen = STRUCT_OPEN.has(prev)
     const structClose = STRUCT_CLOSE.has(next)
@@ -153,22 +162,38 @@ function repairMismatchedQuotes(text: string): string | null {
 /** 尝试用多种策略解析候选文本，解析成功返回对象，否则返回 undefined */
 function tryParseCandidate(candidate: string): unknown {
   // 1) 原样解析
-  try { return JSON.parse(candidate) } catch { /* 继续 */ }
+  try {
+    return JSON.parse(candidate)
+  } catch {
+    /* 继续 */
+  }
   // 2) 修复字符串值里的裸 ASCII 引号（结构配平但含中文引号误写，最常见）
   const dequoted = repairMismatchedQuotes(candidate)
   if (dequoted !== null) {
-    try { return JSON.parse(dequoted) } catch { /* 继续 */ }
+    try {
+      return JSON.parse(dequoted)
+    } catch {
+      /* 继续 */
+    }
   }
   // 3) 修复被截断的 JSON：先于 findJsonSpan，避免抠到内层完整碎片而丢失外层结构
   //    （如 {"points":[{"text":"a"... 被截断时，内层 {"text":"a"} 是合法 JSON 但缺 stance/points）
   const repaired = repairTruncatedJson(candidate)
   if (repaired !== null) {
-    try { return JSON.parse(repaired) } catch { /* 继续 */ }
+    try {
+      return JSON.parse(repaired)
+    } catch {
+      /* 继续 */
+    }
   }
   // 4) 抠出完整 JSON 子串（说明文字夹杂 / 代码块）
   const span = findJsonSpan(candidate)
   if (span) {
-    try { return JSON.parse(candidate.slice(span.start, span.end)) } catch { /* 继续 */ }
+    try {
+      return JSON.parse(candidate.slice(span.start, span.end))
+    } catch {
+      /* 继续 */
+    }
   }
   return undefined
 }

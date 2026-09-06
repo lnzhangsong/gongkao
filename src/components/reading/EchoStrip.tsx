@@ -35,9 +35,7 @@ export function EchoStrip({ articleId, topic }: { articleId: string; topic?: Art
         a.memorized === true &&
         (a.materialType === 'quote' || a.materialType === 'pattern'),
     )
-    const ranked = [...mats].sort(
-      (x, y) => recallProbability(x, events) - recallProbability(y, events),
-    )
+    const ranked = [...mats].sort((x, y) => recallProbability(x, events) - recallProbability(y, events))
     const sameTopic = ranked.filter((a) => getArticle(a.articleId)?.topic === topic)
     const picked = [...sameTopic, ...ranked.filter((a) => !sameTopic.includes(a))].slice(0, 3)
     for (const a of picked) {

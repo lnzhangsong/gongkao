@@ -5,7 +5,15 @@
  * 输出走 extractJson 容错解析，mode / sourceIdx 做枚举与范围校验；
  * 产出一律先进页面草稿态，人工确认后才写入 examStudyStore（A3 不变）。
  */
-import { DERIVE_MODES, MARK_LEVELS, MARK_ROLES, type AnswerPointTrace, type DeriveMode, type MarkLevel, type MaterialMark } from '../stores/examStudyStore'
+import {
+  DERIVE_MODES,
+  MARK_LEVELS,
+  MARK_ROLES,
+  type AnswerPointTrace,
+  type DeriveMode,
+  type MarkLevel,
+  type MaterialMark,
+} from '../stores/examStudyStore'
 import { aiChat, extractJson } from './ai'
 
 export interface TraceExamMaterial {
@@ -97,7 +105,10 @@ ${materialBlock}`
     temperature: 0.3,
     signal: opts.signal,
   })
-  return parseTraceResult(raw, opts.materials.map((m) => m.idx))
+  return parseTraceResult(
+    raw,
+    opts.materials.map((m) => m.idx),
+  )
 }
 
 /** 解析 + 校验 AI 返回：mode 枚举容错、sourceIdx 范围校验（越界/非数字回退 null） */
@@ -179,7 +190,17 @@ ${buildMaterialBlock(opts.materials)}`
     maxTokens: 8000,
     signal: opts.signal,
   })
-  const out = extractJson<{ marks?: { matIdx?: unknown; quote?: unknown; role?: unknown; use?: unknown; level?: unknown; stage?: unknown; stageSummary?: unknown }[] }>(raw)
+  const out = extractJson<{
+    marks?: {
+      matIdx?: unknown
+      quote?: unknown
+      role?: unknown
+      use?: unknown
+      level?: unknown
+      stage?: unknown
+      stageSummary?: unknown
+    }[]
+  }>(raw)
   const marks = (Array.isArray(out.marks) ? out.marks : [])
     .map((m): MaterialMark | null => {
       const quote = typeof m?.quote === 'string' ? m.quote.trim() : ''
@@ -189,20 +210,41 @@ ${buildMaterialBlock(opts.materials)}`
       const matIdx = Number.isFinite(idxRaw) && idxSet.has(idxRaw) ? idxRaw : opts.materials[0]?.idx
       if (matIdx == null) return null
       const levelRaw = typeof m?.level === 'string' ? m.level.trim().toLowerCase() : ''
-      const level: MarkLevel = (MARK_LEVELS as readonly string[]).includes(levelRaw) ? (levelRaw as MarkLevel) : 'normal'
+      const level: MarkLevel = (MARK_LEVELS as readonly string[]).includes(levelRaw)
+        ? (levelRaw as MarkLevel)
+        : 'normal'
       const roleRaw = rawRole
       /* role 归一化到体系词：AI 常见的近义词映射，认不出则保留原词 */
       const ROLE_ALIAS: Record<string, string> = {
-        案例: '案例叙事', 数据: '数据支撑', 权威: '权威观点', 专家观点: '权威观点',
-        民众: '民众声音', 群众声音: '民众声音', 问题: '问题呈现', 成绩: '成绩成效',
-        对策: '对策做法', 建议: '对策做法', 原因: '原因分析', 意义: '意义影响',
-        危害: '危害后果', 背景: '背景铺垫', 转折: '转折', 递进: '递进',
-        衔接: '衔接过渡', 过渡: '衔接过渡', 总结: '总结收束', 收束: '总结收束',
-        关键词: '高频关键词', 核心概念: '核心概念', 高频词: '高频关键词',
+        案例: '案例叙事',
+        数据: '数据支撑',
+        权威: '权威观点',
+        专家观点: '权威观点',
+        民众: '民众声音',
+        群众声音: '民众声音',
+        问题: '问题呈现',
+        成绩: '成绩成效',
+        对策: '对策做法',
+        建议: '对策做法',
+        原因: '原因分析',
+        意义: '意义影响',
+        危害: '危害后果',
+        背景: '背景铺垫',
+        转折: '转折',
+        递进: '递进',
+        衔接: '衔接过渡',
+        过渡: '衔接过渡',
+        总结: '总结收束',
+        收束: '总结收束',
+        关键词: '高频关键词',
+        核心概念: '核心概念',
+        高频词: '高频关键词',
       }
       const role = (MARK_ROLES as readonly string[]).includes(roleRaw)
         ? roleRaw
-        : ROLE_ALIAS[roleRaw] ?? Object.entries(ROLE_ALIAS).find(([k]) => roleRaw.includes(k))?.[1] ?? (roleRaw || '衔接过渡')
+        : (ROLE_ALIAS[roleRaw] ??
+          Object.entries(ROLE_ALIAS).find(([k]) => roleRaw.includes(k))?.[1] ??
+          (roleRaw || '衔接过渡'))
       return {
         id: `k${Math.random().toString(36).slice(2, 10)}`,
         matIdx,
@@ -212,7 +254,10 @@ ${buildMaterialBlock(opts.materials)}`
         use: typeof m?.use === 'string' && m.use.trim() ? m.use.trim() : '辅助句：帮助理解材料脉络，一般不直接进答案',
         level,
         /* 行文阶段（提纲用）：AI 未产出则缺省，展示端按连续同作用兜底分组 */
-        stage: typeof m?.stage === 'number' && Number.isFinite(m.stage) ? m.stage : parseInt(String(m?.stage ?? ''), 10) || undefined,
+        stage:
+          typeof m?.stage === 'number' && Number.isFinite(m.stage)
+            ? m.stage
+            : parseInt(String(m?.stage ?? ''), 10) || undefined,
         stageSummary: typeof m?.stageSummary === 'string' && m.stageSummary.trim() ? m.stageSummary.trim() : undefined,
       }
     })

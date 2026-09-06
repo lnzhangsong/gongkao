@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { ArrowLeft, BookOpenCheck, Bookmark, Library, Minus, Plus, SlidersHorizontal, StickyNote, Settings } from 'lucide-react'
+import {
+  ArrowLeft,
+  BookOpenCheck,
+  Bookmark,
+  Library,
+  Minus,
+  Plus,
+  SlidersHorizontal,
+  StickyNote,
+  Settings,
+} from 'lucide-react'
 import { MenuSelect } from './MenuSelect'
 import { FONT_FAMILIES } from '../../stores/readerStore'
 import type { ReaderSettings } from '../../types'
@@ -70,12 +80,7 @@ export function ArticleToolsMenu({
 
   return (
     <div className="article-tools-menu reading-page-menu" ref={ref}>
-      <button
-        className="tools-hamburger"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="阅读辅助"
-        aria-expanded={open}
-      >
+      <button className="tools-hamburger" onClick={() => setOpen((o) => !o)} aria-label="阅读辅助" aria-expanded={open}>
         <SlidersHorizontal size={18} />
       </button>
 

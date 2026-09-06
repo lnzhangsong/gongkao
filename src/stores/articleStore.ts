@@ -108,7 +108,7 @@ function putContentCache(s: ArticleState, id: string, article: Article): Partial
   return { contentCache: cache }
 }
 
-/** 用 API meta + localEdits/deletedIds 重建合并视图 */function buildArticles(
+/** 用 API meta + localEdits/deletedIds 重建合并视图 */ function buildArticles(
   apiMeta: Article[],
   localEdits: Record<string, Article>,
   deletedIds: string[],
@@ -257,8 +257,7 @@ export const useArticleStore = create<ArticleState>()(
           }
         }),
 
-      importProgress: (map) =>
-        set((s) => ({ progress: { ...s.progress, ...map } })),
+      importProgress: (map) => set((s) => ({ progress: { ...s.progress, ...map } })),
 
       addArticle: (input) => {
         const article: Article = {

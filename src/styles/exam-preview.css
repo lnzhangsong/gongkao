@@ -71,7 +71,9 @@
   justify-content: space-between;
   gap: 10px;
   overflow: hidden;
-  transition: transform 0.35s, box-shadow 0.35s;
+  transition:
+    transform 0.35s,
+    box-shadow 0.35s;
   text-align: left;
   cursor: pointer;
   font-family: inherit;
@@ -561,7 +563,9 @@
   border-radius: 2px;
   padding: 4px 10px;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .exam-jump-chip:hover {
@@ -727,7 +731,9 @@
   border: 1px solid var(--line);
   border-radius: 2px;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .exam-move-btn:hover:not(:disabled) {
@@ -952,12 +958,31 @@
 }
 
 /* 加工深度 0 摘抄 → 5 补充，accent 渐进 */
-.draw-mode.m0 { background: color-mix(in srgb, var(--accent) 16%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
-.draw-mode.m1 { background: color-mix(in srgb, var(--accent) 28%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
-.draw-mode.m2 { background: color-mix(in srgb, var(--accent) 42%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 62%, transparent); }
-.draw-mode.m3 { background: color-mix(in srgb, var(--accent) 56%, var(--paper)); border-color: color-mix(in srgb, var(--accent) 74%, transparent); color: var(--accent-text); }
-.draw-mode.m4 { background: color-mix(in srgb, var(--ink) 14%, var(--paper)); border-color: color-mix(in srgb, var(--ink) 40%, transparent); }
-.draw-mode.m5 { background: transparent; border-style: dashed; }
+.draw-mode.m0 {
+  background: color-mix(in srgb, var(--accent) 16%, var(--paper));
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.draw-mode.m1 {
+  background: color-mix(in srgb, var(--accent) 28%, var(--paper));
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.draw-mode.m2 {
+  background: color-mix(in srgb, var(--accent) 42%, var(--paper));
+  border-color: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+.draw-mode.m3 {
+  background: color-mix(in srgb, var(--accent) 56%, var(--paper));
+  border-color: color-mix(in srgb, var(--accent) 74%, transparent);
+  color: var(--accent-text);
+}
+.draw-mode.m4 {
+  background: color-mix(in srgb, var(--ink) 14%, var(--paper));
+  border-color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.draw-mode.m5 {
+  background: transparent;
+  border-style: dashed;
+}
 
 .draw-card-top textarea.draw-point-input {
   flex: 1;
@@ -1053,8 +1078,13 @@ p mark.exam-mark.flash {
 }
 
 @keyframes exam-mark-flash {
-  0%, 30% { background: color-mix(in srgb, var(--accent) 55%, transparent); }
-  100% { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  0%,
+  30% {
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  100% {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
 }
 
 /* 题头「解析」入口 */
@@ -1082,7 +1112,9 @@ p mark.exam-mark.flash {
   padding: 4px 10px;
   font-size: 12px;
   color: var(--muted);
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .draw-head-actions .text-btn:hover {

@@ -24,7 +24,8 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 page.on('console', (m) => {
   // 404：预期内的探测；ERR_FAILED：加载失败错误态用例主动 abort 所致
-  if (m.type() === 'error' && !m.text().includes('404') && !m.text().includes('ERR_FAILED')) errors.push(`console: ${m.text()}`)
+  if (m.type() === 'error' && !m.text().includes('404') && !m.text().includes('ERR_FAILED'))
+    errors.push(`console: ${m.text()}`)
 })
 // 接受所有 confirm / alert（删除确认、导入确认等）
 page.on('dialog', (d) => d.accept())
@@ -200,7 +201,11 @@ check('字体下拉弹出', (await page.locator('.menu-select-item').count()) ==
 await page.locator('.menu-select-item', { hasText: '仿宋' }).click()
 await page.waitForTimeout(250)
 const fontData = await page.evaluate(() => JSON.parse(localStorage.getItem('readbook:reader') || '{}'))
-check('正文字体下拉切换持久化', fontData.state?.settings?.fontFamily === 'fangsong', `fontFamily=${fontData.state?.settings?.fontFamily}`)
+check(
+  '正文字体下拉切换持久化',
+  fontData.state?.settings?.fontFamily === 'fangsong',
+  `fontFamily=${fontData.state?.settings?.fontFamily}`,
+)
 
 // ---------- 阅读页：段落聚焦（带内可读 / 带外淡化） ----------
 await page.evaluate(() => {
@@ -210,13 +215,19 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(300)
 // 滚到页中段，等延迟补算（400ms）完成后检查带内外分布
-await page.evaluate(() => window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.5, behavior: 'instant' }))
+await page.evaluate(() =>
+  window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.5, behavior: 'instant' }),
+)
 await page.waitForTimeout(700)
 const focusDist = await page.evaluate(() => ({
   dim: document.querySelectorAll('.article-body p.dim').length,
   total: document.querySelectorAll('.article-body p').length,
 }))
-check('段落聚焦带外淡化', focusDist.dim >= 1 && focusDist.dim < focusDist.total, `${focusDist.total - focusDist.dim}/${focusDist.total} 可读`)
+check(
+  '段落聚焦带外淡化',
+  focusDist.dim >= 1 && focusDist.dim < focusDist.total,
+  `${focusDist.total - focusDist.dim}/${focusDist.total} 可读`,
+)
 await page.evaluate(() => {
   const tools = [...document.querySelectorAll('.article-tools .tool')]
   const focusTool = tools.find((t) => t.querySelector('span')?.textContent === '段落聚焦')
@@ -226,7 +237,9 @@ await page.waitForTimeout(300)
 check('段落聚焦关闭恢复', (await page.locator('.article-body p.dim').count()) === 0)
 
 // ---------- 阅读页：graphite（墨夜）主题 ----------
-await page.evaluate(() => localStorage.setItem('readbook:theme', JSON.stringify({ state: { theme: 'graphite', autoDark: false }, version: 0 })))
+await page.evaluate(() =>
+  localStorage.setItem('readbook:theme', JSON.stringify({ state: { theme: 'graphite', autoDark: false }, version: 0 })),
+)
 await page.reload({ waitUntil: 'domcontentloaded' })
 await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 8000 }).catch(() => {})
 await page.waitForTimeout(600)
@@ -234,7 +247,9 @@ const gTheme = await page.evaluate(() => document.documentElement.dataset.theme)
 const gBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
 check('graphite 主题生效', gTheme === 'graphite' && gBg !== 'rgb(244, 240, 233)', `${gTheme} bg=${gBg}`)
 // 还原暖纸，避免影响后续用例
-await page.evaluate(() => localStorage.setItem('readbook:theme', JSON.stringify({ state: { theme: 'paper', autoDark: false }, version: 0 })))
+await page.evaluate(() =>
+  localStorage.setItem('readbook:theme', JSON.stringify({ state: { theme: 'paper', autoDark: false }, version: 0 })),
+)
 await page.reload({ waitUntil: 'domcontentloaded' })
 await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 8000 }).catch(() => {})
 await page.waitForTimeout(400)
@@ -252,25 +267,37 @@ await open('/reading/p0001')
 await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
 await page.waitForTimeout(300)
 await selectRange(0, 4, 16)
-check('选择后弹出工具栏', (await page.evaluate(() => document.querySelector('.selection-popover')?.classList.contains('show'))) === true)
+check(
+  '选择后弹出工具栏',
+  (await page.evaluate(() => document.querySelector('.selection-popover')?.classList.contains('show'))) === true,
+)
 check('色板含 6 种颜色', (await page.locator('.hl-dots .hl-dot').count()) === 6)
 const dotRect = await page.evaluate(() => {
   const r = document.querySelector('.hl-dot').getBoundingClientRect()
   return { w: r.width, h: r.height }
 })
 check('高亮色点为正圆', Math.abs(dotRect.w - dotRect.h) < 0.5, `${dotRect.w}×${dotRect.h}`)
-check('首字放大已移除', (await page.evaluate(() => {
-  const p = document.querySelector('.article-body p')
-  return getComputedStyle(p, '::first-letter').fontSize === getComputedStyle(p).fontSize
-})) === true)
-check('段首空两格', (await page.evaluate(() => {
-  const p = document.querySelector('.article-body p')
-  return getComputedStyle(p).textIndent === '34px'
-})) === true)
-check('小字号提升到 12px', (await page.evaluate(() => {
-  const el = document.querySelector('.article-head .tag')
-  return getComputedStyle(el).fontSize === '12px'
-})) === true)
+check(
+  '首字放大已移除',
+  (await page.evaluate(() => {
+    const p = document.querySelector('.article-body p')
+    return getComputedStyle(p, '::first-letter').fontSize === getComputedStyle(p).fontSize
+  })) === true,
+)
+check(
+  '段首空两格',
+  (await page.evaluate(() => {
+    const p = document.querySelector('.article-body p')
+    return getComputedStyle(p).textIndent === '34px'
+  })) === true,
+)
+check(
+  '小字号提升到 12px',
+  (await page.evaluate(() => {
+    const el = document.querySelector('.article-head .tag')
+    return getComputedStyle(el).fontSize === '12px'
+  })) === true,
+)
 // 点击蓝色色点 → 蓝色高亮
 await page.evaluate(() => {
   const dot = document.querySelector('.hl-dot.blue')
@@ -295,9 +322,12 @@ await page.waitForTimeout(250)
 const mergedAnns = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 const hlMerged = mergedAnns.filter((a) => a.kind === 'highlight' && a.articleId === 'p0001')
 check('重叠高亮合并为一条', hlMerged.length === 1, `${hlMerged.length} 条`)
-check('合并区间取并集', hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24, `[${hlMerged[0]?.start},${hlMerged[0]?.end})`)
+check(
+  '合并区间取并集',
+  hlMerged[0]?.start === 4 && hlMerged[0]?.end === 24,
+  `[${hlMerged[0]?.start},${hlMerged[0]?.end})`,
+)
 check('合并后正文单段高亮', (await page.locator('.article-body .highlighted').count()) === 1)
-
 
 // ---------- 点击标注管理：切颜色 / 加下划线 ----------
 await page.evaluate(() => {
@@ -305,7 +335,10 @@ await page.evaluate(() => {
   if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('点击高亮弹出管理', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
+check(
+  '点击高亮弹出管理',
+  (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true,
+)
 await page.evaluate(() => {
   const d = document.querySelector('.ann-popover .hl-dot.pink')
   if (d) d.click()
@@ -315,11 +348,22 @@ const afterColor = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').st
 const hlAfter = afterColor.find((a) => a.kind === 'highlight' && a.articleId === 'p0001')
 check('点击高亮切换颜色', hlAfter?.color === 'pink', `color=${hlAfter?.color ?? 'none'}`)
 check('切换颜色后渲染', (await page.locator('.article-body .highlighted.hl-pink').count()) >= 1)
-check('无下划线时菜单不显示样式点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0)
-check('无下划线时无删除下划线', (await page.evaluate(() => [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')))) === false)
+check(
+  '无下划线时菜单不显示样式点',
+  (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0,
+)
+check(
+  '无下划线时无删除下划线',
+  (await page.evaluate(() =>
+    [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')),
+  )) === false,
+)
 // 下划线经选中文字创建（菜单只切换不新增）
 await selectRange(0, 10, 24)
-await page.evaluate(() => { const d = document.querySelector('.ul-dot.solid'); if (d) d.click() })
+await page.evaluate(() => {
+  const d = document.querySelector('.ul-dot.solid')
+  if (d) d.click()
+})
 await page.waitForTimeout(250)
 const withUl = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 const ulAnn = withUl.find((a) => a.kind === 'underline' && a.articleId === 'p0001' && a.end === 24)
@@ -446,8 +490,6 @@ await page.evaluate(() => {
 await page.waitForTimeout(250)
 check('波浪下划线渲染', (await page.locator('.article-body .underlined.ul-wavy').count()) >= 1)
 
-
-
 // ---------- 阅读页：笔记 ----------
 await selectRange(2, 2, 14)
 await clickPopoverButton('笔记')
@@ -467,9 +509,20 @@ await page.evaluate(() => {
   if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('纯笔记段菜单含高亮色点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .hl-dot').length)) === 6)
-check('纯笔记段菜单无下划线样式点', (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0)
-check('纯笔记段无删除下划线', (await page.evaluate(() => [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')))) === false)
+check(
+  '纯笔记段菜单含高亮色点',
+  (await page.evaluate(() => document.querySelectorAll('.ann-popover .hl-dot').length)) === 6,
+)
+check(
+  '纯笔记段菜单无下划线样式点',
+  (await page.evaluate(() => document.querySelectorAll('.ann-popover .ul-dot').length)) === 0,
+)
+check(
+  '纯笔记段无删除下划线',
+  (await page.evaluate(() =>
+    [...document.querySelectorAll('.ann-popover button')].some((b) => b.textContent.includes('删除下划线')),
+  )) === false,
+)
 // 点色点给纯笔记段加高亮
 await page.evaluate(() => {
   const d = document.querySelector('.ann-popover .hl-dot.pink')
@@ -491,14 +544,22 @@ const markerCounts = await page.evaluate(() => ({
   ul: document.querySelectorAll('.note-row .ul-swatch').length,
   note: document.querySelectorAll('.note-row .note-swatch').length,
 }))
-check('摘录标记可区分', markerCounts.hl > 0 && markerCounts.ul > 0 && markerCounts.note > 0, JSON.stringify(markerCounts))
-check('一段话多条笔记标记', (await page.evaluate(() => document.body.innerText.includes('✦×2'))))
+check(
+  '摘录标记可区分',
+  markerCounts.hl > 0 && markerCounts.ul > 0 && markerCounts.note > 0,
+  JSON.stringify(markerCounts),
+)
+check('一段话多条笔记标记', await page.evaluate(() => document.body.innerText.includes('✦×2')))
 await page.evaluate(() => {
   const row = [...document.querySelectorAll('.note-row')].find((r) => r.innerText.includes('规划建议提出'))
   if (row) row.click()
 })
 await page.waitForTimeout(200)
-check('详情展示多条笔记', (await page.locator('.detail-note').count()) >= 2, `${await page.locator('.detail-note').count()} 条`)
+check(
+  '详情展示多条笔记',
+  (await page.locator('.detail-note').count()) >= 2,
+  `${await page.locator('.detail-note').count()} 条`,
+)
 check('摘录详情面板', (await page.locator('.note-detail blockquote').count()) === 1)
 await page.locator('.note-search input').fill('测试笔记内容')
 await page.waitForTimeout(300)
@@ -518,7 +579,10 @@ await page.evaluate(() => {
   if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('点击标注弹出管理', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
+check(
+  '点击标注弹出管理',
+  (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true,
+)
 await page.evaluate(() => {
   const btns = document.querySelectorAll('.ann-popover button')
   for (const b of btns) if (b.textContent.includes('删除高亮')) b.click()
@@ -539,7 +603,9 @@ const matAnn = matAnns.find((a) => a.materialType === 'thesis')
 check('素材类型持久化', Boolean(matAnn), `materialType=${matAnn?.materialType ?? 'none'}`)
 
 // 标注管理弹层：取消素材标记 + 句式模板
-await page.evaluate(() => document.querySelector('.article-body .mat-thesis')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+await page.evaluate(() =>
+  document.querySelector('.article-body .mat-thesis')?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+)
 await page.waitForTimeout(200)
 check('管理弹层含素材行', (await page.locator('.ann-popover .mat-row').count()) === 1)
 await page.evaluate(() => {
@@ -565,14 +631,21 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(300)
 const studyRaw = JSON.parse((await idbGet('readbook:shenlun')) ?? '{}')
-check('学习状态持久化', studyRaw.state?.study?.p0001?.status === 'learning', `status=${studyRaw.state?.study?.p0001?.status ?? 'none'}`)
+check(
+  '学习状态持久化',
+  studyRaw.state?.study?.p0001?.status === 'learning',
+  `status=${studyRaw.state?.study?.p0001?.status ?? 'none'}`,
+)
 await page.evaluate(() => document.querySelector('.shenlun-close')?.click())
 await page.waitForTimeout(200)
 check('拆解面板可关闭', (await page.locator('.shenlun-panel').count()) === 0)
 const delAnns1 = JSON.parse((await idbGet('readbook:annotations')) ?? '{}').state?.annotations ?? []
 check('删除高亮持久化', !delAnns1.some((a) => a.kind === 'highlight' && a.start === 4 && a.end === 24))
 // 同段下划线仍在
-check('同段下划线保留', delAnns1.some((a) => a.kind === 'underline' && a.articleId === 'p0001' && a.end === 24))
+check(
+  '同段下划线保留',
+  delAnns1.some((a) => a.kind === 'underline' && a.articleId === 'p0001' && a.end === 24),
+)
 
 // 删除下划线（该段单独删，不影响其它下划线）
 await page.evaluate(() => {
@@ -595,7 +668,10 @@ await page.evaluate(() => {
   if (el) el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 })
 await page.waitForTimeout(200)
-check('点击笔记弹出管理', (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true)
+check(
+  '点击笔记弹出管理',
+  (await page.evaluate(() => document.querySelector('.ann-popover')?.classList.contains('show'))) === true,
+)
 await page.evaluate(() => {
   const btns = document.querySelectorAll('.ann-popover button')
   for (const b of btns) if (b.textContent.includes('删除笔记')) b.click()
@@ -626,13 +702,15 @@ await page.locator('.toolbar-tools button.ghost').click()
 await page.waitForTimeout(500)
 check('跳转到新建页', (await page.evaluate(() => window.location.pathname)) === '/admin/new')
 await page.locator('.admin-edit input[placeholder="文章标题"]').fill('测试录入：基层减负要久久为功')
-await page.locator('.admin-edit textarea[placeholder^="第一段"]').fill('基层是服务群众的最后一公里。\n减负不是减责任，而是把干部从形式主义中解放出来。')
+await page
+  .locator('.admin-edit textarea[placeholder^="第一段"]')
+  .fill('基层是服务群众的最后一公里。\n减负不是减责任，而是把干部从形式主义中解放出来。')
 await page.locator('.admin-form-actions .ghost').first().click()
 await page.waitForTimeout(500)
 check('保存后回到列表', (await page.evaluate(() => window.location.pathname)) === '/admin')
-check('录入文章加入列表', (await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功'))))
+check('录入文章加入列表', await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功')))
 await open('/library')
-check('录入文章进入文章库', (await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功'))))
+check('录入文章进入文章库', await page.evaluate(() => document.body.innerText.includes('测试录入：基层减负要久久为功')))
 await page.evaluate(() => {
   const row = [...document.querySelectorAll('.article-row')].find((r) => r.innerText.includes('测试录入'))
   if (row) row.click()
@@ -672,10 +750,56 @@ await open('/settings')
 const importPayload = {
   exportedAt: '2024-06-01T00:00:00.000Z',
   theme: 'night',
-  readerSettings: { fontSize: 20, lineHeight: 2.0, fontFamily: 'kaiti', readerTheme: '', reducedMotion: false, showAnnotations: true },
-  articles: [{ id: 'a05', title: 'x', topic: '时政评论', source: '申论精读', date: '2024-05-06', progress: { articleId: 'a05', percent: 42, lastPosition: 0, lastReadAt: '2024-06-01T00:00:00.000Z', completed: false, readCount: 1, favorite: false, timeSpentSec: 120 } }],
-  annotations: [{ id: 'imp-1', articleId: 'a05', kind: 'highlight', text: '导入测试高亮文字', start: 1, end: 5, createdAt: '2024-06-01T00:00:00.000Z', color: 'green' }],
-  shenlun: [{ articleId: 'a05', status: 'mastered', mastery: 3, coreThesis: '导入测试总论点', subTheses: [], createdAt: '2024-06-01T00:00:00.000Z', updatedAt: '2024-06-01T00:00:00.000Z' }],
+  readerSettings: {
+    fontSize: 20,
+    lineHeight: 2.0,
+    fontFamily: 'kaiti',
+    readerTheme: '',
+    reducedMotion: false,
+    showAnnotations: true,
+  },
+  articles: [
+    {
+      id: 'a05',
+      title: 'x',
+      topic: '时政评论',
+      source: '申论精读',
+      date: '2024-05-06',
+      progress: {
+        articleId: 'a05',
+        percent: 42,
+        lastPosition: 0,
+        lastReadAt: '2024-06-01T00:00:00.000Z',
+        completed: false,
+        readCount: 1,
+        favorite: false,
+        timeSpentSec: 120,
+      },
+    },
+  ],
+  annotations: [
+    {
+      id: 'imp-1',
+      articleId: 'a05',
+      kind: 'highlight',
+      text: '导入测试高亮文字',
+      start: 1,
+      end: 5,
+      createdAt: '2024-06-01T00:00:00.000Z',
+      color: 'green',
+    },
+  ],
+  shenlun: [
+    {
+      articleId: 'a05',
+      status: 'mastered',
+      mastery: 3,
+      coreThesis: '导入测试总论点',
+      subTheses: [],
+      createdAt: '2024-06-01T00:00:00.000Z',
+      updatedAt: '2024-06-01T00:00:00.000Z',
+    },
+  ],
 }
 await page.setInputFiles('input[type="file"]', {
   name: 'readbook-import.json',
@@ -690,11 +814,22 @@ await page.waitForTimeout(900)
 const impTheme = await page.evaluate(() => document.documentElement.dataset.theme)
 check('导入主题生效', impTheme === 'night', impTheme)
 const impArt = JSON.parse((await idbGet('readbook:articles')) ?? '{}')
-check('导入进度合并', impArt.state?.progress?.['a05']?.percent === 42, `percent=${impArt.state?.progress?.['a05']?.percent}`)
+check(
+  '导入进度合并',
+  impArt.state?.progress?.['a05']?.percent === 42,
+  `percent=${impArt.state?.progress?.['a05']?.percent}`,
+)
 const impAnn = JSON.parse((await idbGet('readbook:annotations')) ?? '{}')
-check('导入摘录合并', (impAnn.state?.annotations ?? []).some((a) => a.id === 'imp-1'))
+check(
+  '导入摘录合并',
+  (impAnn.state?.annotations ?? []).some((a) => a.id === 'imp-1'),
+)
 const impStudy = JSON.parse((await idbGet('readbook:shenlun')) ?? '{}')
-check('导入学习记录合并', impStudy.state?.study?.a05?.status === 'mastered', `status=${impStudy.state?.study?.a05?.status ?? 'none'}`)
+check(
+  '导入学习记录合并',
+  impStudy.state?.study?.a05?.status === 'mastered',
+  `status=${impStudy.state?.study?.a05?.status ?? 'none'}`,
+)
 
 // ---------- P0 入口规则 + 本周统计 ----------
 await open('/')
@@ -706,7 +841,11 @@ check('首页 eyebrow 当日日期', homeEyebrow.includes(today), homeEyebrow)
 check('本周阅读统计卡', (await page.locator('.week-stats').count()) === 1)
 // 申论统计行：拆解/导入产生学习记录 + 素材标记后，首页展示「已拆解 X 篇 · 素材 Y 条」
 const homeStats = await page.locator('.week-stats').innerText()
-check('首页申论统计行', /已拆解 \d+ 篇 · 素材 \d+ 条/.test(homeStats.replace(/\n/g, ' ')), homeStats.replace(/\n/g, ' '))
+check(
+  '首页申论统计行',
+  /已拆解 \d+ 篇 · 素材 \d+ 条/.test(homeStats.replace(/\n/g, ' ')),
+  homeStats.replace(/\n/g, ' '),
+)
 
 // ---------- 相邻文章导航（上一篇/下一篇） ----------
 const listRes = await fetch(`http://localhost:${API_PORT}/api/articles`).then((r) => r.json())
@@ -716,8 +855,14 @@ const nextArt = listRes.articles[6]
 await open(`/reading/${cur.id}`)
 check('文末相邻导航', (await page.locator('.article-pager').count()) === 1)
 check('顶部相邻导航', (await page.locator('.article-pager-top').count()) === 1)
-check('文末显示下一篇标题', (await page.locator('.article-pager .pager-item.next').innerText()).includes(nextArt.title.slice(0, 8)))
-check('上一篇指向排序前一篇', (await page.locator('.article-pager-top a', { hasText: '上一篇' }).getAttribute('href')) === `/reading/${prevArt.id}`)
+check(
+  '文末显示下一篇标题',
+  (await page.locator('.article-pager .pager-item.next').innerText()).includes(nextArt.title.slice(0, 8)),
+)
+check(
+  '上一篇指向排序前一篇',
+  (await page.locator('.article-pager-top a', { hasText: '上一篇' }).getAttribute('href')) === `/reading/${prevArt.id}`,
+)
 await page.locator('.article-pager-top a', { hasText: '下一篇' }).click()
 await page.waitForTimeout(1000)
 check('下一篇跳转', new URL(page.url()).pathname.endsWith(nextArt.id), page.url())

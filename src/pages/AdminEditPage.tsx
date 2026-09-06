@@ -32,7 +32,10 @@ export function AdminEditPage() {
   /** 正文区模式：edit 编辑 / preview 预览 */
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
-  const paragraphs = form.contentText.split('\n').map((s) => s.trim()).filter(Boolean)
+  const paragraphs = form.contentText
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
   const previewParas = paragraphs.slice(0, 30)
 
   const save = () => {
@@ -67,7 +70,6 @@ export function AdminEditPage() {
     if (!hasContent || saved) return true
     return confirmDialog('还未保存，离开将丢弃已填写的内容，确定离开？', { danger: true })
   }
-
 
   return (
     <section className="admin-edit-page page-section">
@@ -146,11 +148,7 @@ export function AdminEditPage() {
           </div>
           <label className="admin-meta-row">
             <span>日期</span>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-            />
+            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </label>
         </div>
 
@@ -159,11 +157,7 @@ export function AdminEditPage() {
           <div className="admin-field-head">
             <span>正文 *（每行一段）</span>
             <div className="admin-mode-toggle">
-              <button
-                className={mode === 'edit' ? 'active' : ''}
-                onClick={() => setMode('edit')}
-                aria-label="编辑模式"
-              >
+              <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')} aria-label="编辑模式">
                 <PencilLine size={12} /> 编辑
               </button>
               <button

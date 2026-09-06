@@ -42,7 +42,10 @@ const writeQueues = new Map<string, Promise<void>>()
 function serializeWrite(key: string, task: () => Promise<void>): Promise<void> {
   const prev = (writeQueues.get(key) ?? Promise.resolve()).catch(() => {})
   const next = prev.then(task)
-  writeQueues.set(key, next.catch(() => {}))
+  writeQueues.set(
+    key,
+    next.catch(() => {}),
+  )
   return next
 }
 
@@ -116,8 +119,7 @@ export const idbStorage: StateStorage = {
     }
     return null
   },
-  setItem: (name, value) =>
-    serializeWrite(name, () => idbSet(name, value)).catch(() => {}),
+  setItem: (name, value) => serializeWrite(name, () => idbSet(name, value)).catch(() => {}),
   removeItem: async (name) => {
     try {
       await idbDel(name)

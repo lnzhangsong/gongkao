@@ -5,8 +5,27 @@ export function sanitizeNoteHtml(html: string): string {
   const tpl = document.createElement('template')
   tpl.innerHTML = html
   const ALLOWED = new Set([
-    'P', 'BR', 'DIV', 'SPAN', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE',
-    'UL', 'OL', 'LI', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'IMG', 'A', 'MARK',
+    'P',
+    'BR',
+    'DIV',
+    'SPAN',
+    'B',
+    'STRONG',
+    'I',
+    'EM',
+    'U',
+    'S',
+    'STRIKE',
+    'UL',
+    'OL',
+    'LI',
+    'BLOCKQUOTE',
+    'H1',
+    'H2',
+    'H3',
+    'IMG',
+    'A',
+    'MARK',
   ])
 
   const walk = (node: Element) => {

@@ -79,9 +79,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   rename: async (nickname) => {
-    if (!supabase || !get().user) throw new Error('未登录')
+    const user = get().user
+    if (!supabase || !user) throw new Error('未登录')
     const clean = nickname.trim().slice(0, 24)
-    const { error } = await supabase.from('profiles').upsert({ nickname: clean })
+    /* upsert 必须带主键 id，PostgREST 才能定位行（首登补建行竞态下也幂等） */
+    const { error } = await supabase.from('profiles').upsert({ id: user.id, nickname: clean })
     if (error) throw error
     set((s) => ({ profile: { ...s.profile, nickname: clean } }))
   },

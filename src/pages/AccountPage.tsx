@@ -63,7 +63,9 @@ export function AccountPage() {
   }
 
   const logout = async () => {
-    const ok = await confirmDialog('退出登录后，本机数据仍会保留，确认退出吗？')
+    const ok = await confirmDialog(
+      '退出登录会清空本机的进度、摘录、学习记录与 AI 配置（数据都在云端，下次登录自动恢复）。确认退出吗？',
+    )
     if (!ok) return
     await signOut()
     toast('已退出登录')

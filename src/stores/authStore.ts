@@ -2,6 +2,15 @@ import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { startCloudSync, stopCloudSync } from '../lib/cloudSync'
+import { useArticleStore } from './articleStore'
+import { useAnnotationStore } from './annotationStore'
+import { useShenlunStore } from './shenlunStore'
+import { useExamStudyStore } from './examStudyStore'
+import { useLearningEventStore } from './learningEventStore'
+import { useAiAssistStore } from './aiAssistStore'
+import { useAiStore, DEFAULT_AI_SETTINGS } from './aiStore'
+import { useReaderStore } from './readerStore'
+import { useThemeStore } from './themeStore'
 
 /**
  * 账号体系（Supabase 全托管）：
@@ -28,6 +37,25 @@ interface AuthState {
 
 function toProfile(user: User | null, nickname: string | null): { nickname: string | null; email: string | null } {
   return { nickname, email: user?.email ?? null }
+}
+
+/** 退出登录时清空本机用户数据：进度/摘录/申论/真题/AI 审题/事件/偏好/AI 配置 + 同步时间戳。
+ *  数据都在云端（含 AI 配置），再次登录自动恢复；换人共用浏览器不留痕迹 */
+function clearLocalData() {
+  useArticleStore.getState().clearAll()
+  useAnnotationStore.getState().clearAll()
+  useShenlunStore.getState().clearAll()
+  useExamStudyStore.getState().clearAll()
+  useLearningEventStore.getState().clearAll()
+  useAiAssistStore.getState().clearAll()
+  useAiStore.setState({ settings: { ...DEFAULT_AI_SETTINGS } })
+  useReaderStore.getState().resetSettings()
+  useThemeStore.setState({ theme: 'paper', autoDark: false })
+  try {
+    localStorage.removeItem('readbook:sync-meta')
+  } catch {
+    /* ignore */
+  }
 }
 
 /** 登录成功后的统一处理：置状态 + 拉取 profile（失败静默，不影响登录） */
@@ -80,8 +108,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     if (!supabase) return
-    /* 先停引擎再登出：登出会触发 onAuthStateChange，避免 RLS 下无效拉取 */
+    /* 顺序关键：先停引擎 → 再清本机 → 最后登出。
+     * 引擎若还活着会把清空动作 diff 成「全部删除」推上云，毁掉云端真实数据 */
     stopCloudSync()
+    clearLocalData()
     await supabase.auth.signOut()
   },
 

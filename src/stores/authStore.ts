@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { startCloudSync, stopCloudSync } from '../lib/cloudSync'
 
 /**
  * 账号体系（Supabase 全托管）：
@@ -33,6 +34,7 @@ function toProfile(user: User | null, nickname: string | null): { nickname: stri
 function onSignedIn(user: User) {
   useAuthStore.setState({ status: 'in', user, profile: toProfile(user, null) })
   void useAuthStore.getState().refreshProfile()
+  startCloudSync()
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
@@ -48,7 +50,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     })
     supabase.auth.onAuthStateChange((_event, session: Session | null) => {
       if (session?.user) onSignedIn(session.user)
-      else set({ status: 'out', user: null, profile: { nickname: null, email: null } })
+      else {
+        stopCloudSync()
+        set({ status: 'out', user: null, profile: { nickname: null, email: null } })
+      }
     })
   },
 
@@ -75,6 +80,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   signOut: async () => {
     if (!supabase) return
+    /* 先停引擎再登出：登出会触发 onAuthStateChange，避免 RLS 下无效拉取 */
+    stopCloudSync()
     await supabase.auth.signOut()
   },
 

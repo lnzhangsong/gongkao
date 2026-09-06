@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { useSyncStore, syncNow } from '../lib/cloudSync'
 import { toast } from '../components/ui/Toast'
 import { confirmDialog } from '../components/ui/ConfirmDialog'
 import '../styles/auth.css'
@@ -14,6 +15,7 @@ export function AccountPage() {
   const profile = useAuthStore((s) => s.profile)
   const rename = useAuthStore((s) => s.rename)
   const signOut = useAuthStore((s) => s.signOut)
+  const { lastSyncAt, error: syncError, syncing } = useSyncStore()
 
   const [nickname, setNickname] = useState('')
   const [busy, setBusy] = useState(false)
@@ -44,6 +46,13 @@ export function AccountPage() {
     }
   }
 
+  const manualSync = async () => {
+    if (syncing) return
+    await syncNow()
+    const err = useSyncStore.getState().error
+    toast(err ? `同步失败：${err}` : '同步完成')
+  }
+
   const logout = async () => {
     const ok = await confirmDialog('退出登录后，本机数据仍会保留，确认退出吗？')
     if (!ok) return
@@ -63,7 +72,7 @@ export function AccountPage() {
             <span>{profile?.nickname || '读者'}。</span>
           </h1>
         </div>
-        <p className="subpage-copy">登录身份仅用于标识你；阅读进度与摘录仍保存在本机浏览器中。</p>
+        <p className="subpage-copy">登录后，阅读进度、摘录标注、申论与真题学习记录自动同步到云端，多设备保持一致。</p>
       </header>
       <div className="auth-body">
         <div className="auth-card auth-account">
@@ -94,6 +103,25 @@ export function AccountPage() {
           </button>
 
           <hr className="auth-divider" />
+
+          <div className="auth-sync">
+            <div className="auth-sync-text">
+              <span>数据同步</span>
+              <small>
+                {syncing
+                  ? '同步中…'
+                  : syncError
+                    ? `同步出错：${syncError}`
+                    : lastSyncAt
+                      ? `上次同步 ${lastSyncAt.slice(11, 16)}`
+                      : '尚未同步'}
+              </small>
+            </div>
+            <button type="button" className="auth-sync-btn" disabled={syncing} onClick={manualSync}>
+              立即同步
+            </button>
+          </div>
+
           <div className="auth-actions">
             <button type="button" className="auth-logout" onClick={logout}>
               <LogOut size={15} /> 退出登录

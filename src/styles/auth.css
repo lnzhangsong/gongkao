@@ -241,3 +241,51 @@
     padding: 20px;
   }
 }
+
+/* 同步状态区 */
+.auth-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px dashed var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.auth-sync-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.auth-sync-text span {
+  font: 12px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.auth-sync-text small {
+  font: 12px var(--sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-sync-btn {
+  flex: none;
+  padding: 8px 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: 13px var(--sans);
+  cursor: pointer;
+}
+
+.auth-sync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

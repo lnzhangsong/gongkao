@@ -166,6 +166,8 @@ export interface Annotation {
   start: number
   end: number
   createdAt: string
+  /** 最近修改时间（云同步 LWW 依据；新建时等于 createdAt） */
+  updatedAt?: string
   /** highlight 类型的颜色（默认 yellow） */
   color?: HighlightColor
   /** underline 类型的样式（默认 solid） */

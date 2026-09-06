@@ -52,7 +52,8 @@ export const useAnnotationStore = create<AnnotationState>()(
       _hasHydrated: false,
 
       add: (a) => {
-        const annotation: Annotation = { ...a, id: genId(), createdAt: new Date().toISOString() }
+        const now = new Date().toISOString()
+        const annotation: Annotation = { ...a, id: genId(), createdAt: now, updatedAt: now }
         set((s) => ({ annotations: [annotation, ...s.annotations] }))
         return annotation
       },
@@ -68,7 +69,9 @@ export const useAnnotationStore = create<AnnotationState>()(
             if (patch.mastery != null) ev('mastery-self', target.id)
           }
           return {
-            annotations: s.annotations.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+            annotations: s.annotations.map((a) =>
+              a.id === id ? { ...a, ...patch, updatedAt: new Date().toISOString() } : a,
+            ),
           }
         }),
 

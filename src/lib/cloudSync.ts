@@ -225,7 +225,9 @@ async function pullTable(table: string, ad: TableAdapter<unknown>): Promise<bool
     if (!data || data.length === 0) break
     for (const r of data as Record<string, unknown>[]) {
       const deleted = r.deleted === true
-      const k = String(r.ann_id ?? r.article_id ?? r.event_id ?? r.key ?? '')
+      /* 各表主键列名不同：annotations=ann_id / progress·study·edits=article_id /
+       * learning_events=event_id / exam_study=key / ai_assists=assist_id */
+      const k = String(r.ann_id ?? r.assist_id ?? r.article_id ?? r.event_id ?? r.key ?? '')
       if (!k) continue
       rows.push({
         k,

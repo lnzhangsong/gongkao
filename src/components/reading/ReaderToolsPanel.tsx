@@ -98,9 +98,7 @@ export function ReaderToolsPanel({
       </div>
       <div className="tool">
         <span>阅读主题</span>
-        <button onClick={onCycleTheme}>
-          {THEMES.find((t) => t.name === activeTheme)?.label ?? '跟随页面'}　↻
-        </button>
+        <button onClick={onCycleTheme}>{THEMES.find((t) => t.name === activeTheme)?.label ?? '跟随页面'}　↻</button>
       </div>
       {onToggleFavorite && (
         <div className="tool">

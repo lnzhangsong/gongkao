@@ -79,7 +79,7 @@ export function useAnnotationPopover(
         return
       }
       const selRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect()
-      if (!selRect || selRect.width === 0 && selRect.height === 0) return
+      if (!selRect || (selRect.width === 0 && selRect.height === 0)) return
       const exactText = flatText(article?.content ?? []).slice(range.start, range.end)
       const bodyRect = el.getBoundingClientRect()
       // PC（宽屏）：absolute 定位相对正文容器，滚动时工具栏跟随选区
@@ -175,12 +175,8 @@ export function useAnnotationPopover(
   ): { id: string; x: number; y: number } | null => {
     if (!article || !popover) return null
     const { start, end, x, y } = popover
-    const overlapped = articleAnnotations.filter(
-      (a) => a.kind === kind && a.start < end && a.end > start,
-    )
-    const inherited: Annotation | undefined = opts?.materialType
-      ? undefined
-      : overlapped.find((a) => a.materialType)
+    const overlapped = articleAnnotations.filter((a) => a.kind === kind && a.start < end && a.end > start)
+    const inherited: Annotation | undefined = opts?.materialType ? undefined : overlapped.find((a) => a.materialType)
     const base = {
       articleId: article.id,
       kind,
@@ -356,9 +352,7 @@ export function useAnnotationPopover(
 
   /** 管理弹出层：id 集合内是否已有某类标注 */
   const annPopoverHas = (kind: AnnotationKind) =>
-    annPopover
-      ? annPopover.ids.some((id) => articleAnnotations.find((a) => a.id === id)?.kind === kind)
-      : false
+    annPopover ? annPopover.ids.some((id) => articleAnnotations.find((a) => a.id === id)?.kind === kind) : false
 
   const annPopoverFirst = (kind: AnnotationKind) => {
     if (!annPopover) return undefined
@@ -388,9 +382,7 @@ export function useAnnotationPopover(
     if (!article || !annPopover) return
     removeEmptyDraftNote()
     // 段内任意标注都可作为取区间依据（纯笔记段也能继续加高亮/下划线/笔记）
-    const primary = annPopover.ids
-      .map((id) => articleAnnotations.find((a) => a.id === id))
-      .find(Boolean)
+    const primary = annPopover.ids.map((id) => articleAnnotations.find((a) => a.id === id)).find(Boolean)
     if (!primary) return
     if (
       kind !== 'note' &&

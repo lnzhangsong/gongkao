@@ -57,10 +57,7 @@ function isProgressShape(v: unknown): v is ReadingProgress {
 function isStudyShape(v: unknown): v is ArticleStudy {
   if (!v || typeof v !== 'object') return false
   const s = v as Record<string, unknown>
-  return (
-    typeof s.articleId === 'string' &&
-    (s.status === 'new' || s.status === 'learning' || s.status === 'mastered')
-  )
+  return typeof s.articleId === 'string' && (s.status === 'new' || s.status === 'learning' || s.status === 'mastered')
 }
 
 /** 从整包导出中提取带正文的文章 */
@@ -69,19 +66,12 @@ function parseArticles(v: unknown): Article[] | undefined {
   const out: Article[] = []
   for (const item of v) {
     const a = item as Record<string, unknown>
-    if (
-      !a ||
-      typeof a.id !== 'string' ||
-      typeof a.title !== 'string' ||
-      !Array.isArray(a.content)
-    ) {
+    if (!a || typeof a.id !== 'string' || typeof a.title !== 'string' || !Array.isArray(a.content)) {
       continue
     }
     const content = (a.content as unknown[]).filter((p): p is string => typeof p === 'string')
     if (content.length === 0) continue
-    const topic = TOPICS.includes(a.topic as ArticleTopic)
-      ? (a.topic as ArticleTopic)
-      : TOPICS[0]
+    const topic = TOPICS.includes(a.topic as ArticleTopic) ? (a.topic as ArticleTopic) : TOPICS[0]
     const source: ArticleSource = a.source === '申论精读' ? '申论精读' : '人民日报'
     out.push({
       id: a.id,

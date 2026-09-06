@@ -25,7 +25,7 @@ export function flatText(content: string[]): string {
 function offsetInPara(paraEl: HTMLElement, node: Node, nodeOffset: number): number {
   if (node.nodeType === Node.ELEMENT_NODE) {
     // 元素边界：offset 0 视为段首，否则视为段末
-    return nodeOffset === 0 ? 0 : paraEl.textContent?.length ?? 0
+    return nodeOffset === 0 ? 0 : (paraEl.textContent?.length ?? 0)
   }
   const walker = document.createTreeWalker(paraEl, NodeFilter.SHOW_TEXT)
   let acc = 0
@@ -51,10 +51,7 @@ export interface SelectionRange {
  * 仅支持单段内选择（跨段返回 null）。
  * root 为 article-body 容器；starts 由 paragraphStarts 得到。
  */
-export function computeSelectionRange(
-  root: HTMLElement,
-  starts: number[],
-): SelectionRange | null {
+export function computeSelectionRange(root: HTMLElement, starts: number[]): SelectionRange | null {
   const sel = window.getSelection()
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null
   const text = sel.toString().trim()
@@ -64,10 +61,8 @@ export function computeSelectionRange(
   const focusNode = sel.focusNode
   if (!anchorNode || !focusNode) return null
 
-  const anchorEl =
-    anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : (anchorNode as HTMLElement)
-  const focusEl =
-    focusNode.nodeType === Node.TEXT_NODE ? focusNode.parentElement : (focusNode as HTMLElement)
+  const anchorEl = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : (anchorNode as HTMLElement)
+  const focusEl = focusNode.nodeType === Node.TEXT_NODE ? focusNode.parentElement : (focusNode as HTMLElement)
   const anchorPara = anchorEl?.closest<HTMLElement>('[data-para]')
   const focusPara = focusEl?.closest<HTMLElement>('[data-para]')
   if (!anchorPara || !focusPara || anchorPara !== focusPara) return null
@@ -93,11 +88,7 @@ export interface TextSegment {
 /**
  * 把单个段落按标注边界切成片段，供渲染时包 <mark>/<u>/<span>。
  */
-export function splitParagraph(
-  text: string,
-  paraStart: number,
-  annotations: Annotation[],
-): TextSegment[] {
+export function splitParagraph(text: string, paraStart: number, annotations: Annotation[]): TextSegment[] {
   const paraEnd = paraStart + text.length
   const hits = annotations
     .filter((a) => a.start < paraEnd && a.end > paraStart)

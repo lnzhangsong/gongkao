@@ -114,12 +114,7 @@ export const TermText = memo(function TermText({ text }: { text: string }) {
     <>
       {splitTermSegments(text, terms).map((seg, i) =>
         seg.hit ? (
-          <span
-            key={i}
-            className="term-box"
-            data-term-id={seg.hit.id}
-            title={`规范词 · ${seg.hit.theme}`}
-          >
+          <span key={i} className="term-box" data-term-id={seg.hit.id} title={`规范词 · ${seg.hit.theme}`}>
             {seg.text}
           </span>
         ) : (

@@ -68,16 +68,16 @@ interface ArticleMeta {
 
 function mapMetaRow(r: any): ArticleMeta {
   return {
-      id: r.id,
-      title: r.title,
-      summary: r.summary,
-      source: r.source,
-      topic: r.topic,
-      date: r.date,
-      readTime: r.read_time,
-      featured: Boolean(r.featured),
-      ...(r.pullquote ? { pullquote: r.pullquote } : {}),
-      ...(r.finish_note ? { finishNote: r.finish_note } : {}),
+    id: r.id,
+    title: r.title,
+    summary: r.summary,
+    source: r.source,
+    topic: r.topic,
+    date: r.date,
+    readTime: r.read_time,
+    featured: Boolean(r.featured),
+    ...(r.pullquote ? { pullquote: r.pullquote } : {}),
+    ...(r.finish_note ? { finishNote: r.finish_note } : {}),
   }
 }
 

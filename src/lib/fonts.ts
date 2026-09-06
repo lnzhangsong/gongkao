@@ -18,10 +18,7 @@ export const useFontLoad = create<FontLoadState>(() => ({ loading: false, progre
 const FONTS_LOAD_TIMEOUT_MS = 2500
 
 function withTimeout<T>(p: Promise<T>, ms = FONTS_LOAD_TIMEOUT_MS): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('font load timeout')), ms)),
-  ])
+  return Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('font load timeout')), ms))])
 }
 
 /* ---------- 每种字体需要的资源 ----------

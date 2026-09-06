@@ -17,7 +17,11 @@ export const FONT_FAMILIES: {
   { key: 'jinkai', label: '仓耳今楷', css: "'仓耳今楷', 'TsangerJinKai', 'Kaiti SC', 'KaiTi', 'STKaiti', serif" },
   { key: 'kaiti', label: '霞鹜文楷', css: "'LXGW WenKai', 'Kaiti SC', 'KaiTi', 'STKaiti', serif" },
   { key: 'fangsong', label: '仿宋', css: "'FangSong', 'STFangsong', '仿宋', serif" },
-  { key: 'sans', label: '思源黑体', css: "'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif" },
+  {
+    key: 'sans',
+    label: '思源黑体',
+    css: "'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif",
+  },
   { key: 'system', label: '系统衬线', css: "Georgia, 'Songti SC', 'SimSun', 'STSong', serif" },
 ]
 
@@ -61,8 +65,7 @@ export const useReaderStore = create<ReaderState>()(
   persist(
     (set) => ({
       settings: DEFAULT_SETTINGS,
-      setFontSize: (px) =>
-        set((s) => ({ settings: { ...s.settings, fontSize: Math.min(28, Math.max(14, px)) } })),
+      setFontSize: (px) => set((s) => ({ settings: { ...s.settings, fontSize: Math.min(28, Math.max(14, px)) } })),
       setLabelFontSize: (px) =>
         set((s) => ({ settings: { ...s.settings, labelFontSize: Math.min(18, Math.max(11, px)) } })),
       setLineHeight: (lh) =>
@@ -79,7 +82,7 @@ export const useReaderStore = create<ReaderState>()(
       setFocusMode: (v) => set((s) => ({ settings: { ...s.settings, focusMode: v } })),
       setMeasure: (v) => set((s) => ({ settings: { ...s.settings, measure: v } })),
       setIndent: (v) => set((s) => ({ settings: { ...s.settings, indent: v } })),
-  setTermBox: (v) => set((s) => ({ settings: { ...s.settings, termBox: v } })),
+      setTermBox: (v) => set((s) => ({ settings: { ...s.settings, termBox: v } })),
       applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),

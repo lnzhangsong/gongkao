@@ -352,12 +352,16 @@
   list-style: none;
 }
 
-.study-skeleton-details summary::-webkit-details-marker { display: none; }
+.study-skeleton-details summary::-webkit-details-marker {
+  display: none;
+}
 .study-skeleton-details summary::before {
   content: '▸ ';
   color: var(--muted);
 }
-.study-skeleton-details[open] summary::before { content: '▾ '; }
+.study-skeleton-details[open] summary::before {
+  content: '▾ ';
+}
 
 /* 字号按钮禁用态 */
 .tool button:disabled,
@@ -405,7 +409,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 
 /* 悬停/聚焦：半透明白叠加——文字保持亮色，深浅主题下都可读；
@@ -710,7 +716,6 @@
   color: var(--accent-text);
 }
 
-
 .tool button.active {
   color: var(--accent-text);
 }
@@ -831,7 +836,9 @@
   width: 264px;
   background: var(--dark);
   border-radius: 10px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.2);
   padding: 8px;
   transform-origin: top right;
   animation: tools-pop-in 0.16s ease-out;
@@ -929,7 +936,9 @@
   align-items: center;
   padding: 3px 4px;
   border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .tools-menu-item .tool-btns button:hover {
@@ -957,7 +966,9 @@
   cursor: pointer;
   padding: 3px 6px;
   border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .tools-menu-action:hover,
@@ -991,7 +1002,9 @@
     border-radius: var(--radius-sm);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
   }
-  .ann-popover.show { display: none; }
+  .ann-popover.show {
+    display: none;
+  }
 
   /* 底部面板不需要箭头 */
   .selection-popover.show::after,
@@ -1273,7 +1286,10 @@
   font: 500 10px/1 var(--mono);
   letter-spacing: 0.22em;
   color: var(--muted);
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .study-collapse:hover {
@@ -1359,7 +1375,10 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   letter-spacing: 0.04em;
   color: var(--muted);
   opacity: 0.45;
-  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .para-num:hover,
@@ -1424,7 +1443,10 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   font: 500 11.5px/1.4 var(--sans);
   color: color-mix(in srgb, var(--ink) 82%, transparent);
   white-space: nowrap;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .para-gist-btn:hover:not(:disabled) {
@@ -1450,8 +1472,6 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   opacity: 0.4;
   cursor: default;
 }
-
-
 
 .para-gist-adopt:hover {
   background: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -1572,7 +1592,9 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   color: rgba(255, 255, 255, 0.88);
   background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 
 .selection-popover .mat-btn:hover {
@@ -1587,11 +1609,21 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
 }
 
 /* 各素材按钮的类型色点 */
-.mat-btn-thesis { box-shadow: inset 0 -2px 0 var(--hl-dot-blue); }
-.mat-btn-evidence { box-shadow: inset 0 -2px 0 var(--hl-dot-violet); }
-.mat-btn-quote { box-shadow: inset 0 -2px 0 var(--hl-dot-yellow); }
-.mat-btn-measure { box-shadow: inset 0 -2px 0 var(--hl-dot-green); }
-.mat-btn-pattern { box-shadow: inset 0 -2px 0 var(--hl-dot-orange); }
+.mat-btn-thesis {
+  box-shadow: inset 0 -2px 0 var(--hl-dot-blue);
+}
+.mat-btn-evidence {
+  box-shadow: inset 0 -2px 0 var(--hl-dot-violet);
+}
+.mat-btn-quote {
+  box-shadow: inset 0 -2px 0 var(--hl-dot-yellow);
+}
+.mat-btn-measure {
+  box-shadow: inset 0 -2px 0 var(--hl-dot-green);
+}
+.mat-btn-pattern {
+  box-shadow: inset 0 -2px 0 var(--hl-dot-orange);
+}
 
 /* 句式模板输入（标注管理弹层内） */
 .selection-popover .pattern-input {
@@ -1894,11 +1926,21 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
   background: var(--dot, color-mix(in srgb, var(--ink) 25%, transparent));
 }
 
-.mat-group-title.mat-thesis { --dot: var(--hl-blue); }
-.mat-group-title.mat-evidence { --dot: var(--hl-violet); }
-.mat-group-title.mat-quote { --dot: var(--hl-yellow); }
-.mat-group-title.mat-measure { --dot: var(--hl-green); }
-.mat-group-title.mat-pattern { --dot: var(--hl-orange); }
+.mat-group-title.mat-thesis {
+  --dot: var(--hl-blue);
+}
+.mat-group-title.mat-evidence {
+  --dot: var(--hl-violet);
+}
+.mat-group-title.mat-quote {
+  --dot: var(--hl-yellow);
+}
+.mat-group-title.mat-measure {
+  --dot: var(--hl-green);
+}
+.mat-group-title.mat-pattern {
+  --dot: var(--hl-orange);
+}
 
 .mat-card {
   display: flex;
@@ -2000,15 +2042,23 @@ article[data-study-inline='on'] .article-body.focus-mode .para-gist-editor {
 }
 
 /* —— AI 预拆解（拆解面板）—— */
-.ai-presplit .text-btn { font-size: 12px; white-space: nowrap; }
-.ai-presplit .text-btn:disabled { opacity: 0.45; cursor: default; }
+.ai-presplit .text-btn {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ai-presplit .text-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .ai-presplit-hint,
 .ai-presplit-error {
   font: 400 12px/1.7 var(--sans);
   color: var(--muted);
   margin: 6px 0 0;
 }
-.ai-presplit-error { color: var(--danger); }
+.ai-presplit-error {
+  color: var(--danger);
+}
 .ai-presplit-result {
   margin-top: 8px;
   padding: 10px 12px;

@@ -71,7 +71,12 @@ interface ExamStudyState {
   setMarks: (paperId: string, qIdx: number, marks: MaterialMark[], origin: 'ai' | 'manual') => void
   /** 删除某卷某材料的所有层级标注（重新生成前清场） */
   removeMaterialMarks: (paperId: string, matIdx: number) => void
-  updateMark: (paperId: string, qIdx: number, markId: string, patch: Partial<Omit<MaterialMark, 'id' | 'matIdx'>>) => void
+  updateMark: (
+    paperId: string,
+    qIdx: number,
+    markId: string,
+    patch: Partial<Omit<MaterialMark, 'id' | 'matIdx'>>,
+  ) => void
   removeMark: (paperId: string, qIdx: number, markId: string) => void
   removeForPaper: (paperId: string) => void
   importTraces: (list: QuestionTrace[]) => void
@@ -195,7 +200,12 @@ export const useExamStudyStore = create<ExamStudyState>()(
           return {
             marks: {
               ...s.marks,
-              [key]: { ...cur, origin: 'manual', marks: cur.marks.filter((m) => m.id !== markId), updatedAt: new Date().toISOString() },
+              [key]: {
+                ...cur,
+                origin: 'manual',
+                marks: cur.marks.filter((m) => m.id !== markId),
+                updatedAt: new Date().toISOString(),
+              },
             },
           }
         }),
@@ -207,7 +217,12 @@ export const useExamStudyStore = create<ExamStudyState>()(
           return {
             marks: {
               ...s.marks,
-              [key]: { ...(cur ?? { paperId, qIdx }), marks, origin, updatedAt: new Date().toISOString() } as QuestionMarks,
+              [key]: {
+                ...(cur ?? { paperId, qIdx }),
+                marks,
+                origin,
+                updatedAt: new Date().toISOString(),
+              } as QuestionMarks,
             },
           }
         }),
@@ -239,7 +254,8 @@ export const useExamStudyStore = create<ExamStudyState>()(
               continue
             }
             const kept = rec.marks.filter((m) => m.matIdx !== matIdx)
-            if (kept.length) nextMarks[k] = { ...rec, marks: kept, origin: 'manual', updatedAt: new Date().toISOString() }
+            if (kept.length)
+              nextMarks[k] = { ...rec, marks: kept, origin: 'manual', updatedAt: new Date().toISOString() }
           }
           return { marks: nextMarks }
         }),

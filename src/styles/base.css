@@ -321,7 +321,11 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
   transform: translate(-50%, -50%);
   mix-blend-mode: difference;
   opacity: 0;
-  transition: width 0.22s, height 0.22s, background 0.22s, opacity 0.25s;
+  transition:
+    width 0.22s,
+    height 0.22s,
+    background 0.22s,
+    opacity 0.25s;
 }
 
 .cursor.hover {
@@ -683,8 +687,12 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
     display: inline-flex;
   }
   .nav:has(.reading-page-menu) .nav-mobile-toggle,
-  .nav:has(.reading-page-menu) .nav-right { display: none; }
-  .nav:has(.reading-page-menu) { justify-content: flex-start; }
+  .nav:has(.reading-page-menu) .nav-right {
+    display: none;
+  }
+  .nav:has(.reading-page-menu) {
+    justify-content: flex-start;
+  }
   .footer {
     padding: 14px 20px;
     display: block;
@@ -874,7 +882,10 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
 
 .loading-copy strong {
   display: block;
-  font: 400 clamp(48px, 7vw, 96px) 'Ma Shan Zheng', 'Kaiti SC', serif;
+  font:
+    400 clamp(48px, 7vw, 96px) 'Ma Shan Zheng',
+    'Kaiti SC',
+    serif;
   letter-spacing: 0.03em;
   color: var(--accent);
   margin: 22px 0;
@@ -941,7 +952,6 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
   letter-spacing: 0.12em;
   z-index: 2;
 }
-
 
 @media (max-width: 700px) {
   .loading-wave {
@@ -1107,4 +1117,3 @@ html.reduced-motion .api-loading-ring {
     inset: -12px;
   }
 }
-

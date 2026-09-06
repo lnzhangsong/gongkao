@@ -145,7 +145,9 @@
   flex-direction: column;
   justify-content: space-between;
   cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
 }
 
 .featured-main:hover {
@@ -247,7 +249,9 @@
   gap: 20px;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
-  transition: padding 0.3s, background 0.3s;
+  transition:
+    padding 0.3s,
+    background 0.3s;
   width: 100%;
   min-width: 0;
   background: transparent;
@@ -426,6 +430,5 @@
     overflow-y: hidden;
   }
 }
-
 
 /* 申论拆解徽标（学习状态 + 素材数） */

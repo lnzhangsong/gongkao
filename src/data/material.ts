@@ -30,10 +30,4 @@ export const MATERIAL_TYPE_HINTS: Record<MaterialType, string> = {
 }
 
 /** Markdown 素材合集导出的固定顺序 */
-export const MATERIAL_EXPORT_ORDER: MaterialType[] = [
-  'thesis',
-  'evidence',
-  'quote',
-  'measure',
-  'pattern',
-]
+export const MATERIAL_EXPORT_ORDER: MaterialType[] = ['thesis', 'evidence', 'quote', 'measure', 'pattern']

@@ -85,7 +85,10 @@ export function ExamMaterialFlowModal({
       >
         <header className="exam-flow-head">
           <h3>
-            {label} · 行文思路 <small>{marks.length} 句 · 归为 {groups.length} 个阶段 · 自上而下顺原文推进</small>
+            {label} · 行文思路{' '}
+            <small>
+              {marks.length} 句 · 归为 {groups.length} 个阶段 · 自上而下顺原文推进
+            </small>
           </h3>
           <button type="button" className="exam-flow-close" aria-label="关闭" onClick={onClose}>
             ×

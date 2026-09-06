@@ -30,13 +30,19 @@ export function ExamQuestionEditor({
           >
             <option value="">未分类</option>
             {['概括', '分析', '对策', '应用文', '大作文'].map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>
+                {t}
+              </option>
             ))}
           </select>
         </span>
         <span className="exam-move-group">
-          <button className="exam-move-btn" title="上移" disabled={q.idx === 1} onClick={() => move(q.idx, -1)}>↑</button>
-          <button className="exam-move-btn" title="下移" disabled={q.idx === total} onClick={() => move(q.idx, 1)}>↓</button>
+          <button className="exam-move-btn" title="上移" disabled={q.idx === 1} onClick={() => move(q.idx, -1)}>
+            ↑
+          </button>
+          <button className="exam-move-btn" title="下移" disabled={q.idx === total} onClick={() => move(q.idx, 1)}>
+            ↓
+          </button>
         </span>
         <button className="text-btn exam-del-btn" onClick={onDelete}>
           删除此题
@@ -51,7 +57,9 @@ export function ExamQuestionEditor({
             min={0}
             value={q.wordLimit ?? ''}
             placeholder="—"
-            onChange={(e) => patch((t) => void (t.wordLimit = e.target.value === '' ? null : parseInt(e.target.value, 10)), q.idx)}
+            onChange={(e) =>
+              patch((t) => void (t.wordLimit = e.target.value === '' ? null : parseInt(e.target.value, 10)), q.idx)
+            }
           />
         </span>
         <span className="exam-edit-field">
@@ -62,7 +70,9 @@ export function ExamQuestionEditor({
             min={0}
             value={q.points ?? ''}
             placeholder="—"
-            onChange={(e) => patch((t) => void (t.points = e.target.value === '' ? null : parseInt(e.target.value, 10)), q.idx)}
+            onChange={(e) =>
+              patch((t) => void (t.points = e.target.value === '' ? null : parseInt(e.target.value, 10)), q.idx)
+            }
           />
         </span>
         <span className="exam-q-fields-hint">字数/分值在题干失焦时自动从原文读取，可手动覆盖</span>

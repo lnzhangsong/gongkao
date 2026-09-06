@@ -20,11 +20,7 @@ export function MarkedParagraph({ text, ranges }: { text: string; ranges: MarkRa
     if (seg.mark) {
       flushNote()
       nodes.push(
-        <mark
-          key={key++}
-          id={`exam-mk-${seg.mark.id}`}
-          className={`exam-mark lv-${seg.mark.level ?? 'normal'}`}
-        >
+        <mark key={key++} id={`exam-mk-${seg.mark.id}`} className={`exam-mark lv-${seg.mark.level ?? 'normal'}`}>
           {seg.text}
         </mark>,
       )

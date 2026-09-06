@@ -172,10 +172,7 @@ export function LibraryPage() {
   const completedCount = articles.filter((a) => progress[a.id]?.completed).length
   const annualPct = Math.round((completedCount / Math.max(1, articles.length)) * 100)
   /* 年份由文章日期动态推导，避免写死 */
-  const years = useMemo(
-    () => [...new Set(articles.map((a) => a.date.slice(0, 4)))].sort().join(' · '),
-    [articles],
-  )
+  const years = useMemo(() => [...new Set(articles.map((a) => a.date.slice(0, 4)))].sort().join(' · '), [articles])
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 
@@ -234,11 +231,7 @@ export function LibraryPage() {
         <div className="toolbar-tools">
           <label className="search-box">
             <Search size={14} className="search-icon" />
-            <input
-              placeholder="搜索标题、摘要或正文"
-              value={q}
-              onChange={(e) => setParam('q', e.target.value)}
-            />
+            <input placeholder="搜索标题、摘要或正文" value={q} onChange={(e) => setParam('q', e.target.value)} />
           </label>
           <div className="toolbar-tools-row">
             <div className="sort">
@@ -262,10 +255,7 @@ export function LibraryPage() {
       <div className="toolbar topic-toolbar">
         <span className="filter-group-label topic-label">主题</span>
         <div className={`filters topic-filters${topicsExpanded ? ' expanded' : ''}`}>
-          <button
-            className={`filter-pill${!topic ? ' active' : ''}`}
-            onClick={() => setParam('topic', '')}
-          >
+          <button className={`filter-pill${!topic ? ' active' : ''}`} onClick={() => setParam('topic', '')}>
             全部主题
           </button>
           {TOPICS.map((t) => (
@@ -381,11 +371,7 @@ export function LibraryPage() {
           )
         })}
 
-        <Pagination
-          page={curPage}
-          totalPages={totalPages}
-          onChange={(p) => setParam('page', String(p))}
-        />
+        <Pagination page={curPage} totalPages={totalPages} onChange={(p) => setParam('page', String(p))} />
       </main>
     </section>
   )

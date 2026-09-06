@@ -25,9 +25,9 @@ function openDb(): DatabaseSync {
 }
 
 export function GET(request: Request): Response {
-  let list = (
-    openDb().prepare('SELECT theme, term, example FROM guifan_terms ORDER BY id').all() as any[]
-  ).map((r) => ({ theme: r.theme, term: r.term, example: r.example }))
+  let list = (openDb().prepare('SELECT theme, term, example FROM guifan_terms ORDER BY id').all() as any[]).map(
+    (r) => ({ theme: r.theme, term: r.term, example: r.example }),
+  )
   const url = new URL(request.url)
   const theme = url.searchParams.get('theme')
   const q = url.searchParams.get('q')?.trim()

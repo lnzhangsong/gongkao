@@ -66,8 +66,7 @@ export function ExamQuestionsDrawer({
           <div>
             <span className="shenlun-eyebrow">EXAM / 作答要求</span>
             <h3>
-              {questions.length} 题
-              {hasAnswered ? ' · 含参考答案' : ''}
+              {questions.length} 题{hasAnswered ? ' · 含参考答案' : ''}
             </h3>
           </div>
           <div className="draw-head-actions">
@@ -111,7 +110,7 @@ export function ExamQuestionsDrawer({
           ) : null}
         </div>
       </aside>
-      </>,
+    </>,
     document.body,
   )
 }

@@ -154,7 +154,12 @@ export default function TermsPage() {
     setBusy(true)
     try {
       await updateTerm(editingId, { theme: editForm.theme.trim(), term, example: editForm.example.trim() })
-      setTerms((prev) => prev?.map((x) => (x.id === editingId ? { ...x, theme: editForm.theme.trim(), term, example: editForm.example.trim() } : x)) ?? prev)
+      setTerms(
+        (prev) =>
+          prev?.map((x) =>
+            x.id === editingId ? { ...x, theme: editForm.theme.trim(), term, example: editForm.example.trim() } : x,
+          ) ?? prev,
+      )
       setEditingId(null)
     } catch (e) {
       void alertDialog(e instanceof Error ? e.message : String(e))
@@ -185,7 +190,7 @@ export default function TermsPage() {
     <div className="exam-page terms-page">
       <header className="subpage-header exam-hero">
         <div>
-          <div className="eyebrow">SHENLUN GUIFANCI　/　{terms ? `${terms.length} 词` : "…"}</div>
+          <div className="eyebrow">SHENLUN GUIFANCI　/　{terms ? `${terms.length} 词` : '…'}</div>
           <h1>
             规范表达，
             <br />
@@ -230,10 +235,14 @@ export default function TermsPage() {
               <button className="ghost" onClick={submitAdd} disabled={busy}>
                 {busy ? '添加中…' : '添加'}
               </button>
-              <button className="text-btn muted" onClick={() => setAdding(false)}>取消</button>
+              <button className="text-btn muted" onClick={() => setAdding(false)}>
+                取消
+              </button>
             </div>
           ) : (
-            <button className="ghost" onClick={() => setAdding(true)}>＋ 新增规范词</button>
+            <button className="ghost" onClick={() => setAdding(true)}>
+              ＋ 新增规范词
+            </button>
           )}
         </div>
       </header>
@@ -244,11 +253,20 @@ export default function TermsPage() {
           <button className={`terms-chip${theme === '' ? ' active' : ''}`} onClick={() => setTheme('')}>
             全部　{terms.length}
           </button>
-          <button key="seen" className={`terms-chip terms-chip-seen${seenOnly ? ' active' : ''}`} onClick={() => changeFilter(() => setSeenOnly(!seenOnly))} title="词面出现在你划过的素材里">
+          <button
+            key="seen"
+            className={`terms-chip terms-chip-seen${seenOnly ? ' active' : ''}`}
+            onClick={() => changeFilter(() => setSeenOnly(!seenOnly))}
+            title="词面出现在你划过的素材里"
+          >
             见过　{seenTotal} ✦
           </button>
           {themes.map(([name, count]) => (
-            <button key={name} className={`terms-chip${theme === name ? ' active' : ''}`} onClick={() => changeFilter(() => setTheme(theme === name ? '' : name))}>
+            <button
+              key={name}
+              className={`terms-chip${theme === name ? ' active' : ''}`}
+              onClick={() => changeFilter(() => setTheme(theme === name ? '' : name))}
+            >
               {name}　{count}
             </button>
           ))}
@@ -262,7 +280,9 @@ export default function TermsPage() {
           <strong>规范词库暂时无法加载</strong>
           本地 API 服务可能没有启动，服务恢复后可重试。
           <div style={{ marginTop: 12 }}>
-            <button className="ghost" onClick={() => void load()}>重试</button>
+            <button className="ghost" onClick={() => void load()}>
+              重试
+            </button>
           </div>
         </div>
       )}
@@ -279,83 +299,81 @@ export default function TermsPage() {
       )}
 
       <div key={terms === null ? 'loading' : 'ready'} className={terms !== null ? 'fade-in' : undefined}>
-      {grouped.map(([name, list]) => (
-        <section key={name}>
-          <div className="content-head exam-year-head terms-theme-head">
-            <h2>{name}</h2>
-            <span>{list.length} 词</span>
-          </div>
-          <div className="terms-grid">
-            {list.map((t) =>
-              editingId === t.id ? (
-                <article key={t.id} className="terms-card terms-card-editing">
-                  <input
-                    className="terms-edit-input"
-                    value={editForm.theme}
-                    placeholder="主题"
-                    onChange={(e) => setEditForm((f) => ({ ...f, theme: e.target.value }))}
-                  />
-                  <input
-                    className="terms-edit-input terms-edit-term"
-                    value={editForm.term}
-                    placeholder="规范词 *"
-                    autoFocus
-                    onChange={(e) => setEditForm((f) => ({ ...f, term: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !busy) void submitEdit()
-                      if (e.key === 'Escape') setEditingId(null)
-                    }}
-                  />
-                  <textarea
-                    className="terms-edit-input terms-edit-example"
-                    rows={2}
-                    value={editForm.example}
-                    placeholder="例句（可空）"
-                    onChange={(e) => setEditForm((f) => ({ ...f, example: e.target.value }))}
-                  />
-                  <div className="terms-edit-actions">
-                    <button className="ghost" onClick={submitEdit} disabled={busy}>
-                      {busy ? '保存中…' : '保存'}
-                    </button>
-                    <button className="text-btn muted" onClick={() => setEditingId(null)}>取消</button>
-                  </div>
-                </article>
-              ) : (
-                <article key={t.id} className="terms-card">
-                  <h4>
-                    {t.term}
-                    {seenMap.has(t.id) && (
-                      <span
-                        className="term-seen"
-                        title={
-                          seenMap.get(t.id)!.articles.length > 0
-                            ? `在你的素材里出现过 ${seenMap.get(t.id)!.count} 次：${seenMap.get(t.id)!.articles.join('、')}`
-                            : `阅读时驻留见过 ${seenMap.get(t.id)!.count} 次`
-                        }
-                      >
-                        见过 ·{seenMap.get(t.id)!.count}
-                      </span>
-                    )}
-                  </h4>
-                  {t.example ? <p className="terms-example">{t.example}</p> : null}
-                  <span className="terms-card-tools">
-                    <button className="text-btn terms-del-btn" title="修改此词" onClick={() => startEdit(t)}>
-                      编辑
-                    </button>
-                    <button
-                      className="text-btn terms-del-btn"
-                      title="删除此词"
-                      onClick={() => void remove(t)}
-                    >
-                      删除
-                    </button>
-                  </span>
-                </article>
-              ),
-            )}
-          </div>
-        </section>
-      ))}
+        {grouped.map(([name, list]) => (
+          <section key={name}>
+            <div className="content-head exam-year-head terms-theme-head">
+              <h2>{name}</h2>
+              <span>{list.length} 词</span>
+            </div>
+            <div className="terms-grid">
+              {list.map((t) =>
+                editingId === t.id ? (
+                  <article key={t.id} className="terms-card terms-card-editing">
+                    <input
+                      className="terms-edit-input"
+                      value={editForm.theme}
+                      placeholder="主题"
+                      onChange={(e) => setEditForm((f) => ({ ...f, theme: e.target.value }))}
+                    />
+                    <input
+                      className="terms-edit-input terms-edit-term"
+                      value={editForm.term}
+                      placeholder="规范词 *"
+                      autoFocus
+                      onChange={(e) => setEditForm((f) => ({ ...f, term: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !busy) void submitEdit()
+                        if (e.key === 'Escape') setEditingId(null)
+                      }}
+                    />
+                    <textarea
+                      className="terms-edit-input terms-edit-example"
+                      rows={2}
+                      value={editForm.example}
+                      placeholder="例句（可空）"
+                      onChange={(e) => setEditForm((f) => ({ ...f, example: e.target.value }))}
+                    />
+                    <div className="terms-edit-actions">
+                      <button className="ghost" onClick={submitEdit} disabled={busy}>
+                        {busy ? '保存中…' : '保存'}
+                      </button>
+                      <button className="text-btn muted" onClick={() => setEditingId(null)}>
+                        取消
+                      </button>
+                    </div>
+                  </article>
+                ) : (
+                  <article key={t.id} className="terms-card">
+                    <h4>
+                      {t.term}
+                      {seenMap.has(t.id) && (
+                        <span
+                          className="term-seen"
+                          title={
+                            seenMap.get(t.id)!.articles.length > 0
+                              ? `在你的素材里出现过 ${seenMap.get(t.id)!.count} 次：${seenMap.get(t.id)!.articles.join('、')}`
+                              : `阅读时驻留见过 ${seenMap.get(t.id)!.count} 次`
+                          }
+                        >
+                          见过 ·{seenMap.get(t.id)!.count}
+                        </span>
+                      )}
+                    </h4>
+                    {t.example ? <p className="terms-example">{t.example}</p> : null}
+                    <span className="terms-card-tools">
+                      <button className="text-btn terms-del-btn" title="修改此词" onClick={() => startEdit(t)}>
+                        编辑
+                      </button>
+                      <button className="text-btn terms-del-btn" title="删除此词" onClick={() => void remove(t)}>
+                        删除
+                      </button>
+                    </span>
+                  </article>
+                ),
+              )}
+            </div>
+          </section>
+        ))}
       </div>
       <Pagination page={curPage} totalPages={totalPages} onChange={setPage} />
     </div>

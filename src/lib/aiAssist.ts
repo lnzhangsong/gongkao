@@ -75,7 +75,10 @@ export async function draftFramework(opts: {
 
   const raw = await aiChat({
     messages: [
-      { role: 'system', content: '你是申论辅导老师，熟悉公务员考试申论五类题型的作答规范。只输出 JSON，不要任何解释文字。' },
+      {
+        role: 'system',
+        content: '你是申论辅导老师，熟悉公务员考试申论五类题型的作答规范。只输出 JSON，不要任何解释文字。',
+      },
       { role: 'user', content: user },
     ],
     json: true,

@@ -1,6 +1,15 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { createExam, deleteExam, fetchExam, fetchExamList, saveExam, type ExamDetail, type ExamPaperMeta, type ExamQuestion } from '../lib/api'
+import {
+  createExam,
+  deleteExam,
+  fetchExam,
+  fetchExamList,
+  saveExam,
+  type ExamDetail,
+  type ExamPaperMeta,
+  type ExamQuestion,
+} from '../lib/api'
 import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
 import { ApiLoading } from '../components/ui/ApiLoading'
 import { useHoverPrefetch } from '../lib/hoverPrefetch'
@@ -241,7 +250,9 @@ export default function ExamPreviewPage() {
     const map = new Map<number, string>()
     if (!draft) return map
     for (let n = 1; n <= draft.materials.length + 5; n++) {
-      const byLabel = draft.materials.find((m) => new RegExp(`[材资]料${n}(?![0-9])`).test(m.label) || m.label.includes(`资料${n}`))
+      const byLabel = draft.materials.find(
+        (m) => new RegExp(`[材资]料${n}(?![0-9])`).test(m.label) || m.label.includes(`资料${n}`),
+      )
       const target = byLabel ?? draft.materials[n - 1]
       if (target) map.set(n, `exam-mat-${target.idx}`)
     }
@@ -304,7 +315,11 @@ export default function ExamPreviewPage() {
         tmp.set(mark.matIdx, list)
       }
     }
-    for (const [k, list] of tmp) map.set(k, list.sort((a, b) => a.order - b.order).map((x) => x.mark))
+    for (const [k, list] of tmp)
+      map.set(
+        k,
+        list.sort((a, b) => a.order - b.order).map((x) => x.mark),
+      )
     return map
   }, [draft, allMarks])
   /** 单则材料生成：忽略具体题目，逐句梳理本则行文脉络；存 qIdx = -材料idx（材料级，不入任何题的解析） */
@@ -318,9 +333,7 @@ export default function ExamPreviewPage() {
     try {
       /* 重新生成语义：先清掉该材料所有层级（题目级 + 材料级）的旧标注 */
       removeMaterialMarks(draft.id, m.idx)
-      const stems = draft.questions
-        .map((q) => `${q.idx}.${q.stem.replace(/\s+/g, '').slice(0, 50)}`)
-        .join('；')
+      const stems = draft.questions.map((q) => `${q.idx}.${q.stem.replace(/\s+/g, '').slice(0, 50)}`).join('；')
       const marks = await draftMaterialMarks({
         question: {
           idx: m.idx,
@@ -391,7 +404,6 @@ export default function ExamPreviewPage() {
     return map
   }, [draft, allMarks, inlineMarks])
 
-
   const reflowAll = () =>
     patchDraft((d) => {
       for (const m of d.materials) m.content = reflowParagraphs(m.content)
@@ -412,12 +424,19 @@ export default function ExamPreviewPage() {
         title: draft.title,
         materials: draft.materials.map((m) => ({ idx: m.idx, label: m.label, content: m.content })),
         questions: draft.questions.map((q) => ({
-          idx: q.idx, type: q.type, stem: q.stem, requirement: q.requirement,
-          wordLimit: q.wordLimit, points: q.points, answer: q.answer,
+          idx: q.idx,
+          type: q.type,
+          stem: q.stem,
+          requirement: q.requirement,
+          wordLimit: q.wordLimit,
+          points: q.points,
+          answer: q.answer,
         })),
       })
       if (newId !== draft.id) setDraft((prev) => (prev ? { ...prev, id: newId } : prev))
-      fetchExamList().then((r) => setPapers(r.papers)).catch(() => {})
+      fetchExamList()
+        .then((r) => setPapers(r.papers))
+        .catch(() => {})
       setDirty(false)
       setSavedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
     } catch (e) {
@@ -479,107 +498,131 @@ export default function ExamPreviewPage() {
       <section className="reading-page">
         <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
           <article>
-          <header className="article-head">
-            <button
-              type="button"
-              className="tag exam-tag-link"
-              onClick={async () => {
-                if (dirty && !(await confirmDialog('有未保存修改，确定离开？'))) return
-                backToList()
-              }}
-            >
-              申论真题　/　{draft.year} · {draft.level}
-            </button>
-            {editing ? (
-              <input
-                className="exam-title-input"
-                value={draft.title}
-                onChange={(e) => patchDraft((d) => void (d.title = e.target.value))}
-              />
-            ) : (
-              <h1>{draft.title}</h1>
-            )}
-            <div className="article-meta">
-              <span>材料　{draft.materials.length}</span>
-              <span>题目　{draft.questions.length}</span>
-              <span>答案　{answered ? `${answered}/${draft.questions.length}` : '无'}</span>
-              {draft.warnings ? <span className="exam-warn">⚠ {draft.warnings}</span> : null}
-              {!editing && <button className="text-btn exam-edit-btn" onClick={() => setEditing(true)}>编辑</button>}
-            </div>
+            <header className="article-head">
+              <button
+                type="button"
+                className="tag exam-tag-link"
+                onClick={async () => {
+                  if (dirty && !(await confirmDialog('有未保存修改，确定离开？'))) return
+                  backToList()
+                }}
+              >
+                申论真题　/　{draft.year} · {draft.level}
+              </button>
+              {editing ? (
+                <input
+                  className="exam-title-input"
+                  value={draft.title}
+                  onChange={(e) => patchDraft((d) => void (d.title = e.target.value))}
+                />
+              ) : (
+                <h1>{draft.title}</h1>
+              )}
+              <div className="article-meta">
+                <span>材料　{draft.materials.length}</span>
+                <span>题目　{draft.questions.length}</span>
+                <span>答案　{answered ? `${answered}/${draft.questions.length}` : '无'}</span>
+                {draft.warnings ? <span className="exam-warn">⚠ {draft.warnings}</span> : null}
+                {!editing && (
+                  <button className="text-btn exam-edit-btn" onClick={() => setEditing(true)}>
+                    编辑
+                  </button>
+                )}
+              </div>
+              {editing && (
+                <div className="exam-edit-bar">
+                  <span className="exam-edit-field">
+                    <label>年份</label>
+                    <YearInput value={draft.year} onCommit={(n) => patchDraft((d) => void (d.year = n))} />
+                  </span>
+                  <span className="exam-edit-field">
+                    <label>级别</label>
+                    <select
+                      className="exam-select"
+                      value={draft.level}
+                      onChange={(e) => patchDraft((d) => void (d.level = e.target.value))}
+                    >
+                      {[...new Set([draft.level, '副省级', '地市级', '行政执法'])].map((lv) => (
+                        <option key={lv} value={lv}>
+                          {lv}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
+                  {savedAt ? <span className="exam-saved">已保存 {savedAt}</span> : null}
+                  {dirty ? <span className="exam-warn">未保存</span> : null}
+                  <span className="exam-edit-actions">
+                    <button className="ghost" onClick={reflowAll}>
+                      一键重排换行
+                    </button>
+                    <button className="ghost exam-btn-primary" onClick={save} disabled={saving || !dirty}>
+                      {saving ? '保存中…' : '保存'}
+                    </button>
+                    <button
+                      className="ghost"
+                      onClick={async () => {
+                        if (
+                          dirty &&
+                          !(await confirmDialog('有未保存修改，退出编辑将丢失这些修改，确定退出？', { danger: true }))
+                        )
+                          return
+                        setEditing(false)
+                      }}
+                    >
+                      退出编辑
+                    </button>
+                    <button
+                      className="text-btn exam-del-btn"
+                      onClick={async () => {
+                        if (
+                          !(await confirmDialog(
+                            `确定删除整张试卷「${draft.title}」？其材料与题目会一并删除，且不可恢复。`,
+                            { danger: true },
+                          ))
+                        )
+                          return
+                        try {
+                          await deleteExam(draft.id)
+                          removeForPaper(draft.id)
+                          backToList()
+                          setPapers((prev) => prev?.filter((p) => p.id !== draft.id) ?? prev)
+                        } catch (e) {
+                          void alertDialog(e instanceof Error ? e.message : String(e))
+                        }
+                      }}
+                    >
+                      删除试卷
+                    </button>
+                  </span>
+                </div>
+              )}
+            </header>
+
             {editing && (
-              <div className="exam-edit-bar">
-                <span className="exam-edit-field">
-                  <label>年份</label>
-                  <YearInput
-                    value={draft.year}
-                    onCommit={(n) => patchDraft((d) => void (d.year = n))}
-                  />
-                </span>
-                <span className="exam-edit-field">
-                  <label>级别</label>
-                  <select
-                    className="exam-select"
-                    value={draft.level}
-                    onChange={(e) => patchDraft((d) => void (d.level = e.target.value))}
-                  >
-                    {[...new Set([draft.level, '副省级', '地市级', '行政执法'])].map((lv) => (
-                      <option key={lv} value={lv}>{lv}</option>
-                    ))}
-                  </select>
-                </span>
-                {savedAt ? <span className="exam-saved">已保存 {savedAt}</span> : null}
-                {dirty ? <span className="exam-warn">未保存</span> : null}
-                <span className="exam-edit-actions">
-                  <button className="ghost" onClick={reflowAll}>一键重排换行</button>
-                  <button className="ghost exam-btn-primary" onClick={save} disabled={saving || !dirty}>
-                    {saving ? '保存中…' : '保存'}
-                  </button>
+              <div className="exam-sec-bar">
+                <span>给定资料 · {draft.materials.length} 段</span>
+                <span>
                   <button
-                    className="ghost"
-                    onClick={async () => {
-                      if (dirty && !(await confirmDialog('有未保存修改，退出编辑将丢失这些修改，确定退出？', { danger: true }))) return
-                      setEditing(false)
-                    }}
+                    className="text-btn exam-add-btn"
+                    onClick={() =>
+                      patchDraft(
+                        (d) =>
+                          void d.materials.push({
+                            idx: (d.materials.at(-1)?.idx ?? 0) + 1,
+                            label: `材料${d.materials.length + 1}`,
+                            content: '',
+                          }),
+                      )
+                    }
                   >
-                    退出编辑
-                  </button>
-                  <button
-                    className="text-btn exam-del-btn"
-                    onClick={async () => {
-                      if (!(await confirmDialog(`确定删除整张试卷「${draft.title}」？其材料与题目会一并删除，且不可恢复。`, { danger: true }))) return
-                      try {
-                        await deleteExam(draft.id)
-                        removeForPaper(draft.id)
-                        backToList()
-                        setPapers((prev) => prev?.filter((p) => p.id !== draft.id) ?? prev)
-                      } catch (e) {
-                        void alertDialog(e instanceof Error ? e.message : String(e))
-                      }
-                    }}
-                  >
-                    删除试卷
+                    ＋ 添加材料
                   </button>
                 </span>
               </div>
             )}
-          </header>
-
-          {editing && (
-            <div className="exam-sec-bar">
-              <span>给定资料 · {draft.materials.length} 段</span>
-              <span>
-                <button
-                  className="text-btn exam-add-btn"
-                  onClick={() => patchDraft((d) => void d.materials.push({ idx: (d.materials.at(-1)?.idx ?? 0) + 1, label: `材料${d.materials.length + 1}`, content: '' }))}
-                >
-                  ＋ 添加材料
-                </button>
-              </span>
-            </div>
-          )}
-          {/* 快速跳转条已移除：材料顺序读，「作答要求」入口在阅读辅助面板 */}
-          <div
-            ref={bodyRef}
+            {/* 快速跳转条已移除：材料顺序读，「作答要求」入口在阅读辅助面板 */}
+            <div
+              ref={bodyRef}
               className={`article-body${settings.focusMode ? ' focus-mode' : ''}${settings.indent ? '' : ' no-indent'}`}
               style={readerVars}
             >
@@ -590,16 +633,34 @@ export default function ExamPreviewPage() {
                         <input
                           className="exam-mat-label-input"
                           value={m.label}
-                          onChange={(e) => patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.label = e.target.value))}
+                          onChange={(e) =>
+                            patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.label = e.target.value))
+                          }
                           aria-label="材料标题"
                         />
                         <span className="exam-move-group">
-                          <button className="exam-move-btn" title="上移" disabled={m.idx === 1} onClick={() => moveItem('materials', m.idx, -1)}>↑</button>
-                          <button className="exam-move-btn" title="下移" disabled={m.idx === draft.materials.length} onClick={() => moveItem('materials', m.idx, 1)}>↓</button>
+                          <button
+                            className="exam-move-btn"
+                            title="上移"
+                            disabled={m.idx === 1}
+                            onClick={() => moveItem('materials', m.idx, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            className="exam-move-btn"
+                            title="下移"
+                            disabled={m.idx === draft.materials.length}
+                            onClick={() => moveItem('materials', m.idx, 1)}
+                          >
+                            ↓
+                          </button>
                         </span>
                         <button
                           className="text-btn exam-del-btn"
-                          onClick={() => patchDraft((d) => void (d.materials = d.materials.filter((x) => x.idx !== m.idx)))}
+                          onClick={() =>
+                            patchDraft((d) => void (d.materials = d.materials.filter((x) => x.idx !== m.idx)))
+                          }
                         >
                           删除此段
                         </button>
@@ -608,7 +669,9 @@ export default function ExamPreviewPage() {
                         className="exam-ta"
                         rows={Math.min(20, Math.max(4, Math.ceil(m.content.length / 40)))}
                         value={m.content}
-                        onChange={(e) => patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.content = e.target.value))}
+                        onChange={(e) =>
+                          patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.content = e.target.value))
+                        }
                       />
                     </Fragment>
                   ))
@@ -675,104 +738,120 @@ export default function ExamPreviewPage() {
                         ))}
                     </Fragment>
                   ))}
-          </div>
-
-          <section className="exam-questions" id="exam-qs-anchor" style={readerVars}>
-            {editing && (
-              <div className="content-head">
-                <h2>作答要求</h2>
-                <span>
-                  {draft.questions.length} 题
-                <button
-                  className="text-btn exam-add-btn"
-                  onClick={() => patchDraft((d) => void d.questions.push({ idx: (d.questions.at(-1)?.idx ?? 0) + 1, type: null, stem: '', requirement: '', wordLimit: null, points: null, answer: null, answerMatched: false }))}
-                >
-                  　＋ 添加题目
-                </button>
-              </span>
             </div>
+
+            <section className="exam-questions" id="exam-qs-anchor" style={readerVars}>
+              {editing && (
+                <div className="content-head">
+                  <h2>作答要求</h2>
+                  <span>
+                    {draft.questions.length} 题
+                    <button
+                      className="text-btn exam-add-btn"
+                      onClick={() =>
+                        patchDraft(
+                          (d) =>
+                            void d.questions.push({
+                              idx: (d.questions.at(-1)?.idx ?? 0) + 1,
+                              type: null,
+                              stem: '',
+                              requirement: '',
+                              wordLimit: null,
+                              points: null,
+                              answer: null,
+                              answerMatched: false,
+                            }),
+                        )
+                      }
+                    >
+                      　＋ 添加题目
+                    </button>
+                  </span>
+                </div>
+              )}
+              {editing &&
+                draft.questions.map((q) => (
+                  <article key={q.idx} className="exam-q">
+                    <header className="exam-q-head">
+                      <span className="exam-q-id">
+                        <span className="exam-q-idx">第{q.idx}题</span>
+                        {q.type ? (
+                          <span className={`exam-q-type${q.type === '大作文' ? ' major' : ''}`}>{q.type}</span>
+                        ) : (
+                          <span className="exam-q-type">未分类</span>
+                        )}
+                      </span>
+                      <span className="exam-q-chips">
+                        {q.wordLimit ? <span>≤{q.wordLimit}字</span> : null}
+                        {q.points ? <span>{q.points}分</span> : null}
+                      </span>
+                    </header>
+                    <ExamQuestionEditor
+                      q={q}
+                      total={draft.questions.length}
+                      patch={patchQuestion}
+                      move={(key, delta) => moveItem('questions', key, delta)}
+                      onDelete={() =>
+                        patchDraft((d) => void (d.questions = d.questions.filter((x) => x.idx !== q.idx)))
+                      }
+                    />
+                  </article>
+                ))}
+            </section>
+
+            {/* 作答要求抽屉：阅读态题目整段收进抽屉 */}
+            {!editing && questionsOpen && (
+              <ExamQuestionsDrawer
+                detail={draft}
+                materialAnchors={materialAnchors}
+                anchorByNum={anchorByNum}
+                onJump={jumpTo}
+                indent={settings.indent}
+                onOpenAnalysis={(qIdx) => {
+                  setQuestionsOpen(false)
+                  setAnalysisIdx(qIdx)
+                }}
+                onClose={() => setQuestionsOpen(false)}
+              />
             )}
-            {editing &&
-              draft.questions.map((q) => (
-                <article key={q.idx} className="exam-q">
-                  <header className="exam-q-head">
-                    <span className="exam-q-id">
-                      <span className="exam-q-idx">第{q.idx}题</span>
-                      {q.type ? (
-                        <span className={`exam-q-type${q.type === '大作文' ? ' major' : ''}`}>{q.type}</span>
-                      ) : (
-                        <span className="exam-q-type">未分类</span>
-                      )}
-                    </span>
-                    <span className="exam-q-chips">
-                      {q.wordLimit ? <span>≤{q.wordLimit}字</span> : null}
-                      {q.points ? <span>{q.points}分</span> : null}
-                    </span>
-                  </header>
-                  <ExamQuestionEditor
-                    q={q}
-                    total={draft.questions.length}
-                    patch={patchQuestion}
-                    move={(key, delta) => moveItem('questions', key, delta)}
-                    onDelete={() => patchDraft((d) => void (d.questions = d.questions.filter((x) => x.idx !== q.idx)))}
-                  />
-                </article>
-              ))}
-          </section>
 
-          {/* 作答要求抽屉：阅读态题目整段收进抽屉 */}
-          {!editing && questionsOpen && (
-            <ExamQuestionsDrawer
-              detail={draft}
-              materialAnchors={materialAnchors}
-              anchorByNum={anchorByNum}
-              onJump={jumpTo}
-              indent={settings.indent}
-              onOpenAnalysis={(qIdx) => {
-                setQuestionsOpen(false)
-                setAnalysisIdx(qIdx)
-              }}
-              onClose={() => setQuestionsOpen(false)}
-            />
-          )}
+            {/* 行文思路开着但还没有标注：一键生成全卷 */}
+            {!editing && inlineMarks && markRangesByMat.size === 0 && (
+              <div className="exam-inline-empty">
+                <p>
+                  {genProgress
+                    ? `正在生成全卷行文思路（${genProgress.done}/${genProgress.total} 题）…`
+                    : '还没有任何标注。'}
+                </p>
+                <button className="ghost exam-btn-primary" disabled={Boolean(genProgress)} onClick={generateAllMarks}>
+                  {genProgress ? '生成中…' : '一键生成全卷行文思路 ✦'}
+                </button>
+                {genError && <p className="draw-error">{genError}</p>}
+              </div>
+            )}
 
-          {/* 行文思路开着但还没有标注：一键生成全卷 */}
-          {!editing && inlineMarks && markRangesByMat.size === 0 && (
-            <div className="exam-inline-empty">
-              <p>
-                {genProgress
-                  ? `正在生成全卷行文思路（${genProgress.done}/${genProgress.total} 题）…`
-                  : '还没有任何标注。'}
-              </p>
-              <button className="ghost exam-btn-primary" disabled={Boolean(genProgress)} onClick={generateAllMarks}>
-                {genProgress ? '生成中…' : '一键生成全卷行文思路 ✦'}
-              </button>
-              {genError && <p className="draw-error">{genError}</p>}
-            </div>
-          )}
-
-          {/* 题目解析抽屉：方法论 + 读材料三问 + 答案溯源（阅读态，一次一题）。
+            {/* 题目解析抽屉：方法论 + 读材料三问 + 答案溯源（阅读态，一次一题）。
               解析必从题目抽屉的「解析」进入，关闭时把题目抽屉带回来，避免回不去 */}
-          {!editing &&
-            analysisIdx != null &&
-            (() => {
-              const aq = draft.questions.find((x) => x.idx === analysisIdx)
-              if (!aq) return null
-              return (
-                <ExamAnalysisDrawer
-                  paperId={draft.id}
-                  q={aq}
-                  materials={draft.materials}
-                  relatedIdx={materialAnchors.get(aq.idx) ?? []}
-                  anchorByNum={anchorByNum}
-                  onJump={jumpTo}
-                  onClose={() => {
-                    setAnalysisIdx(null)
-                    setQuestionsOpen(true)
-                  }}
-                />
-              )
-            })()}
+            {!editing &&
+              analysisIdx != null &&
+              (() => {
+                const aq = draft.questions.find((x) => x.idx === analysisIdx)
+                if (!aq) return null
+                return (
+                  <ExamAnalysisDrawer
+                    paperId={draft.id}
+                    q={aq}
+                    materials={draft.materials}
+                    relatedIdx={materialAnchors.get(aq.idx) ?? []}
+                    anchorByNum={anchorByNum}
+                    onJump={jumpTo}
+                    onClose={() => {
+                      setAnalysisIdx(null)
+                      setQuestionsOpen(true)
+                    }}
+                  />
+                )
+              })()}
           </article>
 
           <ReaderToolsPanel
@@ -868,7 +947,9 @@ export default function ExamPreviewPage() {
           <strong>试卷列表暂时无法加载</strong>
           本地 API 服务可能没有启动，服务恢复后可重试。
           <div style={{ marginTop: 12 }}>
-            <button className="ghost" onClick={reloadList}>重试</button>
+            <button className="ghost" onClick={reloadList}>
+              重试
+            </button>
           </div>
         </div>
       )}
@@ -916,7 +997,6 @@ export default function ExamPreviewPage() {
 }
 
 /** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
-
 
 /** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
 function cloneDraft(d: ExamDetail): ExamDetail {

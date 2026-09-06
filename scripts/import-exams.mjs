@@ -88,13 +88,10 @@ function findFirst(body, patterns, from = 0) {
 // ---------- 材料/题目/答案切分 ----------
 
 const CN = '一二三四五六七八九十'
-const reMaterialHead = new RegExp(
-  `^[ \\t]*(?:【?\\s*)?材料\\s*([0-9${CN}]+)\\s*[\\.、：:)）]?\\s*[^\n]*$`,
-  'gm',
-)
+const reMaterialHead = new RegExp(`^[ \\t]*(?:【?\\s*)?材料\\s*([0-9${CN}]+)\\s*[\\.、：:)）]?\\s*[^\n]*$`, 'gm')
 const reQNumCN = new RegExp(`^[ \\t]*([${CN}])[、\\.．]\\s*`, 'm')
 const reQNumParen = new RegExp(`^[ \\t]*[（(](\\d{1,2}|[${CN}])[）)]\\s*`, 'm') // （1）/（一）混用（2019 实测两种并存）
-const reQNumAr = /^[ \t\u3000]*(\d{1,2})[、\.．]\s*/m
+const reQNumAr = /^[ \t\u3000]*(\d{1,2})[、.．]\s*/m
 const reQBracket = /^[ \t\u3000]*【(?:问题|题目)([一二三四五六七八九十1-9]+)】/m
 const reQBlock2026 = /^[ \t\u3000]*【作答要求】\s*$/m
 const reQWen = /^[ \t\u3000]*问题[一二三四五六七八九十1-9]+[：:]?/m // 2023 独立行 / 2022「问题一：题干…」行内式
@@ -143,7 +140,9 @@ function splitQuestions(text) {
     const isDup = p.ok && seenStems.has(dupKey)
     // 「回答下列两个问题」引导的短小题 → 并入引导题
     const isSub =
-      p.ok && out.length && p.text.replace(/\s/g, '').length < 50 &&
+      p.ok &&
+      out.length &&
+      p.text.replace(/\s/g, '').length < 50 &&
       out.slice(-2).some((q) => /两个问题|下面两题|以下两题|下面的问题/.test(q.stem))
     if (p.ok && !isDup && !isSub) {
       seenStems.add(dupKey)
@@ -177,7 +176,7 @@ function splitAnswers(text) {
 
 function extractStemAndRequirement(blockText) {
   const lines = blockText.split('\n')
-  const reqIdx = lines.findIndex((l) => /^要求[（(:：]/.test(l.trim()) || /^要求：/.test(l.trim()))
+  const reqIdx = lines.findIndex((l) => /^要求[（(:：]/.test(l.trim()) || l.trim().startsWith('要求：'))
   if (reqIdx > 0) {
     return {
       stem: lines.slice(0, reqIdx).join('\n').trim(),
@@ -206,7 +205,11 @@ function classifyQuestion(stem, requirement, wordLimit) {
   const t = stem + requirement
   if (/写一篇(?:文章|议论文|文章)|自拟题目|自选角度|作文|写一篇.{0,6}文章/.test(t)) return '大作文'
   if (/文章|议论/.test(t) && wordLimit && (wordLimit.max >= 900 || (wordLimit.min ?? 0) >= 900)) return '大作文'
-  if (/提案|讲话稿|发言稿|倡议书|公开信|报告|提纲|宣传稿|简报|编者按|导言|新闻稿|公众号|短评|讲解稿|备询|经验介绍|材料(?:的)?(?:标题|导语)/.test(t))
+  if (
+    /提案|讲话稿|发言稿|倡议书|公开信|报告|提纲|宣传稿|简报|编者按|导言|新闻稿|公众号|短评|讲解稿|备询|经验介绍|材料(?:的)?(?:标题|导语)/.test(
+      t,
+    )
+  )
     return '应用文'
   if (/对策|建议|措施|解决办法|解决.{0,6}问题|如何(解决|改善|推进)|工作思路/.test(t)) return '对策'
   if (/分析|谈谈|看法|理解|启示|评价|见解|含义|认识|比较/.test(t)) return '分析'
@@ -223,7 +226,10 @@ function cleanMaterial(content) {
     const after = content.slice(m.index + 4, m.index + 6)
     if (after.startsWith('两')) continue // 注意事项 boilerplate：「与作答要求两部分构成」
     if (before in '\n【、三二一' || /^\s*[（(一二三四五1-9【问\n]/.test(after)) {
-      return content.slice(0, m.index).replace(/[【（(]\s*$/, '').replace(/\s+$/, '')
+      return content
+        .slice(0, m.index)
+        .replace(/[【（(]\s*$/, '')
+        .replace(/\s+$/, '')
     }
   }
   return content
@@ -257,7 +263,11 @@ function parsePaper(relPath, text) {
   if (/(?:答案解析|大作文参考答案)\.md$/.test(base)) return null // 纯答案/解析文件，不是完整试卷
 
   const body = normalizeBody(raw)
-  const rawTitle = body.split('\n').map((l) => l.trim()).find((l) => l.length > 6) || meta.source_file
+  const rawTitle =
+    body
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => l.length > 6) || meta.source_file
   const title = cleanTitle(rawTitle)
   const level = parseLevel(meta, title)
   const year = parseInt(meta.year, 10)
@@ -270,12 +280,14 @@ function parsePaper(relPath, text) {
   // —— 特例 A：2026 式「作答要求/参考答案」逐题交错 ——
   const qMarksAll = [...body.matchAll(/^[ \t\u3000]*【作答要求】\s*$/gm)].map((m) => m.index)
   const aMarksAll = [...body.matchAll(/^[ \t\u3000]*【参考答案】\s*$/gm)].map((m) => m.index)
-  const interleaved =
-    qMarksAll.length >= 2 && aMarksAll.length >= 2 && aMarksAll[0] < qMarksAll[1]
+  const interleaved = qMarksAll.length >= 2 && aMarksAll.length >= 2 && aMarksAll[0] < qMarksAll[1]
   const finishQuestions = (list) =>
     list.map((q) => {
       // 题干开头残留的序号（一、/（一）/1.）剥掉
-      q.stem = q.stem.replace(/^[ \t\u3000]*(?:[一二三四五六七八九十]+[、\.．]|[（(][一二三四五六七八九十1-9]+[）)]|\d{1,2}[、\.．])[ \t\u3000]*/, '')
+      q.stem = q.stem.replace(
+        /^[ \t\u3000]*(?:[一二三四五六七八九十]+[、.．]|[（(][一二三四五六七八九十1-9]+[）)]|\d{1,2}[、.．])[ \t\u3000]*/,
+        '',
+      )
       const { stem, requirement } = extractStemAndRequirement(q.stem)
       const wordLimit = extractWordLimit(requirement) || extractWordLimit(stem)
       return {
@@ -292,10 +304,9 @@ function parsePaper(relPath, text) {
     })
 
   if (interleaved) {
-    const marks = [
-      ...qMarksAll.map((i) => ({ i, t: 'q' })),
-      ...aMarksAll.map((i) => ({ i, t: 'a' })),
-    ].sort((x, y) => x.i - y.i)
+    const marks = [...qMarksAll.map((i) => ({ i, t: 'q' })), ...aMarksAll.map((i) => ({ i, t: 'a' }))].sort(
+      (x, y) => x.i - y.i,
+    )
     const questions = []
     let cur = null
     for (const [k, mk] of marks.entries()) {
@@ -311,11 +322,23 @@ function parsePaper(relPath, text) {
     if (questions.length) {
       // 材料区 = 首个【作答要求】之前
       const matHead = mStart || findFirst(body, [/^[ \t\u3000]*材料[0-9一二三四五六七八九十]+/m])
-      const matRegion = matHead && matHead.index < qMarksAll[0] ? body.slice(matHead.index + matHead.text.length, qMarksAll[0]) : ''
+      const matRegion =
+        matHead && matHead.index < qMarksAll[0] ? body.slice(matHead.index + matHead.text.length, qMarksAll[0]) : ''
       const { parts: materials } = matRegion ? splitByHead(matRegion, reMaterialHead) : { parts: [] }
       return {
-        paper: paperMeta(relPath, meta, title, level, year, questions, ['作答要求/参考答案逐题交错，按块解析'],
-          questions.filter((q) => q.answer).map((q) => `【第${q.idx}题参考答案】\n${q.answer}`).join('\n\n')),
+        paper: paperMeta(
+          relPath,
+          meta,
+          title,
+          level,
+          year,
+          questions,
+          ['作答要求/参考答案逐题交错，按块解析'],
+          questions
+            .filter((q) => q.answer)
+            .map((q) => `【第${q.idx}题参考答案】\n${q.answer}`)
+            .join('\n\n'),
+        ),
         materials,
         questions: finishQuestions(questions),
       }
@@ -326,8 +349,7 @@ function parsePaper(relPath, text) {
   let qRegionStart = qStart ? qStart.index + qStart.text.length : null
   if (!qStart && aStart && mStart) {
     let lastMat = null
-    for (const m of body.matchAll(new RegExp(reMaterialHead.source, 'gm')))
-      if (m.index < aStart.index) lastMat = m
+    for (const m of body.matchAll(new RegExp(reMaterialHead.source, 'gm'))) if (m.index < aStart.index) lastMat = m
     qRegionStart = lastMat ? lastMat.index + lastMat[0].length : mStart.index + mStart.text.length
     warnings.push('无「作答要求」标题，题目区按材料区之后推定')
   }
@@ -429,7 +451,8 @@ const report = {
     .filter((p) => p.questions.length < 3 || p.questions.length > 5)
     .map((p) => `${p.paper.id}: ${p.questions.length} 题`),
 }
-for (const p of deduped) for (const q of p.questions) report.typeDist[q.type || '未识别'] = (report.typeDist[q.type || '未识别'] || 0) + 1
+for (const p of deduped)
+  for (const q of p.questions) report.typeDist[q.type || '未识别'] = (report.typeDist[q.type || '未识别'] || 0) + 1
 
 if (DRY) {
   console.log(JSON.stringify(report, null, 2))
@@ -504,15 +527,34 @@ const insQ = db.prepare(
 
 for (const { paper, materials, questions } of deduped) {
   insP.run(
-    paper.id, paper.year, paper.level, paper.title, paper.source_file,
-    paper.source_format, paper.pages, paper.chars, paper.status, paper.has_answer, paper.answers_raw, paper.warnings,
+    paper.id,
+    paper.year,
+    paper.level,
+    paper.title,
+    paper.source_file,
+    paper.source_format,
+    paper.pages,
+    paper.chars,
+    paper.status,
+    paper.has_answer,
+    paper.answers_raw,
+    paper.warnings,
   )
   for (const [i, m] of materials.entries())
     insM.run(`${paper.id}-m${i + 1}`, paper.id, i + 1, m.label, m.content, m.content.length)
   for (const q of questions)
     insQ.run(
-      `${paper.id}-q${q.idx}`, paper.id, q.idx, q.type, q.stem, q.requirement,
-      q.word_limit, q.word_limit_json, q.points, q.answer, q.answer_matched ? 1 : 0,
+      `${paper.id}-q${q.idx}`,
+      paper.id,
+      q.idx,
+      q.type,
+      q.stem,
+      q.requirement,
+      q.word_limit,
+      q.word_limit_json,
+      q.points,
+      q.answer,
+      q.answer_matched ? 1 : 0,
     )
 }
 

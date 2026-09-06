@@ -12,7 +12,23 @@ interface AnnotationState {
   _hasHydrated: boolean
 
   add: (a: Omit<Annotation, 'id' | 'createdAt'>) => Annotation
-  update: (id: string, patch: Partial<Pick<Annotation, 'noteText' | 'noteRich' | 'tags' | 'color' | 'underlineStyle' | 'materialType' | 'memorized' | 'mastery' | 'pattern'>>) => void
+  update: (
+    id: string,
+    patch: Partial<
+      Pick<
+        Annotation,
+        | 'noteText'
+        | 'noteRich'
+        | 'tags'
+        | 'color'
+        | 'underlineStyle'
+        | 'materialType'
+        | 'memorized'
+        | 'mastery'
+        | 'pattern'
+      >
+    >,
+  ) => void
   remove: (id: string) => void
   removeMany: (ids: string[]) => void
   removeForArticle: (articleId: string) => void
@@ -56,8 +72,7 @@ export const useAnnotationStore = create<AnnotationState>()(
           }
         }),
 
-      remove: (id) =>
-        set((s) => ({ annotations: s.annotations.filter((a) => a.id !== id) })),
+      remove: (id) => set((s) => ({ annotations: s.annotations.filter((a) => a.id !== id) })),
 
       removeMany: (ids) => {
         const setIds = new Set(ids)

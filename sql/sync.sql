@@ -126,3 +126,29 @@ begin
     );
   end loop;
 end $$;
+
+-- ---------- v3：产品埋点（匿名可写、仅本人可读） ----------
+-- 前端 src/lib/analytics.ts 写入：pageview + 关键功能事件，用于了解使用情况
+create table if not exists public.app_events (
+  id         bigint generated always as identity primary key,
+  ts         timestamptz not null default now(),
+  visitor_id text not null,              -- 匿名访客 id（localStorage 随机 uuid，不涉个人身份）
+  user_id    uuid references auth.users (id) on delete set null,  -- 登录时带上，匿名时为 null
+  name       text not null,              -- 'pageview' / 'auth_login' / ...
+  path       text,                       -- 页面路径
+  props      jsonb                       -- 事件附加信息
+);
+
+create index if not exists app_events_name_ts_idx on public.app_events (name, ts desc);
+
+alter table public.app_events enable row level security;
+
+-- 任何人可写（埋点需要匿名上报）；能不能写进来仍受 Supabase 速率约束
+drop policy if exists "任何人可上报埋点" on public.app_events;
+create policy "任何人可上报埋点" on public.app_events
+  for insert with check (true);
+
+-- 只能看自己的行（匿名行谁也看不了，只能进 SQL Editor 聚合分析）
+drop policy if exists "本人可读自己的埋点" on public.app_events;
+create policy "本人可读自己的埋点" on public.app_events
+  for select using (auth.uid() = user_id);

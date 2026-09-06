@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { startCloudSync, stopCloudSync } from '../lib/cloudSync'
+import { track } from '../lib/analytics'
 import { useArticleStore } from './articleStore'
 import { useAnnotationStore } from './annotationStore'
 import { useShenlunStore } from './shenlunStore'
@@ -63,6 +64,7 @@ function onSignedIn(user: User) {
   useAuthStore.setState({ status: 'in', user, profile: toProfile(user, null) })
   void useAuthStore.getState().refreshProfile()
   startCloudSync()
+  track('auth_login', { provider: user.app_metadata?.provider ?? 'email' })
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
@@ -110,6 +112,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (!supabase) return
     /* 顺序关键：先停引擎 → 再清本机 → 最后登出。
      * 引擎若还活着会把清空动作 diff 成「全部删除」推上云，毁掉云端真实数据 */
+    track('auth_logout')
     stopCloudSync()
     clearLocalData()
     await supabase.auth.signOut()

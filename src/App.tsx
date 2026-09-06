@@ -24,6 +24,7 @@ import { LoadingScreen } from './components/LoadingScreen'
 import { ConfirmHost } from './components/ui/ConfirmDialog'
 import { ToastHost } from './components/ui/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { trackPageview } from './lib/analytics'
 
 /* 启动动画不再人为等待：数据就绪即收尾（最短时长仅防闪屏） */
 const LOADING_MIN_MS = 600
@@ -36,6 +37,15 @@ function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
+/** 路由变化上报 pageview（产品埋点，失败静默） */
+function AnalyticsRoute() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    trackPageview(pathname)
   }, [pathname])
   return null
 }
@@ -121,6 +131,7 @@ function App() {
       <BrowserRouter>
         {/* 浏览器原生的 popstate 滚动恢复与 SPA 异步渲染不合拍，统一由 ScrollToTop 接管 */}
         <ScrollToTop />
+        <AnalyticsRoute />
         {/* chunk 加载间隙不渲染任何内容（页面级骨架已由各页面/启动 loading 覆盖） */}
         <Suspense fallback={null}>
           <Routes>

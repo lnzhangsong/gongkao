@@ -247,9 +247,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.7
         version: 19.2.7(@types/react@19.2.18)
-      '@vercel/postgres':
-        specifier: ^0.10.0
-        version: 0.10.0
       '@vitejs/plugin-react':
         specifier: ^6.1.1
         version: 6.1.1(@voidzero-dev/vite-plus-core@0.3.0(@types/node@26.4.1)(typescript@5.9.3))
@@ -288,9 +285,6 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
-
-  '@neondatabase/serverless@0.9.5':
-    resolution: {integrity: sha512-siFas6gItqv6wD/pZnvdu34wEqgG3nSE6zWZdq5j2DEsa+VvX8i/5HXJOo06qrw5axPXn+lGCxeR+NLaSPIXug==}
 
   '@oxc-project/runtime@0.146.0':
     resolution: {integrity: sha512-lbXHIpZ1MmK6zuw5txlMdIZ2waLVUIU5Gnm3sEuwJOiqDfQfbtjeHscatmeBoxbv8+If9LFM6PGh/3DcDWYIYw==}
@@ -643,9 +637,6 @@ packages:
   '@types/node@26.4.1':
     resolution: {integrity: sha512-k97ENvZWtvA6yqz5/FS6a7duDgOPEeOQOc2iKS/nY6mX6qJUKtLnWzQS+Xj6tXweyj6ZcTAK2Qecetnvi9nCLA==}
 
-  '@types/pg@8.11.6':
-    resolution: {integrity: sha512-/2WmmBXHLsfRqzfHW7BNZ8SbYzE8OSk7i3WjFYvfgRHj7S1xj+16Je5fUKv3lVdVzk/zn9TXOqf+avFCFIE0yQ==}
-
   '@types/react-dom@19.2.7':
     resolution: {integrity: sha512-I8bPpDLcHBv1qiIiXDCy71Rt8eQDKJP0sMSWJphDdAcdqiJ1sGpZamavoEIRZmYzjia9LuEb2HlYdDpmoENpvQ==}
     peerDependencies:
@@ -653,11 +644,6 @@ packages:
 
   '@types/react@19.2.18':
     resolution: {integrity: sha512-AnzbBERsrLKtk2XSfTbYRLjQPdy116Sty4q+T+Bp3IC4l6jNBvreVPAHmpq9qhXQM7CXZPjLVmGMw9sy+hxQ3w==}
-
-  '@vercel/postgres@0.10.0':
-    resolution: {integrity: sha512-fSD23DxGND40IzSkXjcFcxr53t3Tiym59Is0jSYIFpG4/0f0KO9SGtcp1sXiebvPaGe7N/tU05cH4yt2S6/IPg==}
-    engines: {node: '>=18.14'}
-    deprecated: '@vercel/postgres is deprecated. If you are setting up a new database, you can choose an alternate storage solution from the Vercel Marketplace. If you had an existing Vercel Postgres database, it should have been migrated to Neon as a native Vercel integration. You can find more details and the guide to migrate to Neon''s SDKs here: https://neon.com/docs/guides/vercel-postgres-transition-guide'
 
   '@vitejs/plugin-react@6.1.1':
     resolution: {integrity: sha512-yxLaQV9gkhS8ezJqCM6+ndU7mDY6gqAg75NQ+0IjwEI8IYOmQCgkRwHKVSfWXW076DsqMo0Dk+0FK1U+M5RgFw==}
@@ -1158,9 +1144,6 @@ packages:
     resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
     hasBin: true
 
-  obuf@1.1.2:
-    resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
-
   obug@2.1.4:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
@@ -1198,21 +1181,6 @@ packages:
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
-  pg-int8@1.0.1:
-    resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
-    engines: {node: '>=4.0.0'}
-
-  pg-numeric@1.0.2:
-    resolution: {integrity: sha512-BM/Thnrw5jm2kKLE5uJkXqqExRUY/toLHda65XgFTBTFYZyopbKjBe29Ii3RbkvlsMoFwD+tHeGaCjjv0gHlyw==}
-    engines: {node: '>=4'}
-
-  pg-protocol@1.16.0:
-    resolution: {integrity: sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==}
-
-  pg-types@4.1.0:
-    resolution: {integrity: sha512-o2XFanIMy/3+mThw69O8d4n1E5zsLhdO+OPqswezu7Z5ekP4hYDqlDjlmOpYMbzY2Br0ufCwJLdDIXeNVwcWFg==}
-    engines: {node: '>=10'}
-
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -1232,25 +1200,6 @@ packages:
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
-
-  postgres-array@3.0.4:
-    resolution: {integrity: sha512-nAUSGfSDGOaOAEGwqsRY27GPOea7CNipJPOA7lPbdEpx5Kg3qzdP0AaWC5MlhTWV9s4hFX39nomVZ+C4tnGOJQ==}
-    engines: {node: '>=12'}
-
-  postgres-bytea@3.0.0:
-    resolution: {integrity: sha512-CNd4jim9RFPkObHSjVHlVrxoVQXz7quwNFpz7RY1okNNme49+sVyiTvTRobiLV548Hx/hb1BG+iE7h9493WzFw==}
-    engines: {node: '>= 6'}
-
-  postgres-date@2.1.0:
-    resolution: {integrity: sha512-K7Juri8gtgXVcDfZttFKVmhglp7epKb1K4pgrkLxehjqkrgPhfG6OO8LHLkfaqkbpjNRnra018XwAr1yQFWGcA==}
-    engines: {node: '>=12'}
-
-  postgres-interval@3.0.0:
-    resolution: {integrity: sha512-BSNDnbyZCXSxgA+1f5UU2GmwhoI0aU5yMxRGO8CdFEcY2BQF9xm/7MqKnYoM1nJDk8nONNWDk9WeSmePFhQdlw==}
-    engines: {node: '>=12'}
-
-  postgres-range@1.1.4:
-    resolution: {integrity: sha512-i/hbxIE9803Alj/6ytL7UHQxRvZkI9O4Sy+J3HGc4F4oo/2eQAjTSNJ0bfxyse3bH0nuVesCk+3IRLaMtG3H6w==}
 
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
@@ -1497,10 +1446,6 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
-  '@neondatabase/serverless@0.9.5':
-    dependencies:
-      '@types/pg': 8.11.6
-
   '@oxc-project/runtime@0.146.0': {}
 
   '@oxc-project/types@0.146.0': {}
@@ -1707,12 +1652,6 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
-  '@types/pg@8.11.6':
-    dependencies:
-      '@types/node': 26.4.1
-      pg-protocol: 1.16.0
-      pg-types: 4.1.0
-
   '@types/react-dom@19.2.7(@types/react@19.2.18)':
     dependencies:
       '@types/react': 19.2.18
@@ -1720,14 +1659,6 @@ snapshots:
   '@types/react@19.2.18':
     dependencies:
       csstype: 3.2.3
-
-  '@vercel/postgres@0.10.0':
-    dependencies:
-      '@neondatabase/serverless': 0.9.5
-      bufferutil: 4.1.0
-      ws: 8.21.3(bufferutil@4.1.0)
-    transitivePeerDependencies:
-      - utf-8-validate
 
   '@vitejs/plugin-react@6.1.1(@voidzero-dev/vite-plus-core@0.3.0(@types/node@26.4.1)(typescript@5.9.3))':
     dependencies:
@@ -1934,6 +1865,7 @@ snapshots:
   bufferutil@4.1.0:
     dependencies:
       node-gyp-build: 4.8.4
+    optional: true
 
   chai@6.2.2: {}
 
@@ -2056,9 +1988,8 @@ snapshots:
 
   nanoid@3.3.18: {}
 
-  node-gyp-build@4.8.4: {}
-
-  obuf@1.1.2: {}
+  node-gyp-build@4.8.4:
+    optional: true
 
   obug@2.1.4: {}
 
@@ -2122,22 +2053,6 @@ snapshots:
 
   pathe@2.0.3: {}
 
-  pg-int8@1.0.1: {}
-
-  pg-numeric@1.0.2: {}
-
-  pg-protocol@1.16.0: {}
-
-  pg-types@4.1.0:
-    dependencies:
-      pg-int8: 1.0.1
-      pg-numeric: 1.0.2
-      postgres-array: 3.0.4
-      postgres-bytea: 3.0.0
-      postgres-date: 2.1.0
-      postgres-interval: 3.0.0
-      postgres-range: 1.1.4
-
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
@@ -2151,18 +2066,6 @@ snapshots:
       nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
-
-  postgres-array@3.0.4: {}
-
-  postgres-bytea@3.0.0:
-    dependencies:
-      obuf: 1.1.2
-
-  postgres-date@2.1.0: {}
-
-  postgres-interval@3.0.0: {}
-
-  postgres-range@1.1.4: {}
 
   pretty-format@27.5.1:
     dependencies:

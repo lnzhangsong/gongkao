@@ -31,7 +31,6 @@
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@vercel/postgres": "^0.10.0",
     "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
     "playwright-core": "^1.62.1",

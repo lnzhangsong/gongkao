@@ -7,6 +7,15 @@ import { toast } from '../components/ui/Toast'
 import { confirmDialog } from '../components/ui/ConfirmDialog'
 import '../styles/auth.css'
 
+/** ISO 时间 → 当地时区「今天显示 HH:mm，更早显示 M.D HH:mm」 */
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) return hm
+  return `${d.getMonth() + 1}.${d.getDate()} ${hm}`
+}
+
 /** 账号页（/account）：资料展示、昵称修改、退出登录 */
 export function AccountPage() {
   const navigate = useNavigate()
@@ -113,7 +122,7 @@ export function AccountPage() {
                   : syncError
                     ? `同步出错：${syncError}`
                     : lastSyncAt
-                      ? `上次同步 ${lastSyncAt.slice(11, 16)}`
+                      ? `上次同步 ${formatTime(lastSyncAt)}`
                       : '尚未同步'}
               </small>
             </div>

@@ -149,3 +149,8 @@ node scripts/e2e-smoke.mjs
 4. Supabase Auth → URL Configuration 里把站点域名（本地 `http://localhost:5173` 与线上域名）加入 Redirect URLs，魔法链接与邮箱确认链接才能回跳
 
 两项 Supabase 环境变量缺省时，登录入口仅显示「未配置」提示，站点其余功能完全不受影响。
+
+### 运维备注（Supabase 免费版）
+
+- **注册已关闭**：登录页仅保留登录与魔法链接入口（`AuthPage` 无注册流程）。Supabase 侧也建议关闭：Authentication → Sign In / Providers → Email → 关闭 "Allow new users to sign up"（双保险，防止有人直连 API 注册）
+- **防项目休眠**：免费版 7 天无 API 请求项目会被暂停。已配 GitHub Actions 每日自动 ping（`.github/workflows/supabase-keepalive.yml`），需在仓库 Settings → Secrets 添加 `SUPABASE_URL` 与 `SUPABASE_ANON_KEY`

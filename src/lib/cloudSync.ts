@@ -102,19 +102,29 @@ const studyAdapter: TableAdapter<ArticleStudy> = {
   payload: (k, data, updatedAt) => ({ article_id: k, data, updated_at: updatedAt }),
 }
 
+/** 真题作答：traces 与 marks 的本地键同为 paperId#qIdx，必须加 kind 前缀隔离
+ *（否则同题既有思路又有标注时互相覆盖，只同步得出一份） */
 const examStudyAdapter: TableAdapter<QuestionTrace | QuestionMarks> = {
   getRows: () => {
     const s = useExamStudyStore.getState()
-    return { ...s.traces, ...s.marks }
+    const rows: Record<string, QuestionTrace | QuestionMarks> = {}
+    for (const [k, v] of Object.entries(s.traces)) rows[`trace#${k}`] = v
+    for (const [k, v] of Object.entries(s.marks)) rows[`mark#${k}`] = v
+    return rows
   },
   apply: (k, data) => {
+    const kind = k.slice(0, k.indexOf('#'))
+    const key = k.slice(k.indexOf('#') + 1)
     useExamStudyStore.setState((s) =>
-      'points' in data ? { traces: { ...s.traces, [k]: data } } : { marks: { ...s.marks, [k]: data } },
+      kind === 'trace'
+        ? { traces: { ...s.traces, [key]: data as QuestionTrace } }
+        : { marks: { ...s.marks, [key]: data as QuestionMarks } },
     )
   },
   payload: (k, data, updatedAt) => {
-    const kind = 'points' in data ? 'trace' : 'mark'
-    return { kind, key: k, data, updated_at: updatedAt }
+    const idx = k.indexOf('#')
+    const kind = k.slice(0, idx)
+    return { kind, key: k.slice(idx + 1), data, updated_at: updatedAt }
   },
 }
 

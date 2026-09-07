@@ -10,6 +10,11 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ de
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const AdminEditPage = lazy(() => import('./pages/AdminEditPage').then((m) => ({ default: m.AdminEditPage })))
 const ExamPreviewPage = lazy(() => import('./pages/ExamPreviewPage'))
+const XingceListPage = lazy(() => import('./pages/XingceListPage').then((m) => ({ default: m.XingceListPage })))
+const XingcePracticePage = lazy(() =>
+  import('./pages/XingcePracticePage').then((m) => ({ default: m.XingcePracticePage })),
+)
+const XingceWrongPage = lazy(() => import('./pages/XingceWrongPage').then((m) => ({ default: m.XingceWrongPage })))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const AssistPage = lazy(() => import('./pages/AssistPage').then((m) => ({ default: m.AssistPage })))
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
@@ -146,6 +151,10 @@ function App() {
               {/* 申论真题预览（临时路由，未入导航）；详情走子路由，浏览器后退可回列表 */}
               <Route path="/exams" element={<ExamPreviewPage />} />
               <Route path="/exams/:examId" element={<ExamPreviewPage />} />
+              {/* 练习（行测刷题，docs/行测做题模块设计方案.md）；「练习」入口为伞形，申论练习 P5 后置挂同入口 */}
+              <Route path="/practice" element={<XingceListPage />} />
+              <Route path="/practice/wrong" element={<XingceWrongPage />} />
+              <Route path="/practice/:paperId" element={<XingcePracticePage />} />
               {/* 申论规范词 */}
               <Route path="/terms" element={<TermsPage />} />
               {/* AI 审题 + 作答框架 */}

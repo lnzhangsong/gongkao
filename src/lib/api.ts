@@ -173,6 +173,66 @@ export function fetchExam(id: string): Promise<ExamDetail> {
   return cachedGet(url, () => request<ExamDetail>(url))
 }
 
+/** —— 行测真题（docs/行测做题模块设计方案.md X1；api/xingce.ts 同构）—— */
+
+export interface XingcePaperMeta {
+  id: string
+  year: number
+  level: string
+  title: string
+  durationMin: number | null
+  questionCount: number
+}
+
+export interface XingceOption {
+  key: string
+  text: string
+}
+
+export interface XingceQuestion {
+  idx: number
+  section: string
+  subtype: string | null
+  /** 题组 id（资料分析/图形推理一组多题）；null = 单题 */
+  groupId: number | null
+  groupStem: string | null
+  stem: string
+  options: XingceOption[]
+  /** null = 引流版解析未收录该题答案 */
+  answer: string | null
+  explanation: string | null
+  image: string | null
+}
+
+export interface XingceDetail {
+  id: string
+  year: number
+  level: string
+  title: string
+  durationMin: number | null
+  warnings?: string
+  questions: XingceQuestion[]
+}
+
+/** 行测试卷列表（按年份倒序） */
+export function fetchXingceList(params?: { year?: number; level?: string }): Promise<{
+  papers: XingcePaperMeta[]
+  total: number
+}> {
+  const sp = new URLSearchParams()
+  if (params?.year) sp.set('year', String(params.year))
+  if (params?.level) sp.set('level', params.level)
+  const qs = sp.toString()
+  const url = `/api/xingce${qs ? `?${qs}` : ''}`
+  return cachedGet(url, () => request(url, { cache: 'reload' }))
+}
+
+/** 行测试卷详情（题目 + 选项 + 答案 + 解析） */
+export function fetchXingce(id: string): Promise<XingceDetail> {
+  const url = `/api/xingce?id=${encodeURIComponent(id)}`
+  return cachedGet(url, () => request<XingceDetail>(url))
+}
+
 /** 申论规范词条目 */
 export interface GuiFanTerm {
   id: number

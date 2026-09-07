@@ -6,6 +6,9 @@
     "api/exams.ts": {
       "includeFiles": "data/articles.db"
     },
+    "api/xingce.ts": {
+      "includeFiles": "data/articles.db"
+    },
     "api/terms.ts": {
       "includeFiles": "data/articles.db"
     }

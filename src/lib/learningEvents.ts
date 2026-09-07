@@ -17,6 +17,7 @@ export type EvidenceKind =
   | 'mastery-self' /* 掌握度自评 */
   | 'material-use' /* 素材被用进框架/作答（使用即复习，最强素材证据） */
   | 'exam-answer' /* 真题要点加工（第 3 期回流） */
+  | 'xingce-wrong' /* 行测错题（练习模块回流，供错题到期排期） */
   | 'infer-answer' /* AI 反向出题作答（第 3 期回流） */
   | 'term-seen' /* 规范词在视区驻留 ≥8s：注意力级「见过」证据 */
 
@@ -29,6 +30,7 @@ export const EVIDENCE: Record<EvidenceKind, { objectType: LearningObjectType; we
   'mastery-self': { objectType: 'material', weight: 2 },
   'material-use': { objectType: 'material', weight: 4 },
   'exam-answer': { objectType: 'ability', weight: 4 },
+  'xingce-wrong': { objectType: 'ability', weight: 3 },
   'infer-answer': { objectType: 'ability', weight: 3 },
   'term-seen': { objectType: 'term', weight: 1 },
 }

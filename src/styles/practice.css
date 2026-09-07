@@ -1,0 +1,466 @@
+/* ============================================================
+   读本 READBOOK · 练习（行测答题卡 /practice）
+   列表复用 exam-preview.css 的 exam-page/exam-card 语言；
+   本文件只写答题卡私有部分：分屏题目、选项、判分反馈。
+   ============================================================ */
+
+.practice-page {
+  /* 申论页允许 1920，答题卡取中道：宽屏下题干不挤、行长也可读 */
+  max-width: 1280px;
+  padding-left: 48px;
+  padding-right: 48px;
+  position: relative;
+}
+
+/* 页头吸顶：答题/翻页时标题与进度始终可见 */
+.practice-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+}
+
+/* 页头：返回 + 标题 + 进度 */
+.practice-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 40px 0 8px;
+}
+
+.practice-back {
+  font: 12px var(--mono);
+  letter-spacing: 0.08em;
+  background: none;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--ink);
+  align-self: flex-start;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+
+.practice-back:hover {
+  transform: translateY(-2px);
+  box-shadow: 3px 4px 0 var(--ink);
+}
+
+.practice-title h1 {
+  font: 500 clamp(20px, 2.6vw, 28px) / 1.5 var(--serif);
+  margin: 6px 0 0;
+}
+
+.practice-progress {
+  font: 12px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.practice-progress strong {
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.practice-mark {
+  display: inline-block;
+  margin-left: 10px;
+  font: 13px var(--serif);
+  opacity: 0.35;
+}
+
+/* 题组 */
+.practice-group {
+  margin-top: 22px;
+}
+
+.practice-group-stem {
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+  padding: 10px 14px 14px;
+  font: 14px/1.9 var(--serif);
+  margin-bottom: 18px;
+}
+
+.practice-stem-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: 11px var(--mono);
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0 8px;
+}
+
+.practice-stem-toggle:hover {
+  color: var(--ink);
+}
+
+.practice-group-stem.is-closed {
+  padding-bottom: 10px;
+}
+
+/* 材料内部滚动：图表材料再长也不挤占答题区 */
+.practice-stem-body {
+  max-height: 42vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.practice-stem-body p {
+  margin: 0 0 6px;
+}
+
+.practice-img {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  margin: 10px 0;
+}
+
+/* 单题 */
+.practice-q {
+  padding: 18px 0 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, var(--paper));
+}
+
+.practice-stem {
+  font: 15px/1.95 var(--serif);
+  margin: 0 0 12px;
+}
+
+.practice-stem strong {
+  font-family: var(--mono);
+  font-weight: 400;
+  margin-right: 6px;
+}
+
+/* 选项：竖排整行可点 */
+.practice-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* 短选项横排：数字/百分比一行四个，词语一行两个 */
+.practice-options.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.practice-options.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 760px) {
+  .practice-options.cols-2,
+  .practice-options.cols-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.practice-opt {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  text-align: left;
+  font: 14px/1.8 var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--ink) 35%, var(--paper));
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.practice-opt:hover:not(:disabled) {
+  transform: translateX(4px);
+  border-color: var(--ink);
+}
+
+.practice-opt.picked {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.practice-opt.right {
+  border-color: #2e7d32;
+  box-shadow: inset 3px 0 0 #2e7d32;
+}
+
+.practice-opt.wrong {
+  border-color: #b3261e;
+  box-shadow: inset 3px 0 0 #b3261e;
+}
+
+.practice-opt-key {
+  font: 12px var(--mono);
+  letter-spacing: 0.05em;
+  flex: 0 0 auto;
+}
+
+/* 判分与解析 */
+.practice-verdict {
+  margin-top: 10px;
+  font: 12px var(--mono);
+  letter-spacing: 0.06em;
+  color: #2e7d32;
+}
+
+.practice-verdict.is-wrong {
+  color: #b3261e;
+}
+
+.practice-explain {
+  margin: 10px 0 8px;
+  border-left: 2px solid var(--ink);
+  padding: 4px 0 4px 14px;
+  font: 13px/1.9 var(--serif);
+  color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+  white-space: pre-wrap;
+}
+
+.practice-explain.is-empty {
+  opacity: 0.55;
+}
+
+/* 组间导航 */
+.practice-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 26px 0 60px;
+}
+
+.practice-nav-btn {
+  font: 12px var(--mono);
+  letter-spacing: 0.08em;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 11px 20px;
+  cursor: pointer;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+
+.practice-nav-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 4px 5px 0 var(--ink);
+}
+
+.practice-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.practice-nav-btn.is-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.practice-hint {
+  font: 11px var(--mono);
+  color: var(--muted);
+}
+
+/* 答题卡：全卷题号网格，点题号任意跳题 */
+.practice-sheet-toggle {
+  margin-left: 12px;
+  font: 12px var(--mono);
+  letter-spacing: 0.06em;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.practice-sheet-toggle:hover {
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: translateY(-1px);
+}
+
+.practice-sheet {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  z-index: 30;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-top: 6px;
+  background: var(--paper);
+  box-shadow: 6px 7px 0 color-mix(in srgb, var(--ink) 85%, var(--paper));
+}
+
+.practice-sheet-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font: 11px var(--mono);
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.practice-sheet-legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid color-mix(in srgb, var(--ink) 40%, var(--paper));
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+.practice-sheet-legend .dot.is-right {
+  background: #2e7d32;
+  border-color: #2e7d32;
+}
+
+.practice-sheet-legend .dot.is-wrong {
+  background: #b3261e;
+  border-color: #b3261e;
+}
+
+.practice-sheet-hint {
+  margin-left: auto;
+}
+
+.practice-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.practice-sheet-cell {
+  font: 12px var(--mono);
+  padding: 8px 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, var(--paper));
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s;
+}
+
+.practice-sheet-cell:hover {
+  transform: translateY(-2px);
+  border-color: var(--ink);
+}
+
+.practice-sheet-cell.is-right {
+  background: #2e7d32;
+  border-color: #2e7d32;
+  color: #fff;
+}
+
+.practice-sheet-cell.is-wrong {
+  background: #b3261e;
+  border-color: #b3261e;
+  color: #fff;
+}
+
+.practice-sheet-cell.is-current {
+  box-shadow: 0 0 0 2px var(--ink);
+  font-weight: 700;
+}
+
+/* 材料表格：OCR 重建的统计表 */
+.practice-stem-table {
+  border-collapse: collapse;
+  margin: 10px 0;
+  font: 12.5px/1.7 var(--mono);
+  width: 100%;
+}
+
+.practice-stem-table th,
+.practice-stem-table td {
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, var(--paper));
+  padding: 4px 9px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.practice-stem-table th {
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  font-weight: 400;
+}
+
+.practice-stem-table td:first-child,
+.practice-stem-table th:first-child {
+  text-align: left;
+}
+
+.practice-stem-note {
+  font: 11px var(--mono);
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+/* 进度条：1px 墨框内一条细进度 */
+.practice-progressbar {
+  height: 6px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.practice-progressbar-fill {
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.4s;
+}
+
+.practice-stats {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  font: 12px var(--mono);
+  color: var(--muted);
+  padding: 8px 2px 0;
+}
+
+.practice-stats strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.practice-stats .is-right {
+  color: #2e7d32;
+}
+
+.practice-stats .is-wrong {
+  color: #b3261e;
+}
+
+.practice-sheet-toggle.is-mini {
+  margin-left: auto;
+  padding: 4px 10px;
+}
+
+/* 旧的头部切换按钮退位（保留样式兼容） */
+.practice-progress .practice-sheet-toggle {
+  margin-left: 10px;
+}

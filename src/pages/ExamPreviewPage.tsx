@@ -290,7 +290,7 @@ export default function ExamPreviewPage() {
     if (!draft) return set
     for (const rec of Object.values(allMarks)) {
       if (rec.paperId !== draft.id) continue
-      for (const m of rec.marks) set.add(m.matIdx)
+      for (const m of rec.marks ?? []) set.add(m.matIdx)
     }
     return set
   }, [draft, allMarks])
@@ -306,7 +306,7 @@ export default function ExamPreviewPage() {
     if (!draft) return map
     for (const record of Object.values(allMarks)) {
       if (record.paperId !== draft.id) continue
-      for (const mark of record.marks) {
+      for (const mark of record.marks ?? []) {
         const mat = draft.materials.find((x) => x.idx === mark.matIdx)
         if (!mat) continue
         const hit = findQuoteInMaterial(joinParagraphs(mat.content), mark.quote)
@@ -361,7 +361,7 @@ export default function ExamPreviewPage() {
     setGenError('')
     const qs = draft.questions.filter((q) => {
       const rec = allMarks[`${draft.id}#${q.idx}`]
-      return !rec?.marks.length
+      return !rec?.marks?.length
     })
     if (!qs.length) {
       setGenProgress(null)
@@ -391,7 +391,7 @@ export default function ExamPreviewPage() {
     if (!draft || !inlineMarks) return map
     for (const record of Object.values(allMarks)) {
       if (record.paperId !== draft.id) continue
-      for (const mark of record.marks) {
+      for (const mark of record.marks ?? []) {
         const mat = draft.materials.find((x) => x.idx === mark.matIdx)
         if (!mat) continue
         const hit = findQuoteInMaterial(joinParagraphs(mat.content), mark.quote)

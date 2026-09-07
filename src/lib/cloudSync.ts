@@ -6,7 +6,7 @@ import type { Article, ReadingProgress } from '../types'
 import { useAnnotationStore } from '../stores/annotationStore'
 import type { Annotation } from '../types'
 import { useShenlunStore, type ArticleStudy } from '../stores/shenlunStore'
-import { useExamStudyStore, type QuestionTrace, type QuestionMarks } from '../stores/examStudyStore'
+import { useExamStudyStore, asMarksRecord, type QuestionTrace, type QuestionMarks } from '../stores/examStudyStore'
 import { useAiAssistStore, type AssistRecord } from '../stores/aiAssistStore'
 import { useAiStore } from '../stores/aiStore'
 import { useLearningEventStore, type LearningEvent } from '../stores/learningEventStore'
@@ -115,11 +115,16 @@ const examStudyAdapter: TableAdapter<QuestionTrace | QuestionMarks> = {
   apply: (k, data) => {
     const kind = k.slice(0, k.indexOf('#'))
     const key = k.slice(k.indexOf('#') + 1)
-    useExamStudyStore.setState((s) =>
-      kind === 'trace'
-        ? { traces: { ...s.traces, [key]: data as QuestionTrace } }
-        : { marks: { ...s.marks, [key]: data as QuestionMarks } },
-    )
+    /* 云端可能残留 9331181 修复前 traces/marks 同键互写的坏记录，形状不对就丢弃，防止拉取后页面崩溃 */
+    if (kind === 'trace') {
+      const d = data as Partial<QuestionTrace>
+      if (!d || !Array.isArray(d.points)) return
+      useExamStudyStore.setState((s) => ({ traces: { ...s.traces, [key]: d as QuestionTrace } }))
+    } else {
+      const ok = asMarksRecord(data)
+      if (!ok) return
+      useExamStudyStore.setState((s) => ({ marks: { ...s.marks, [key]: ok } }))
+    }
   },
   payload: (k, data, updatedAt) => {
     const idx = k.indexOf('#')

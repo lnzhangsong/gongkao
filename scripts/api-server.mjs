@@ -165,6 +165,51 @@ function queryExam(id) {
   }
 }
 
+// —— 行测真题（xg_papers / xg_questions 两表，import-xingce.mjs 入库；与 api/xingce.ts 同构）——
+function queryXingceList() {
+  return openExamDb()
+    .prepare('SELECT id, year, level, title, duration_min, question_count FROM xg_papers ORDER BY year DESC, id')
+    .all()
+    .map((r) => ({
+      id: r.id,
+      year: r.year,
+      level: r.level,
+      title: r.title,
+      durationMin: r.duration_min ?? null,
+      questionCount: r.question_count,
+    }))
+}
+function queryXingce(id) {
+  const d = openExamDb()
+  const p = d.prepare('SELECT id, year, level, title, duration_min, warnings FROM xg_papers WHERE id = ?').get(id)
+  if (!p) return null
+  const questions = d
+    .prepare(
+      'SELECT idx, section, subtype, group_id, group_stem, stem, options, answer, explanation, image FROM xg_questions WHERE paper_id = ? ORDER BY idx',
+    )
+    .all(id)
+  return {
+    id: p.id,
+    year: p.year,
+    level: p.level,
+    title: p.title,
+    durationMin: p.duration_min ?? null,
+    ...(p.warnings ? { warnings: p.warnings } : {}),
+    questions: questions.map((q) => ({
+      idx: q.idx,
+      section: q.section,
+      subtype: q.subtype ?? null,
+      groupId: q.group_id ?? null,
+      groupStem: q.group_stem ?? null,
+      stem: q.stem,
+      options: JSON.parse(q.options),
+      answer: q.answer,
+      explanation: q.explanation ?? null,
+      image: q.image ?? null,
+    })),
+  }
+}
+
 // —— 申论规范词（guifan_terms 表，import-guifanci.mjs 全量重建）——
 function queryTerms() {
   return openDb()
@@ -371,6 +416,22 @@ const server = createServer((req, res) => {
   }
   // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
   // 新增试卷（body: { year, level, title }）
+  if (url.pathname === '/api/xingce' && req.method === 'GET') {
+    // 与线上 api/xingce.ts 相同的 ?id= 查询参数取详情
+    const singleId = url.searchParams.get('id')
+    if (singleId) {
+      const paper = queryXingce(singleId)
+      if (!paper) {
+        void respond(json({ error: 'not found' }, 404))
+        return
+      }
+      void respond(json(paper))
+      return
+    }
+    const xgList = queryXingceList()
+    void respond(json({ papers: xgList, total: xgList.length }))
+    return
+  }
   if (url.pathname === '/api/exams' && req.method === 'POST') {
     if (!writeAuthorized(req)) return denyWrite(respond)
     let body = ''

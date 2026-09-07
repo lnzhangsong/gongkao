@@ -8,6 +8,7 @@ import type { Annotation } from '../types'
 import { useShenlunStore, type ArticleStudy } from '../stores/shenlunStore'
 import { useExamStudyStore, asMarksRecord, type QuestionTrace, type QuestionMarks } from '../stores/examStudyStore'
 import { useAiAssistStore, type AssistRecord } from '../stores/aiAssistStore'
+import { useXingceStore, asXgAnswer, type XgAnswer } from '../stores/xingceStore'
 import { useAiStore } from '../stores/aiStore'
 import { useLearningEventStore, type LearningEvent } from '../stores/learningEventStore'
 import { useReaderStore } from '../stores/readerStore'
@@ -199,6 +200,17 @@ function applyAiConfig(data: Record<string, unknown>) {
   useAiStore.setState((s) => ({ settings: { ...s.settings, ...data } }))
 }
 
+/** 行测作答：单键 paperId#qIdx，拉取时校验形状（坏记录拒入，examStudy 事故同款防线） */
+const xgAdapter: TableAdapter<XgAnswer> = {
+  getRows: () => useXingceStore.getState().answers,
+  apply: (k, data) => {
+    const ok = asXgAnswer(data)
+    if (!ok) return
+    useXingceStore.setState((s) => ({ answers: { ...s.answers, [k]: ok } }))
+  },
+  payload: (k, data, updatedAt) => ({ key: k, data, updated_at: updatedAt }),
+}
+
 const ADAPTERS = {
   reading_progress: progressAdapter,
   annotations: annotationsAdapter,
@@ -207,6 +219,7 @@ const ADAPTERS = {
   learning_events: eventsAdapter,
   ai_assists: assistsAdapter,
   article_edits: editsAdapter,
+  xg_answers: xgAdapter,
 } as const
 
 // ---------- 引擎 ----------
@@ -410,6 +423,7 @@ export function startCloudSync(): void {
   useAnnotationStore.subscribe(() => watch('annotations'))
   useShenlunStore.subscribe(() => watch('article_study'))
   useExamStudyStore.subscribe(() => watch('exam_study'))
+  useXingceStore.subscribe(() => watch('xg_answers'))
   useLearningEventStore.subscribe(() => watch('learning_events'))
   useReaderStore.subscribe(() => watch('user_prefs'))
   useThemeStore.subscribe(() => watch('user_prefs'))

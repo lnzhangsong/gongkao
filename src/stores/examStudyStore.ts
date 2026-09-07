@@ -136,6 +136,14 @@ export interface QuestionMarks {
   updatedAt: string
 }
 
+/** 云同步 / 旧版本数据可能是 trace 形状（9331181 修复前 traces 与 marks 同键互写），
+ *  marks 字段缺失或非数组会让页面 `for of rec.marks` 崩溃——进 store 前先校验形状 */
+export function asMarksRecord(data: unknown): QuestionMarks | null {
+  const d = data as Partial<QuestionMarks> | null
+  if (d && typeof d === 'object' && Array.isArray(d.marks)) return d as QuestionMarks
+  return null
+}
+
 function upsertTrace(
   s: ExamStudyState,
   paperId: string,
@@ -284,7 +292,19 @@ export const useExamStudyStore = create<ExamStudyState>()(
       name: 'readbook:exam-study',
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({ traces: s.traces, marks: s.marks }),
-      onRehydrateStorage: () => () => {
+      onRehydrateStorage: () => (state) => {
+        /* 本地 IndexedDB 残留的坏形状记录同样清洗掉 */
+        if (state) {
+          const marks: Record<string, QuestionMarks> = {}
+          let dirty = false
+          for (const [k, rec] of Object.entries(state.marks)) {
+            const ok = asMarksRecord(rec)
+            if (ok) marks[k] = ok
+            else dirty = true
+          }
+          useExamStudyStore.setState(dirty ? { marks, _hasHydrated: true } : { _hasHydrated: true })
+          return
+        }
         useExamStudyStore.setState({ _hasHydrated: true })
       },
     },

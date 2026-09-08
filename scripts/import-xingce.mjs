@@ -95,7 +95,8 @@ function validate(paper, file) {
       if (!q.image) errs.push(`${at} options 少于 2 项且无配图`)
     } else {
       if (new Set(keys).size !== keys.length) errs.push(`${at} 选项 key 重复`)
-      for (const o of opts) if (!o.text) errs.push(`${at} 选项 ${o.key} 文本为空`)
+      // 图片选项题（图形推理/资料分析图形题）选项正文在截图里，允许空文本
+      for (const o of opts) if (!o.text && !q.image) errs.push(`${at} 选项 ${o.key} 文本为空且无配图`)
     }
     if (q.answer == null) warns.push(`第${q.idx}题答案缺失（引流版解析未收录）`)
     else if (!/^[A-E]$/.test(q.answer)) errs.push(`${at} answer 非法：${q.answer}`)

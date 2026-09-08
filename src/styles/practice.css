@@ -160,6 +160,19 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
+/* 图片选项题（图形推理整题截图）：选项按钮收窄成一行标签，不做空占位条 */
+.practice-options.is-imgopts {
+  display: flex;
+  gap: 10px;
+}
+
+.practice-options.is-imgopts .practice-opt {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 64px;
+  padding: 6px 18px;
+}
+
 @media (max-width: 760px) {
   .practice-options.cols-2,
   .practice-options.cols-4 {

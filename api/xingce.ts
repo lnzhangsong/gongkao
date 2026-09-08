@@ -39,7 +39,7 @@ export function GET(request: Request): Response {
     const questions = (
       d
         .prepare(
-          'SELECT idx, section, subtype, group_id, group_stem, stem, options, answer, explanation, image FROM xg_questions WHERE paper_id = ? ORDER BY idx',
+          'SELECT idx, section, subtype, group_id, group_stem, group_image, stem, options, answer, explanation, image FROM xg_questions WHERE paper_id = ? ORDER BY idx',
         )
         .all(singleId) as any[]
     ).map((q) => ({
@@ -48,6 +48,7 @@ export function GET(request: Request): Response {
       subtype: q.subtype ?? null,
       groupId: q.group_id ?? null,
       groupStem: q.group_stem ?? null,
+      groupImage: q.group_image ?? null,
       stem: q.stem,
       options: JSON.parse(q.options) as { key: string; text: string }[],
       answer: q.answer,

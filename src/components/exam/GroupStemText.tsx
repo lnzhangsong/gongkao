@@ -10,7 +10,8 @@ function toRows(lines: string[]): string[][] {
   return lines.map((l) => l.split(' | ').map((c) => c.trim()))
 }
 
-export function GroupStemText({ text }: { text: string }) {
+export function GroupStemText({ text }: { text: string | null | undefined }) {
+  if (!text) return null
   const lines = text.split('\n')
   const out: ReactNode[] = []
   let buf: string[] = []
@@ -62,4 +63,33 @@ export function GroupStemText({ text }: { text: string }) {
   flush()
 
   return <>{out}</>
+}
+
+/**
+ * 截图渲染：groupImage/image 字段是 JSON 数组字符串的 data URL（xingce-images.py 产出，
+ * 跨页材料为多张），也可能是单个 data URL。空值/解析失败一律渲染 null。
+ */
+export function DataUrls({ value, altPrefix }: { value: string | null | undefined; altPrefix: string }) {
+  if (!value) return null
+  let urls: string[] = []
+  try {
+    const parsed: unknown = JSON.parse(value)
+    urls = Array.isArray(parsed) ? (parsed as string[]) : [String(parsed)]
+  } catch {
+    if (value.startsWith('data:')) urls = [value]
+    else return null
+  }
+  return (
+    <>
+      {urls.map((src, i) => (
+        <img
+          className="practice-img"
+          key={i}
+          src={src}
+          alt={urls.length > 1 ? `${altPrefix}图${i + 1}` : `${altPrefix}配图`}
+          loading="lazy"
+        />
+      ))}
+    </>
+  )
 }

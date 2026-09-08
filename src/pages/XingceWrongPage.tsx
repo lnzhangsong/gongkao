@@ -109,11 +109,17 @@ export function XingceWrongPage() {
               <article className="practice-group" key={`${it.paperId}#${it.q.idx}`}>
                 <div className="practice-group-stem">
                   <small style={{ fontFamily: 'var(--mono)', opacity: 0.6 }}>{it.paperTitle}</small>
-                  {'\n'}
-                  {it.q.idx}. {it.q.stem}
+                  {!it.q.image && (
+                    <>
+                      {'\n'}
+                      {it.q.idx}. {it.q.stem}
+                    </>
+                  )}
                 </div>
-                {(it.q.image || it.q.groupImage) && (
-                  <DataUrls value={it.q.image ?? it.q.groupImage} altPrefix={`第${it.q.idx}题`} />
+                {it.q.image ? (
+                  <DataUrls value={it.q.image} altPrefix={`第${it.q.idx}题`} />
+                ) : (
+                  it.q.groupImage && <DataUrls value={it.q.groupImage} altPrefix={`第${it.q.idx}题组材料`} />
                 )}
                 <div className={`practice-verdict${it.picked ? ' is-wrong' : ''}`}>
                   {it.picked ? `你选了 ${it.picked}` : '未作答'} · 正确答案 {it.q.answer}

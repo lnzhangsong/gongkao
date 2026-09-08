@@ -103,6 +103,8 @@ export interface ReaderSettings {
   indent: boolean
   /** 规范词方框标注（阅读时圈出正文中的申论规范词） */
   termBox: boolean
+  /** 行测练习：零散单题每组（分屏）题目数 */
+  singlesPerScreen: number
 }
 
 export type AnnotationKind = 'highlight' | 'underline' | 'note'

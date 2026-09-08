@@ -40,6 +40,7 @@ interface ReaderState {
   setMeasure: (v: ReaderSettings['measure']) => void
   setIndent: (v: boolean) => void
   setTermBox: (v: boolean) => void
+  setSinglesPerScreen: (n: number) => void
   /** 应用导入的阅读器设置（缺省字段保持默认） */
   applySettings: (patch: Partial<ReaderSettings>) => void
   resetSettings: () => void
@@ -59,6 +60,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   measure: 'normal',
   indent: true,
   termBox: true,
+  singlesPerScreen: 10,
 }
 
 export const useReaderStore = create<ReaderState>()(
@@ -83,14 +85,17 @@ export const useReaderStore = create<ReaderState>()(
       setMeasure: (v) => set((s) => ({ settings: { ...s.settings, measure: v } })),
       setIndent: (v) => set((s) => ({ settings: { ...s.settings, indent: v } })),
       setTermBox: (v) => set((s) => ({ settings: { ...s.settings, termBox: v } })),
+      setSinglesPerScreen: (n) =>
+        set((s) => ({ settings: { ...s.settings, singlesPerScreen: Math.min(20, Math.max(5, n)) } })),
       applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     {
       name: 'readbook:reader',
-      version: 2,
+      version: 3,
       // v1：移除「黑体」选项，旧设置映射到思源宋体
       // v2：新增 focusMode / measure / indent，旧数据用默认值补齐（防止字段缺失为 undefined）
+      // v3：新增 singlesPerScreen（行测练习每组题数），旧数据用默认值补齐
       migrate: (persisted) => {
         const p = persisted as { settings?: { fontFamily?: string } }
         if (p.settings?.fontFamily === 'heiti') {

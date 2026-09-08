@@ -49,6 +49,8 @@ interface XingceState {
   record: (answer: XgAnswer) => void
   /** 清空某卷全部作答（重做整卷） */
   clearPaper: (paperId: string) => void
+  /** 删除组内指定题号的作答（「重刷本组」用） */
+  removeMany: (paperId: string, qIdxes: number[]) => void
 }
 
 function upsert(s: XingceState, next: XgAnswer): Pick<XingceState, 'answers'> {
@@ -71,6 +73,14 @@ export const useXingceStore = create<XingceState>()(
         set((s) => {
           const next: Record<string, XgAnswer> = {}
           for (const [k, v] of Object.entries(s.answers)) if (v.paperId !== paperId) next[k] = v
+          return { answers: next }
+        }),
+
+      removeMany: (paperId, qIdxes) =>
+        set((s) => {
+          const kill = new Set(qIdxes.map((i) => xgKey(paperId, i)))
+          const next: Record<string, XgAnswer> = {}
+          for (const [k, v] of Object.entries(s.answers)) if (!kill.has(k)) next[k] = v
           return { answers: next }
         }),
     }),

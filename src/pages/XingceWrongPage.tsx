@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ApiLoading } from '../components/ui/ApiLoading'
 import { useXingceStore } from '../stores/xingceStore'
 import { fetchXingce, type XingceQuestion } from '../lib/api'
+import { DataUrls } from '../components/exam/GroupStemText'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
 
@@ -111,6 +112,9 @@ export function XingceWrongPage() {
                   {'\n'}
                   {it.q.idx}. {it.q.stem}
                 </div>
+                {(it.q.image || it.q.groupImage) && (
+                  <DataUrls value={it.q.image ?? it.q.groupImage} altPrefix={`第${it.q.idx}题`} />
+                )}
                 <div className={`practice-verdict${it.picked ? ' is-wrong' : ''}`}>
                   {it.picked ? `你选了 ${it.picked}` : '未作答'} · 正确答案 {it.q.answer}
                 </div>

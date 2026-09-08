@@ -196,11 +196,14 @@ export interface XingceQuestion {
   /** 题组 id（资料分析/图形推理一组多题）；null = 单题 */
   groupId: number | null
   groupStem: string | null
+  /** 题组材料截图（JSON 数组字符串的 data URL；跨页材料多张） */
+  groupImage: string | null
   stem: string
   options: XingceOption[]
   /** null = 引流版解析未收录该题答案 */
   answer: string | null
   explanation: string | null
+  /** 整题截图（图形推理/图片选项题，JSON 数组字符串的 data URL） */
   image: string | null
 }
 

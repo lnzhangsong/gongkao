@@ -185,7 +185,7 @@ function queryXingce(id) {
   if (!p) return null
   const questions = d
     .prepare(
-      'SELECT idx, section, subtype, group_id, group_stem, stem, options, answer, explanation, image FROM xg_questions WHERE paper_id = ? ORDER BY idx',
+      'SELECT idx, section, subtype, group_id, group_stem, group_image, stem, options, answer, explanation, image FROM xg_questions WHERE paper_id = ? ORDER BY idx',
     )
     .all(id)
   return {
@@ -201,6 +201,7 @@ function queryXingce(id) {
       subtype: q.subtype ?? null,
       groupId: q.group_id ?? null,
       groupStem: q.group_stem ?? null,
+      groupImage: q.group_image ?? null,
       stem: q.stem,
       options: JSON.parse(q.options),
       answer: q.answer,

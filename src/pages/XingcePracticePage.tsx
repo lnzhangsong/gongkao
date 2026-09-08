@@ -4,7 +4,7 @@ import { ApiLoading } from '../components/ui/ApiLoading'
 import { fetchXingce, type XingceDetail, type XingceQuestion } from '../lib/api'
 import { useXingceStore, xgKey } from '../stores/xingceStore'
 import { levelMark } from '../lib/examText'
-import { GroupStemText } from '../components/exam/GroupStemText'
+import { GroupStemText, DataUrls } from '../components/exam/GroupStemText'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
 
@@ -18,6 +18,7 @@ import '../styles/practice.css'
 interface Group {
   groupId: number | null
   groupStem: string | null
+  groupImage: string | null
   questions: XingceQuestion[]
 }
 
@@ -44,7 +45,7 @@ function groupQuestions(qs: XingceQuestion[]): Group[] {
       last.questions.push(q)
       continue
     }
-    groups.push({ groupId: q.groupId, groupStem: q.groupStem, questions: [q] })
+    groups.push({ groupId: q.groupId, groupStem: q.groupStem, groupImage: q.groupImage, questions: [q] })
   }
   return groups
 }
@@ -150,7 +151,7 @@ export function XingcePracticePage() {
   const wrongCount = doneCount - rightCount
   const pct = Math.round((doneCount / paper.questions.length) * 100)
   const cols = group ? optionCols(group.questions) : 1
-  const isMaterialGroup = group?.groupId != null && !!group.groupStem
+  const isMaterialGroup = group?.groupId != null && (!!group.groupStem || !!group.groupImage)
 
   return (
     <div className="exam-page practice-page">
@@ -253,7 +254,8 @@ export function XingcePracticePage() {
               </button>
               {stemOpen && (
                 <div className="practice-stem-body">
-                  <GroupStemText text={group.groupStem!} />
+                  <DataUrls value={group.groupImage} altPrefix={`第${group.questions[0].idx}题组材料`} />
+                  <GroupStemText text={group.groupStem} />
                 </div>
               )}
             </div>
@@ -262,15 +264,20 @@ export function XingcePracticePage() {
           {group.questions.map((q) => {
             const saved = answers[xgKey(paper.id, q.idx)]
             const pick = judged ? (saved?.picked ?? '') : (picked[q.idx] ?? '')
+            const imgOpt = !!q.image && q.options.every((o) => !o.text)
             return (
               <section className="practice-q" key={q.idx} id={`q-${q.idx}`}>
-                <p className="practice-stem">
-                  <strong>{q.idx}.</strong> {q.stem}
-                </p>
-                {q.image && (
-                  <img className="practice-img" src={`/xingce/${paper.id}/${q.image}`} alt={`第${q.idx}题图`} />
+                {!/^第\d+题（见配图）$/.test(q.stem) && (
+                  <p className="practice-stem">
+                    <strong>{q.idx}.</strong> {q.stem}
+                  </p>
                 )}
-                <div className={`practice-options cols-${cols}`} role="radiogroup" aria-label={`第${q.idx}题选项`}>
+                {q.image && <DataUrls value={q.image} altPrefix={`第${q.idx}题`} />}
+                <div
+                  className={`practice-options cols-${cols}${imgOpt ? ' is-imgopts' : ''}`}
+                  role="radiogroup"
+                  aria-label={`第${q.idx}题选项`}
+                >
                   {q.options.map((o) => {
                     const cls = [
                       'practice-opt',

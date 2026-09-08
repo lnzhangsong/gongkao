@@ -25,7 +25,44 @@ PART_RE = re.compile(r"^第[一二三四五六七八九十]+部分\s*(.+)$")
 Q_START_RE = re.compile(r"^(\d{1,3})\.\s*")
 ANS_RE = re.compile(r"^\d{1,3}\.\s*([A-E])\s*项?。", re.M)
 OPT_SPLIT_RE = re.compile(r"([A-E])\s*[.、．]\s*")
-GROUP_RE = re.compile(r"^[一二三四五六七八九十]+、\s*根据以下资料，?回答?\s*(\d+)\s*[-—–~至]\s*(\d+)\s*题")
+GROUP_RE = re.compile(
+    r"^(?:[一二三四五六七八九十]+、\s*)?根据(?:以下资料|所给材料|所给的材料|下述材料)，?回答?\s*(\d+)\s*[-—–~至]\s*(\d+)\s*题"
+)
+# 题组头被 pypdf 粘进上一题选项行的情况：按匹配位置拆成两行
+INLINE_GROUP_RE = re.compile(
+    r"根据(?:以下资料|所给材料|所给的材料|下述材料)，?回答?\s*\d+\s*[-—–~至]\s*\d+\s*题"
+)
+# pypdf 会把部分头/指导语/下一题解析粘进上一个选项的行——这些标记之后的文本一律截断
+LEAK_RE = re.compile(
+    r"（共\s*\d+\s*题[，,]?参考时限"
+    r"|请开始答题"
+    r"|[一二三四五六七八九十]+、\s*(?:图形推理|定义判断|类比推理|逻辑判断|资料分析|数量关系|言语理解|言语理解与表达|常识判断|政治理论)"
+    r"|(?:[一二三四五六七八九十]+、\s*)?根据(?:以下资料|所给材料|所给的材料|下述材料)，?回答?\s*\d+\s*[-—–~至]\s*\d+\s*题"
+    r"|\d{1,3}[.．]\s*【解析】"
+)
+
+
+def cut_leak(s: str, nxt: int | None = None) -> str:
+    """截断粘进来的泄漏文本；nxt 给出紧邻下一题号时，连「N.」形态的下一题开头一起切
+    （小数如 78.5 不切，题号后紧跟年份如 78.2024年 要切）。"""
+    pat = LEAK_RE
+    if nxt is not None:
+        pat = re.compile(LEAK_RE.pattern + rf"|(?<![0-9]){nxt}[.．]\s*(?!\d{{1,2}}[^0-9])")
+    m = pat.search(s)
+    return s[: m.start()].rstrip() if m else s
+
+
+# 引流版尾部推广语（「…上岸咨询热线/微信：18650027100 要成公，选优公！圆您公职梦！」）
+AD_CUT = re.compile(
+    r"上岸咨询热线|要成公[，,]?选优公|圆您公职梦|优公教育|咨询热线[／/]|微信[：:]\s*\d{5,}"
+)
+
+
+def cut_ad(s: str | None) -> str | None:
+    if not s:
+        return s
+    m = AD_CUT.search(s)
+    return s[: m.start()].rstrip() if m else s
 FIG_Q_RE = re.compile(r"^从所给的四个选项中")
 
 
@@ -47,6 +84,11 @@ def clean_lines(raw: str) -> list[str]:
             continue
         if s.startswith("…") or "版权所有" in s or s.startswith("严禁折叠"):
             continue
+        # 行中间粘出的题组头：拆成两行，让 GROUP_RE 能认出后半
+        gm = INLINE_GROUP_RE.search(s)
+        if gm and gm.start() > 0:
+            out.append(s[: gm.start()].strip())
+            s = s[gm.start() :].strip()
         out.append(s)
     return out
 
@@ -77,6 +119,9 @@ def parse_paper(pdf: Path, level: str) -> dict:
             }
             continue
         qm = Q_START_RE.match(line)
+        # 题组过界（当前题号 > 组 end）：关闭该组，防止吞掉后续题
+        if pending_group and qm and int(qm.group(1)) > pending_group["end"]:
+            pending_group = None
         # 进入「第一部分」之后才开始切题——否则卷首「注意事项 1.」会被当成第 1 题
         if qm and section is not None and int(qm.group(1)) == next_idx:
             # 上一题组收尾：若题组范围在上一题结束后才闭合也无所谓，按题逐个判断归属
@@ -111,7 +156,8 @@ def parse_paper(pdf: Path, level: str) -> dict:
             section2 = m.group(1).strip()
             continue
         gm = GROUP_RE.match(line)
-        if gm and section2 == "资料分析":
+        # 与首扫一致：统计所有题组头（不再只限资料分析），否则组号错位
+        if gm:
             gc += 1
             pending = gc
             group_stems.setdefault(pending, [])
@@ -146,6 +192,8 @@ def parse_paper(pdf: Path, level: str) -> dict:
             answer = ans_m.group(1)
             tail = text[ans_m.end():].strip()
             tail = re.sub(r"^【解析】\s*", "", tail)
+            # 引流版里上一题解析后面会粘下一段的部分头/指导语/下一题组材料
+            tail = cut_leak(tail, b["idx"] + 1)
             tail = re.sub(r"^因此，?本题答案为\s*[A-E]\s*项?。?\s*$", "", tail, flags=re.M).strip()
             explanation = tail or None
         body = text[: ans_m.start()] if ans_m else text
@@ -164,9 +212,11 @@ def parse_paper(pdf: Path, level: str) -> dict:
         # 不收「、」变体：题干里「A、B、C 三个品牌」会被误切
         chunks = re.split(r"(?:^|\n|\s)([A-E])\s*[.．]\s*", body)
         if len(chunks) >= 3 and "A" in chunks[1::2]:
-            stem = chunks[0].strip()
+            stem = cut_leak(chunks[0].strip(), b["idx"] + 1)
             for i in range(1, len(chunks) - 1, 2):
-                options.append({"key": chunks[i], "text": chunks[i + 1].strip()})
+                options.append({"key": chunks[i], "text": cut_leak(chunks[i + 1].strip(), b["idx"] + 1)})
+            # 双栏排版的选项 pypdf 按行抽出后键序可能乱（A,C,B,D），按键重排
+            options.sort(key=lambda o: o["key"])
         is_fig = bool(FIG_Q_RE.match(stem))
         # 图形推理/饼图选项题：题图是图片，OCR 无法表达 → 不收录（表格材料由 xingce-ocr.py 回文字）
         if is_fig or len(options) < 2:
@@ -203,6 +253,26 @@ def parse_paper(pdf: Path, level: str) -> dict:
         warnings.append(f"答案缺失（引流版解析未收录详解）：共 {len(no_answer)} 题")
     if fig_skipped:
         warnings.append(f"图形推理/图片选项题 {len(fig_skipped)} 题为图片形态，OCR 无法表达，未收录（题号 {fig_skipped[0]}–{fig_skipped[-1]}）")
+
+    # 后处理：大段无标记词的粘连（如题组材料整段粘进上一题选项）无法靠 LEAK_RE 截断，
+    # 用「其它题的题干/题组材料开头」交叉匹配定位切点
+    starts = [t[:24] for q in questions for t in (q.get("groupStem"), q.get("stem")) if t]
+
+    def decontam(t: str | None) -> str | None:
+        if not t:
+            return t
+        cut = None
+        for s0 in starts:
+            i = t.find(s0, 8)  # 从第 8 字符起找：题干以材料开头属正常，不算粘连
+            if i > 0 and (cut is None or i < cut):
+                cut = i
+        return t[:cut].rstrip() if cut is not None else t
+
+    for q in questions:
+        q["stem"] = cut_ad(decontam(q["stem"]))
+        q["explanation"] = cut_ad(decontam(q["explanation"]))
+        for o in q["options"]:
+            o["text"] = cut_ad(decontam(o["text"]))
     return {
         "id": None,  # 由调用方按 level 填
         "level": level,

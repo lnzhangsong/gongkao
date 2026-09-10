@@ -40,7 +40,6 @@ export function SettingsPage() {
   const setReaderTheme = useReaderStore((s) => s.setReaderTheme)
   const setReducedMotion = useReaderStore((s) => s.setReducedMotion)
   const setFocusMode = useReaderStore((s) => s.setFocusMode)
-  const setMeasure = useReaderStore((s) => s.setMeasure)
   const setIndent = useReaderStore((s) => s.setIndent)
   const resetSettings = useReaderStore((s) => s.resetSettings)
 
@@ -338,24 +337,6 @@ export function SettingsPage() {
               </div>
               <div className="setting-control">
                 <Toggle on={settings.focusMode} onChange={setFocusMode} label="段落聚焦" />
-              </div>
-            </div>
-
-            <div className="setting-row">
-              <div>
-                <div className="setting-title">版面宽度</div>
-                <div className="setting-desc">收窄后每行约 40 字，长文精读更省力</div>
-              </div>
-              <div className="setting-control">
-                <MenuSelect
-                  value={settings.measure}
-                  options={[
-                    { key: 'normal', label: '标准宽度' },
-                    { key: 'narrow', label: '收窄' },
-                  ]}
-                  onChange={(key) => setMeasure(key as typeof settings.measure)}
-                  ariaLabel="版面宽度"
-                />
               </div>
             </div>
 

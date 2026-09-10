@@ -97,8 +97,6 @@ export interface ReaderSettings {
   showAnnotations: boolean
   /** 段落聚焦：突出当前段落，其余淡化 */
   focusMode: boolean
-  /** 版面宽度：normal 标准 / narrow 收窄（约 40 字/行） */
-  measure: 'normal' | 'narrow'
   /** 段首缩进两格（默认开，与现有排版一致） */
   indent: boolean
   /** 规范词方框标注（阅读时圈出正文中的申论规范词） */

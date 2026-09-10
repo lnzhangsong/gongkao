@@ -7,10 +7,12 @@
  *   GET /api/exams            申论真题试卷列表（?year=&level= 过滤；与文章同库）
  *   GET /api/exams/:id        试卷详情（材料 + 题目 + 答案）
  *   GET /api/terms            申论规范词全集（?theme=&q= 过滤；guifan_terms 表）
+ *   GET /xingce-img/:paper/:file  行测题图/材料图（data/xingce-img/ 落盘文件）
  */
 import { createServer } from 'node:http'
 import { DatabaseSync } from 'node:sqlite'
 import { createHash } from 'node:crypto'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -262,6 +264,24 @@ const server = createServer((req, res) => {
     }
     res.writeHead(resp.status, headers)
     res.end(await resp.text())
+  }
+
+  // 行测题图/材料图：data/xingce-img/{paper}/{file}，与 Vercel 的 api/xingce-img.ts 同逻辑
+  if (url.pathname.startsWith('/xingce-img/') && req.method === 'GET') {
+    const rel = decodeURIComponent(url.pathname.slice('/xingce-img/'.length))
+    if (!rel.includes('..') && /\.(png|webp)$/.test(rel)) {
+      const file = path.join(PROJECT_ROOT, 'data', 'xingce-img', rel)
+      if (fs.existsSync(file)) {
+        res.writeHead(200, {
+          'content-type': rel.endsWith('.webp') ? 'image/webp' : 'image/png',
+          'cache-control': 'public, max-age=3600',
+        })
+        res.end(fs.readFileSync(file))
+        return
+      }
+    }
+    res.writeHead(404).end()
+    return
   }
 
   if (url.pathname === '/api/articles' && req.method === 'GET') {

@@ -11,10 +11,23 @@
     },
     "api/terms.ts": {
       "includeFiles": "data/articles.db"
+    },
+    "api/xingce-img.ts": {
+      "includeFiles": "data/xingce-img/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/xingce-img/(.*)",
+      "destination": "/api/xingce-img?path=$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

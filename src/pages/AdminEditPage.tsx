@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, PencilLine, Save } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
-import { confirmDialog, alertDialog } from '../components/ui/ConfirmDialog'
+import { confirmDialog, alertDialog } from '../components/ui/confirm'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { TOPICS, computeReadTime } from '../data'
 import type { ArticleInput, ArticleSource, ArticleTopic } from '../types'
@@ -61,7 +61,7 @@ export function AdminEditPage() {
     addArticle(input)
     setSaved(true)
     void alertDialog('文章已保存，可在文章库中查看。')
-    navigate('/admin')
+    void navigate('/admin')
   }
 
   /** 有已填内容时离开需确认，避免误触丢稿 */
@@ -94,7 +94,7 @@ export function AdminEditPage() {
             if (!hasContent || saved) return
             e.preventDefault()
             if (await confirmDialog('还未保存，离开将丢弃已填写的内容，确定离开？', { danger: true })) {
-              navigate('/admin')
+              void navigate('/admin')
             }
           }}
         >
@@ -222,7 +222,7 @@ export function AdminEditPage() {
           <button
             className="ghost"
             onClick={async () => {
-              if (await guardLeave()) navigate('/admin')
+              if (await guardLeave()) void navigate('/admin')
             }}
           >
             取消

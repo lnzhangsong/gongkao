@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const KEY = 'readbook:exam-panel-h'
 const MIN_H = 180
@@ -16,7 +16,10 @@ export function usePanelResize() {
     return Math.round(window.innerHeight * 0.52)
   })
   const heightRef = useRef(height)
-  heightRef.current = height
+  /* 在 effect 里同步而非渲染期赋值：渲染期写 ref 会破坏并发渲染的纯性 */
+  useEffect(() => {
+    heightRef.current = height
+  }, [height])
 
   const onHandleDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault()

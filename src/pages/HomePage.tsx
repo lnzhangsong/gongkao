@@ -5,6 +5,7 @@ import { useShenlunStore } from '../stores/shenlunStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useLearningEventStore } from '../stores/learningEventStore'
 import { reviewQueue } from '../lib/reviewQueue'
+import { useMountedAt } from '../lib/useMountedAt'
 import { loadDisplayFont } from '../lib/fonts'
 import { formatArticleNo } from '../data'
 import { useEffect } from 'react'
@@ -24,6 +25,8 @@ export function HomePage() {
   /* 申论学习统计：已拆解（学习状态 ≠ 未学）的篇数 + 带素材类型的摘录条数 */
   const studyMap = useShenlunStore((s) => s.study)
   const annotations = useAnnotationStore((s) => s.annotations)
+  /* 相对时间统计的基准时刻（挂载时取一次，渲染期不再读时钟） */
+  const mountedAt = useMountedAt()
   const shenlunStats = useMemo(() => {
     const deconstructed = Object.values(studyMap).filter((s) => s.status !== 'new').length
     const materials = annotations.reduce((n, a) => (a.materialType ? n + 1 : n), 0)
@@ -50,7 +53,9 @@ export function HomePage() {
   const daySeed = useMemo(() => {
     const d = new Date()
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-    return [...key].reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 0)
+    let acc = 0
+    for (const ch of key) acc = acc * 31 + ch.charCodeAt(0)
+    return acc
   }, [])
 
   /**
@@ -87,7 +92,7 @@ export function HomePage() {
 
   /** 本周阅读统计（近 7 天有阅读行为的文章：累计时长 + 篇数） */
   const weekStats = useMemo(() => {
-    const cutoff = Date.now() - 7 * 24 * 3600 * 1000
+    const cutoff = mountedAt - 7 * 24 * 3600 * 1000
     let sec = 0
     let count = 0
     for (const a of articles) {
@@ -97,7 +102,7 @@ export function HomePage() {
       count += 1
     }
     return { minutes: Math.round(sec / 60), count }
-  }, [articles, progress])
+  }, [articles, progress, mountedAt])
 
   const open = (a: Article) => navigate(`/reading/${a.id}`)
 

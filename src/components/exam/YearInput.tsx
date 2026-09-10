@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 /** 年份输入：输入过程中允许自由编辑（含清空），失焦时校验 2000-2100 并回写 */
 export function YearInput({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
   const [raw, setRaw] = useState(String(value))
-  useEffect(() => setRaw(String(value)), [value])
+  /* 外部值变化时在渲染期同步（React 官方「调整 state」模式），避免 effect 里 setState 引发级联渲染 */
+  const [prevValue, setPrevValue] = useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
+    setRaw(String(value))
+  }
   return (
     <input
       type="number"

@@ -106,7 +106,8 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
     return map
   }, [annotations, article.id])
 
-  const summaries = study?.paragraphSummaries ?? []
+  /* 稳定引用：study 未就绪时不要每次渲染都新建 []，否则下游 useMemo 依赖每轮都变 */
+  const summaries = useMemo(() => study?.paragraphSummaries ?? [], [study])
   const summaryByPara = useMemo(() => new Map(summaries.map((s) => [s.paraIndex, s.summary])), [summaries])
   const skeleton = study?.skeleton
   const patterns = materialByType.get('pattern') ?? []
@@ -170,18 +171,20 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
   const goInferExam = useCallback(() => {
     flushAllParas()
     onClose()
-    navigate(`/assist?infer=${article.id}`)
+    void navigate(`/assist?infer=${article.id}`)
   }, [article.id, flushAllParas, navigate, onClose])
 
   // 卸载时兜底 flush（Esc / 路由切走等未走 handleClose 的路径）
   useEffect(() => {
+    /* 在 effect 内取出 ref 当前值：cleanup 直接读 .current 会拿到已被后续渲染改掉的值 */
+    const timers = paraTimersRef.current
     return () => {
-      for (const [idx, timer] of paraTimersRef.current) {
+      for (const [idx, timer] of timers) {
         window.clearTimeout(timer)
         const v = paraDrafts[idx] ?? ''
         if (v.trim() || summaryByPara.get(idx)) setParagraphSummary(article.id, idx, v)
       }
-      paraTimersRef.current.clear()
+      timers.clear()
     }
     // 仅卸载时 flush，不随 paraDrafts 变化重建
     // oxlint-disable-next-line react-hooks/exhaustive-deps
@@ -528,7 +531,12 @@ function CoreThesisField({
 }) {
   const [draft, setDraft] = useState(value)
   const timerRef = useRef<number | null>(null)
-  useEffect(() => setDraft(value), [value])
+  /* 外部 value 变化时渲染期同步草稿（替代 effect 内 setState） */
+  const [prevValue, setPrevValue] = useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
+    setDraft(value)
+  }
   useEffect(() => {
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current)
@@ -564,7 +572,12 @@ function CoreThesisField({
 function PatternDraftInput({ initial, onSave }: { initial: string; onSave: (v: string) => void }) {
   const [draft, setDraft] = useState(initial)
   const timerRef = useRef<number | null>(null)
-  useEffect(() => setDraft(initial), [initial])
+  /* 外部 initial 变化时渲染期同步草稿 */
+  const [prevInitial, setPrevInitial] = useState(initial)
+  if (initial !== prevInitial) {
+    setPrevInitial(initial)
+    setDraft(initial)
+  }
   useEffect(
     () => () => {
       if (timerRef.current) window.clearTimeout(timerRef.current)
@@ -616,7 +629,12 @@ function SkeletonField({
   const [extra, setExtra] = useState('')
   const [draft, setDraft] = useState(value)
   const timerRef = useRef<number | null>(null)
-  useEffect(() => setDraft(value), [value])
+  /* 外部 value 变化时渲染期同步草稿 */
+  const [prevValue, setPrevValue] = useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
+    setDraft(value)
+  }
   useEffect(
     () => () => {
       if (timerRef.current) window.clearTimeout(timerRef.current)

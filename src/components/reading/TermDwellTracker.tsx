@@ -45,7 +45,8 @@ export function TermDwellTracker({ articleId }: { articleId: string }) {
       if (termId && acc >= DWELL_MS) log(termId)
     }
     const pauseAll = (now: number) => {
-      for (const el of [...enterAt.keys()]) pauseOne(el, now)
+      /* Map 迭代器允许遍历中删除当前项（pauseOne → settle 会 delete），无需数组快照 */
+      for (const el of enterAt.keys()) pauseOne(el, now)
     }
     const startIfEligible = (el: Element, now: number) => {
       if (enterAt.has(el) || timers.has(el)) return

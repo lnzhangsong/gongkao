@@ -206,7 +206,8 @@ ${buildMaterialBlock(opts.materials)}`
       const quote = typeof m?.quote === 'string' ? m.quote.trim() : ''
       const rawRole = typeof m?.role === 'string' ? m.role.trim() : ''
       if (!quote || !rawRole) return null
-      const idxRaw = typeof m?.matIdx === 'number' ? m.matIdx : parseInt(String(m?.matIdx ?? ''), 10)
+      const idxRaw =
+        typeof m?.matIdx === 'number' ? m.matIdx : parseInt(typeof m?.matIdx === 'string' ? m.matIdx : '', 10)
       const matIdx = Number.isFinite(idxRaw) && idxSet.has(idxRaw) ? idxRaw : opts.materials[0]?.idx
       if (matIdx == null) return null
       const levelRaw = typeof m?.level === 'string' ? m.level.trim().toLowerCase() : ''
@@ -257,7 +258,7 @@ ${buildMaterialBlock(opts.materials)}`
         stage:
           typeof m?.stage === 'number' && Number.isFinite(m.stage)
             ? m.stage
-            : parseInt(String(m?.stage ?? ''), 10) || undefined,
+            : parseInt(typeof m?.stage === 'string' ? m.stage : '', 10) || undefined,
         stageSummary: typeof m?.stageSummary === 'string' && m.stageSummary.trim() ? m.stageSummary.trim() : undefined,
       }
     })

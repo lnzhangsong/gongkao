@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS xg_questions (
 CREATE INDEX IF NOT EXISTS idx_xg_questions_group ON xg_questions(paper_id, group_id);`)
 }
 
-function validate(paper, file) {
+function validate(paper, _file) {
   const errs = []
   const warns = []
   for (const k of ['id', 'year', 'level', 'title']) if (paper[k] === undefined) errs.push(`缺字段 ${k}`)

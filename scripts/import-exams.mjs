@@ -257,7 +257,7 @@ function parseLevel(meta, title) {
 function parsePaper(relPath, text) {
   const { meta, body: raw } = parseFrontmatter(text)
   if (meta.subject !== '申论' || meta.source_priority !== 'recommended') return null
-  if (!/^ok/.test(meta.status || '')) return null
+  if (!(meta.status || '').startsWith('ok')) return null
   if (/答题(纸|卡)/.test(relPath)) return null // 答题纸模板非试卷
   const base = relPath.split('/').pop()
   if (/(?:答案解析|大作文参考答案)\.md$/.test(base)) return null // 纯答案/解析文件，不是完整试卷

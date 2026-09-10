@@ -22,7 +22,7 @@ import { draftFramework, type MaterialCandidate } from '../lib/aiAssist'
 import { track } from '../lib/analytics'
 import { inferExamCandidates, draftFullExam, type InferExamResult } from '../lib/aiExamGen'
 import type { ArticleTopic } from '../types'
-import { alertDialog } from '../components/ui/ConfirmDialog'
+import { alertDialog } from '../components/ui/confirm'
 
 /**
  * AI 审题 + 作答框架（/assist，AI-1/AI-2）：

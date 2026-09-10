@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
@@ -64,9 +64,10 @@ function App() {
   const reducedMotion = useReaderStore((s) => s.settings.reducedMotion)
   const apiReady = useArticleStore((s) => s._apiReady)
   const [minElapsed, setMinElapsed] = useState(false)
-  /** loading 阶段：loading → finishing（冲 100%）→ done（移除） */
-  const [phase, setPhase] = useState<'loading' | 'finishing' | 'done'>('loading')
-  const mountAtRef = useRef(0)
+  /** 启动 loading 阶段：loading → finishing（冲 100%）→ done（移除）。
+   *  finishing 由 apiReady / minElapsed 派生，done 才需要 state（有定时器推进） */
+  const [done, setDone] = useState(false)
+  const finishing = !done && apiReady && minElapsed
 
   /* 主题应用到 html 根节点（含自动夜读解析） */
   useEffect(() => {
@@ -85,7 +86,6 @@ function App() {
 
   /* 启动时从 API 加载文章列表（meta，不含正文）；同时恢复登录会话 */
   useEffect(() => {
-    mountAtRef.current = Date.now()
     void useArticleStore.getState().hydrate()
     useAuthStore.getState().init()
     // 首屏动画最短展示时长：即使 API 秒回，也让 loading 完整呈现
@@ -93,24 +93,17 @@ function App() {
     return () => window.clearTimeout(t)
   }, [])
 
-  /* 阶段流转：数据就绪且最短时长已到 → 进入收尾（进度冲 100%）→ 停留后移除 */
-  useEffect(() => {
-    if (phase === 'loading' && apiReady && minElapsed) {
-      setPhase('finishing')
-    }
-  }, [phase, apiReady, minElapsed])
-
   /* 收尾：进入 finishing 后停留 LOADING_FINISH_MS 再移除 */
   useEffect(() => {
-    if (phase !== 'finishing') return
-    const t = window.setTimeout(() => setPhase('done'), LOADING_FINISH_MS)
+    if (!finishing) return
+    const t = window.setTimeout(() => setDone(true), LOADING_FINISH_MS)
     return () => window.clearTimeout(t)
-  }, [phase])
+  }, [finishing])
 
   /* 首屏就绪后空闲预取：① 真题列表与规范词全量（写入会话缓存）；
    * ② 各懒加载页面的路由 chunk —— 首次进入这些页面零网络等待 */
   useEffect(() => {
-    if (phase !== 'done') return
+    if (!done) return
     const t = window.setTimeout(() => {
       prefetchIdle()
       void import('./pages/LibraryPage')
@@ -124,11 +117,11 @@ function App() {
       void import('./pages/AdminEditPage')
     }, 1500)
     return () => window.clearTimeout(t)
-  }, [phase])
+  }, [done])
 
   // 首次访问：显示全屏 loading（数据就绪 + 最短时长 + 收尾完成后才切走）
-  if (phase !== 'done') {
-    return <LoadingScreen finishing={phase === 'finishing'} hint="正在加载文章库…" />
+  if (!done) {
+    return <LoadingScreen finishing={finishing} hint="正在加载文章库…" />
   }
 
   return (

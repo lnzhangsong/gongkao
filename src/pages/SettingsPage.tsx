@@ -15,7 +15,7 @@ import { MenuSelect } from '../components/ui/MenuSelect'
 import { downloadJSON } from '../lib/export'
 import { parseImportData } from '../lib/import'
 import { idbStorage } from '../lib/idbStorage'
-import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
+import { alertDialog, confirmDialog } from '../components/ui/confirm'
 
 const SECTIONS = [
   { id: 'reading', label: '阅读偏好' },
@@ -116,7 +116,8 @@ export function SettingsPage() {
     }
     reader.onload = () => {
       setImporting(false)
-      const parsed = parseImportData(String(reader.result ?? ''))
+      const text = typeof reader.result === 'string' ? reader.result : ''
+      const parsed = parseImportData(text)
       if ('error' in parsed) {
         void alertDialog(`导入失败：${parsed.error}`)
         return

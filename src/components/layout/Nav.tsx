@@ -28,10 +28,8 @@ export function Nav() {
   const authed = useAuthStore((s) => s.status === 'in')
   const accountTo = authed ? '/account' : '/login'
 
-  /* 路由切换后自动收起移动端导航面板 */
-  useEffect(() => {
-    setMenuOpen(false)
-  }, [])
+  /* 移动端面板的每个 NavLink 自带 onClick 收起（见下方渲染），
+     无需再挂「路由变化 → setState」的 effect（那也会触发级联渲染告警） */
 
   /* 打开时：锁定背景滚动 + 点击外部/Esc 关闭 */
   useEffect(() => {

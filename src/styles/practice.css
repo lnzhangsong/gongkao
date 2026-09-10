@@ -63,6 +63,11 @@
   margin-top: 22px;
 }
 
+/* 题组标题只有 padding-bottom、没有 margin，材料/题目会紧贴分隔线——补一段呼吸区 */
+.practice-group > .content-head {
+  margin-bottom: 16px;
+}
+
 .practice-group-stem {
   border: 1px solid var(--ink);
   border-radius: var(--radius-sm);

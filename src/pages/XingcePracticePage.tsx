@@ -191,7 +191,14 @@ export function XingcePracticePage() {
   useEffect(() => {
     if (scrollTarget.current == null) return
     const el = document.getElementById(`q-${scrollTarget.current}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (el) {
+      /* 吸顶页头（top:76px + 自身高度）会盖住滚到视口顶部的题：
+         不能直接用 scrollIntoView({block:'start'})，要按页头实际高度留偏移。
+         余量给足——跳转后「本组小结」出现会让页头再长高一点 */
+      const head = document.querySelector('.practice-head')
+      const offset = (head?.getBoundingClientRect().height ?? 0) + 76 + 24
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' })
+    }
     scrollTarget.current = null
   }, [pos, paper])
 

@@ -909,7 +909,16 @@ if (xgCards > 0) {
       .locator('.practice-sheet-cell', { hasText: new RegExp(`^${target.idx}$`) })
       .first()
       .click()
-    await page.waitForTimeout(400)
+    await page.waitForTimeout(900) // 等平滑滚动落定
+    /* 回归：吸顶页头会盖住滚到视口顶部的题（曾用 scrollIntoView 导致跳过去看不见题） */
+    const jumpGap = await page.evaluate((idx) => {
+      const q = document.getElementById(`q-${idx}`)
+      const head = document.querySelector('.practice-head')
+      if (!q || !head) return null
+      return Math.round(q.getBoundingClientRect().top - head.getBoundingClientRect().bottom)
+    }, target.idx)
+    check('答题卡跳题不被吸顶页头遮挡', jumpGap !== null && jumpGap >= 0, `题目距页头 ${jumpGap}px`)
+
     const q = page.locator(`#q-${target.idx}`)
     await q.locator('.practice-opt:not([disabled])').first().click()
     await page.locator('.practice-nav-btn.is-primary').click()

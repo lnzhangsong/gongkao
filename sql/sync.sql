@@ -152,3 +152,36 @@ create policy "任何人可上报埋点" on public.app_events
 drop policy if exists "本人可读自己的埋点" on public.app_events;
 create policy "本人可读自己的埋点" on public.app_events
   for select using (auth.uid() = user_id);
+
+-- ---------- v4：LWW 时间戳改由服务端赋值 ----------
+-- 问题：客户端用本机墙钟（new Date().toISOString()）作 updated_at，设备间时钟偏差
+--       会让「较新的写入」被判成旧的而被忽略。
+-- 处理：所有同步表的 updated_at 一律由数据库 now() 覆盖（客户端传什么都会被替换），
+--       客户端下一次 pull 读回服务端时间戳写进 meta，LWW 基准即统一到服务端时钟。
+-- 注：learning_events 是 append-only 且只有 created_at（无 updated_at），不挂触发器；
+--     其余表才有 updated_at 列。now() 是事务开始时间，同一批 upsert 的多行会拿到相同
+--     时间戳——当前 pull 走全表比对（非 incremental watermark），不会因此漏行。
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end $$;
+
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'reading_progress', 'annotations', 'article_study', 'exam_study',
+    'user_prefs', 'ai_assists', 'article_edits', 'user_ai_config'
+  ]
+  loop
+    execute format('drop trigger if exists %I on public.%I', t || '_touch', t);
+    execute format(
+      'create trigger %I before insert or update on public.%I for each row execute function public.touch_updated_at()',
+      t || '_touch', t
+    );
+  end loop;
+end $$;

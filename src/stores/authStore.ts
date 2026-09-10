@@ -7,6 +7,7 @@ import { useArticleStore } from './articleStore'
 import { useAnnotationStore } from './annotationStore'
 import { useShenlunStore } from './shenlunStore'
 import { useExamStudyStore } from './examStudyStore'
+import { useXingceStore } from './xingceStore'
 import { useLearningEventStore } from './learningEventStore'
 import { useAiAssistStore } from './aiAssistStore'
 import { useAiStore, DEFAULT_AI_SETTINGS } from './aiStore'
@@ -40,13 +41,14 @@ function toProfile(user: User | null, nickname: string | null): { nickname: stri
   return { nickname, email: user?.email ?? null }
 }
 
-/** 退出登录时清空本机用户数据：进度/摘录/申论/真题/AI 审题/事件/偏好/AI 配置 + 同步时间戳。
+/** 退出登录时清空本机用户数据：进度/摘录/申论/真题/行测/AI 审题/事件/偏好/AI 配置 + 同步时间戳。
  *  数据都在云端（含 AI 配置），再次登录自动恢复；换人共用浏览器不留痕迹 */
 function clearLocalData() {
   useArticleStore.getState().clearAll()
   useAnnotationStore.getState().clearAll()
   useShenlunStore.getState().clearAll()
   useExamStudyStore.getState().clearAll()
+  useXingceStore.getState().clearAll()
   useLearningEventStore.getState().clearAll()
   useAiAssistStore.getState().clearAll()
   useAiStore.setState({ settings: { ...DEFAULT_AI_SETTINGS } })

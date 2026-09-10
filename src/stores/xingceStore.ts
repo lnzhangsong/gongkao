@@ -51,6 +51,8 @@ interface XingceState {
   clearPaper: (paperId: string) => void
   /** 删除组内指定题号的作答（「重刷本组」用） */
   removeMany: (paperId: string, qIdxes: number[]) => void
+  /** 清空整机行测作答（退出登录时与其余 store 一起清，避免换账号串数据） */
+  clearAll: () => void
 }
 
 function upsert(s: XingceState, next: XgAnswer): Pick<XingceState, 'answers'> {
@@ -83,6 +85,8 @@ export const useXingceStore = create<XingceState>()(
           for (const [k, v] of Object.entries(s.answers)) if (!kill.has(k)) next[k] = v
           return { answers: next }
         }),
+
+      clearAll: () => set({ answers: {} }),
     }),
     {
       name: 'readbook:xingce',

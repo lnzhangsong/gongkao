@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from './supabase'
-import { diffRows, shouldApply, sameJSON, mergePages, type CloudRow } from './cloudSyncCore'
+import { diffRows, shouldApply, sameJSON, mergePages, rowKey, type CloudRow } from './cloudSyncCore'
 import { useArticleStore } from '../stores/articleStore'
 import type { Article, ReadingProgress } from '../types'
 import { useAnnotationStore } from '../stores/annotationStore'
@@ -16,10 +16,12 @@ import { useThemeStore } from '../stores/themeStore'
 
 /**
  * 数据云同步引擎（Supabase Postgres，按行 LWW，见 sql/sync.sql）：
- * - 登录后 push（本地未推送修改打上本机时间戳）→ pull（仅应用比 meta 新的云行）→ 订阅增量
- * - meta（每行上次同步时间戳）持久化在 localStorage，登出不清（换设备登录后仍可比对）
+ * - 登录后 push（本地未推送修改上推）→ pull（仅应用比 meta 新的云行）→ 订阅增量推送
+ * - 编辑触发的增量推送只写不拉（runPush）；登录首轮 / 窗口聚焦 / 手动同步才跑全量（runSync）
+ * - updated_at 由数据库 now() 赋值（v4 触发器），避免设备间墙钟偏差误判新旧
+ * - meta（每行上次同步时间戳）持久化在 localStorage，登出时随本机数据一起清除
  * - 摘录删除走墓碑（annotations.deleted），其余表行删除不同步（progress/articleStudy 无删除语义）
- * - AI 配置（含 API key）刻意不同步
+ * - AI 服务配置（含 API key）随账号同步，受 RLS 保护仅本人可读，换设备免重配
  */
 
 const META_KEY = 'readbook:sync-meta'
@@ -231,6 +233,15 @@ let running = false
 let lastPullAt = 0
 const cleanups: (() => void)[] = []
 
+/* 串行化：push 与 full sync 共用一条队列，避免并发读写模块级的 snapshot/meta 互相覆盖时间戳。
+   排队而非直接丢弃——丢弃会漏掉最后一次编辑的推送。 */
+let queue: Promise<void> = Promise.resolve()
+function enqueue(task: () => Promise<void>): Promise<void> {
+  const next = queue.then(task, task)
+  queue = next.catch(() => {})
+  return next
+}
+
 function nowISO() {
   return new Date().toISOString()
 }
@@ -253,15 +264,14 @@ async function pullTable(table: string, ad: TableAdapter<unknown>): Promise<bool
     if (!data || data.length === 0) break
     for (const r of data as Record<string, unknown>[]) {
       const deleted = r.deleted === true
-      /* 各表主键列名不同：annotations=ann_id / progress·study·edits=article_id /
-       * learning_events=event_id / exam_study=key / ai_assists=assist_id */
-      const k = String(r.ann_id ?? r.assist_id ?? r.article_id ?? r.event_id ?? r.key ?? '')
+      const k = rowKey(r)
       if (!k) continue
+      const ts = r.updated_at ?? r.created_at
       rows.push({
         k,
         data: (r.data as unknown) ?? null,
         deleted,
-        updated_at: String(r.updated_at ?? r.created_at ?? ''),
+        updated_at: typeof ts === 'string' ? ts : '',
       })
     }
     if (data.length < UPSERT_BATCH) break
@@ -304,7 +314,8 @@ async function pushTable(table: string, ad: TableAdapter<unknown>, userId: strin
   const now = nowISO()
   const { upserts, tombstones } = diffRows(current, snapshot[table] ?? {}, now, !!ad.allowTombstone)
   if (upserts.length === 0 && tombstones.length === 0) return false
-  const tableMeta = (meta[table] ??= {})
+  /* 刻意不在这里写 meta：updated_at 由服务端触发器赋值，紧接的 pull 会把服务端时间戳
+     读回并写入 meta。若这里塞客户端 now，服务端时钟落后时会用一个偏未来的值挡住真实更新 */
 
   for (let i = 0; i < upserts.length; i += UPSERT_BATCH) {
     const batch = upserts
@@ -312,7 +323,6 @@ async function pushTable(table: string, ad: TableAdapter<unknown>, userId: strin
       .map((u) => ({ user_id: userId, ...ad.payload(u.k, u.data, u.updatedAt) }))
     const { error } = await supabase.from(table).upsert(batch, { defaultToNull: false })
     if (error) throw new Error(`${table}: ${error.message}`)
-    for (const u of upserts.slice(i, i + UPSERT_BATCH)) tableMeta[u.k] = u.updatedAt
   }
   if (tombstones.length > 0) {
     const { error } = await supabase.from(table).upsert(
@@ -326,7 +336,6 @@ async function pushTable(table: string, ad: TableAdapter<unknown>, userId: strin
       { defaultToNull: false },
     )
     if (error) throw new Error(`${table}: ${error.message}`)
-    for (const t of tombstones) tableMeta[t.k] = t.updatedAt
   }
   return true
 }
@@ -342,7 +351,7 @@ async function pushWhole(
   const { error } = await supabase.from(table).upsert({ user_id: userId, data, updated_at: now })
   if (error) throw new Error(`${table}: ${error.message}`)
   snapshot[table] = data
-  ;(meta[table] ??= {}).me = now
+  /* 同上：meta 交给随后的 pullWhole 按服务端 updated_at 校准 */
   return true
 }
 
@@ -368,7 +377,7 @@ async function pullWhole(
   return false
 }
 
-async function runSync(): Promise<void> {
+async function runSyncInner(): Promise<void> {
   if (!running || !supabase) return
   setSync({ syncing: true, error: null })
   try {
@@ -408,8 +417,36 @@ function schedulePush() {
   if (pushTimer) clearTimeout(pushTimer)
   pushTimer = setTimeout(() => {
     pushTimer = null
-    void runSync()
+    void runPush()
   }, PUSH_DEBOUNCE_MS)
+}
+
+// ---------- 串行化入口 ----------
+// 完整同步（push + pull）：登录首轮、窗口聚焦、账号页「立即同步」
+const runSync = () => enqueue(runSyncInner)
+// 仅推送：编辑触发的轻量同步。此前每次编辑都跑完整 runSync（全表 pull），
+// 大账号下等于每 4s 把云端所有行拉一遍；改为只推本地变化。
+const runPush = () => enqueue(runPushInner)
+
+/** 仅推送本地变化（不做 pull）。与 runSync 共用队列，故不会与其并发。 */
+async function runPushInner(): Promise<void> {
+  if (!running || !supabase) return
+  setSync({ syncing: true, error: null })
+  try {
+    const userId = await currentUserId()
+    if (!userId) return
+    for (const [table, ad] of Object.entries(ADAPTERS)) {
+      if (await pushTable(table, ad, userId)) snapshot[table] = ad.getRows()
+    }
+    await pushWhole('user_prefs', currentPrefs(), userId)
+    await pushWhole('user_ai_config', aiConfig(), userId)
+    saveMeta(meta)
+    setSync({ lastSyncAt: nowISO() })
+  } catch (err) {
+    setSync({ error: err instanceof Error ? err.message : String(err) })
+  } finally {
+    setSync({ syncing: false })
+  }
 }
 
 /** 登录后调用：push→pull 首轮同步 + 订阅各 store 与窗口聚焦 */
@@ -418,16 +455,19 @@ export function startCloudSync(): void {
   running = true
   resetSnapshot()
 
-  const watch = (_table: string) => schedulePush()
-  useArticleStore.subscribe(() => watch('reading_progress'))
-  useAnnotationStore.subscribe(() => watch('annotations'))
-  useShenlunStore.subscribe(() => watch('article_study'))
-  useExamStudyStore.subscribe(() => watch('exam_study'))
-  useXingceStore.subscribe(() => watch('xg_answers'))
-  useLearningEventStore.subscribe(() => watch('learning_events'))
-  useReaderStore.subscribe(() => watch('user_prefs'))
-  useThemeStore.subscribe(() => watch('user_prefs'))
-  useAiStore.subscribe(() => watch('user_ai_config'))
+  const watch = () => schedulePush()
+  /* 订阅返回值必须收集进 cleanups：否则每次登录都会再挂 9 个永不解除的监听 */
+  cleanups.push(
+    useArticleStore.subscribe(watch),
+    useAnnotationStore.subscribe(watch),
+    useShenlunStore.subscribe(watch),
+    useExamStudyStore.subscribe(watch),
+    useXingceStore.subscribe(watch),
+    useLearningEventStore.subscribe(watch),
+    useReaderStore.subscribe(watch),
+    useThemeStore.subscribe(watch),
+    useAiStore.subscribe(watch),
+  )
 
   const onFocus = () => {
     if (Date.now() - lastPullAt > PULL_MIN_INTERVAL_MS) void runSync()
@@ -438,7 +478,9 @@ export function startCloudSync(): void {
   void runSync()
 }
 
-/** 登出时调用：停订阅与定时器；meta 保留（同设备再登录仍可正确比对） */
+/** 登出时调用：停订阅与定时器，并清空同步时间戳。
+ *  meta 若不清，换账号登录时会用上一个账号的时间戳误判新旧，还会把本机残留数据
+ *  当成「未推送变更」推给新账号；清掉后首轮全量 pull 会把该账号的数据完整拉回。 */
 export function stopCloudSync(): void {
   running = false
   if (pushTimer) {
@@ -446,6 +488,12 @@ export function stopCloudSync(): void {
     pushTimer = null
   }
   while (cleanups.length) cleanups.pop()?.()
+  for (const k of Object.keys(meta)) delete meta[k]
+  try {
+    localStorage.removeItem(META_KEY)
+  } catch {
+    /* ignore */
+  }
 }
 
 /** 账号页「立即同步」 */

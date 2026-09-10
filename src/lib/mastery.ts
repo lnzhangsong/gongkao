@@ -26,8 +26,14 @@ function baseStability(mastery: Annotation['mastery']): number {
   return 3
 }
 
-/** 素材当前的可提取概率 R ∈ (0, 1]：距最近一次证据越久越低，用过/掌握过越稳越高 */
-export function recallProbability(ann: Annotation, events: LearningEvent[]): number {
+/**
+ * 素材当前的可提取概率 R ∈ (0, 1]：距最近一次证据越久越低，用过/掌握过越稳越高。
+ *
+ * `now` 由调用方传入而非内部读 Date.now()：本函数服务于渲染路径（回声/候选排序），
+ * 渲染期读时钟会破坏纯性，也让排序比较器不稳定（同一轮内两次调用可能差几毫秒）。
+ * 调用方传挂载时刻即可（见 lib/useMountedAt）。
+ */
+export function recallProbability(ann: Annotation, events: LearningEvent[], now: number): number {
   const lastAt = events.reduce<string | null>(
     (acc, e) => (e.objectId === ann.id && (!acc || e.at > acc) ? e.at : acc),
     null,
@@ -35,13 +41,13 @@ export function recallProbability(ann: Annotation, events: LearningEvent[]): num
   const s = baseStability(ann.mastery)
   if (!lastAt) {
     /* 从无证据的背记素材按创建时间起算，避免恒为 1 */
-    const days = (Date.now() - new Date(ann.createdAt).getTime()) / 86400000
+    const days = (now - new Date(ann.createdAt).getTime()) / 86400000
     return Math.pow(1 + days / (FACTOR * s), -DECAY)
   }
   /* 使用是最强巩固：每次使用（material-use）让稳定性 ×1.3，封顶 5 次 */
   const uses = events.filter((e) => e.objectId === ann.id && e.kind === 'material-use').length
   const stability = s * Math.pow(1.3, Math.min(uses, 5))
-  const days = (Date.now() - new Date(lastAt).getTime()) / 86400000
+  const days = (now - new Date(lastAt).getTime()) / 86400000
   return Math.pow(1 + days / (FACTOR * stability), -DECAY)
 }
 
@@ -50,9 +56,10 @@ export function echoCompare(
   a: { annotation: Annotation },
   b: { annotation: Annotation },
   events: LearningEvent[],
+  now: number,
 ): number {
-  const ra = recallProbability(a.annotation, events)
-  const rb = recallProbability(b.annotation, events)
+  const ra = recallProbability(a.annotation, events, now)
+  const rb = recallProbability(b.annotation, events, now)
   if (ra !== rb) return ra - rb
   return a.annotation.createdAt.localeCompare(b.annotation.createdAt)
 }

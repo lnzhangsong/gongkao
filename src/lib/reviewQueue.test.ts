@@ -1,24 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { describe, expect, it } from 'vite-plus/test'
 import { reviewQueue } from './reviewQueue'
 import type { Annotation } from '../types'
 import type { LearningEvent } from '../stores/learningEventStore'
 
 /**
  * 背记素材的到期队列：池筛选 + 到期规则 + 排序。
- * 内部读 Date.now()，冻结系统时间保证确定性。
+ * `now` 由调用方传入（不再内部读 Date.now），给定固定基准即确定。
  */
 
-const NOW = new Date('2026-06-01T00:00:00.000Z')
+const NOW = new Date('2026-06-01T00:00:00.000Z').getTime()
 const DAY = 86_400_000
-const daysAgo = (n: number) => new Date(NOW.getTime() - n * DAY).toISOString()
-
-beforeEach(() => {
-  vi.useFakeTimers()
-  vi.setSystemTime(NOW)
-})
-afterEach(() => {
-  vi.useRealTimers()
-})
+const daysAgo = (n: number) => new Date(NOW - n * DAY).toISOString()
 
 /** 默认造一条「金句 + 已加入背记」的合格素材 */
 function ann(over: Partial<Annotation> = {}): Annotation {
@@ -41,6 +33,7 @@ function ev(objectId: string, at: string): LearningEvent {
 }
 
 const ids = (list: Annotation[]) => list.map((a) => a.id)
+const due = (list: Annotation[], events: LearningEvent[] = []) => ids(reviewQueue(list, events, NOW))
 
 describe('reviewQueue', () => {
   it('只收「highlight + 金句/句式 + 已加入背记」的素材', () => {
@@ -54,7 +47,7 @@ describe('reviewQueue', () => {
       ann({ id: 'not-underline', kind: 'underline', materialType: 'quote' }),
     ]
 
-    expect(ids(reviewQueue(list, []))).toEqual(['ok-quote', 'ok-pattern'])
+    expect(due(list)).toEqual(['ok-quote', 'ok-pattern'])
   })
 
   it('未掌握（mastery 非 2，含缺省）一律到期', () => {
@@ -62,28 +55,28 @@ describe('reviewQueue', () => {
     /* 即便刚刚复习过，只要没标「已掌握」就仍然到期 */
     const events = list.map((a) => ev(a.id, daysAgo(0)))
 
-    expect(ids(reviewQueue(list, events)).sort()).toEqual(['fuzzy', 'undefined', 'zero'])
+    expect(due(list, events).sort()).toEqual(['fuzzy', 'undefined', 'zero'])
   })
 
   it('已掌握：无复习证据 → 到期；7 天内复习过 → 不到期；超过 7 天 → 到期', () => {
     const list = [ann({ id: 'never', mastery: 2 }), ann({ id: 'recent', mastery: 2 }), ann({ id: 'stale', mastery: 2 })]
     const events = [ev('recent', daysAgo(6)), ev('stale', daysAgo(8))]
 
-    expect(ids(reviewQueue(list, events)).sort()).toEqual(['never', 'stale'])
+    expect(due(list, events).sort()).toEqual(['never', 'stale'])
   })
 
   it('7 天整为边界：严格大于才到期', () => {
     const list = [ann({ id: 'exactly', mastery: 2 }), ann({ id: 'justOver', mastery: 2 })]
-    const events = [ev('exactly', daysAgo(7)), ev('justOver', new Date(NOW.getTime() - 7 * DAY - 1).toISOString())]
+    const events = [ev('exactly', daysAgo(7)), ev('justOver', new Date(NOW - 7 * DAY - 1).toISOString())]
 
-    expect(ids(reviewQueue(list, events))).toEqual(['justOver'])
+    expect(due(list, events)).toEqual(['justOver'])
   })
 
   it('只看该素材自己的证据（别的 objectId 不算复习过）', () => {
     const list = [ann({ id: 'mine', mastery: 2 })]
     const events = [ev('someone-else', daysAgo(1))]
 
-    expect(ids(reviewQueue(list, events))).toEqual(['mine'])
+    expect(due(list, events)).toEqual(['mine'])
   })
 
   it('未掌握排前；掌握组内按最近证据最旧优先', () => {
@@ -94,7 +87,7 @@ describe('reviewQueue', () => {
     ]
     const events = [ev('mastered-new', daysAgo(10)), ev('mastered-old', daysAgo(40)), ev('not-mastered', daysAgo(0))]
 
-    expect(ids(reviewQueue(list, events))).toEqual(['not-mastered', 'mastered-old', 'mastered-new'])
+    expect(due(list, events)).toEqual(['not-mastered', 'mastered-old', 'mastered-new'])
   })
 
   it('取同一素材最近的一条证据（乱序传入也算）', () => {
@@ -102,6 +95,6 @@ describe('reviewQueue', () => {
     /* 旧证据在后：仍应以最近的那条为准 → 不到期 */
     const events = [ev('x', daysAgo(1)), ev('x', daysAgo(50))]
 
-    expect(reviewQueue(list, events)).toHaveLength(0)
+    expect(due(list, events)).toHaveLength(0)
   })
 })

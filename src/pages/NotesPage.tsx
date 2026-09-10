@@ -138,8 +138,8 @@ export function NotesPage() {
   const events = useLearningEventStore((s) => s.events)
   const eventsHydrated = useLearningEventStore((s) => s._hasHydrated)
   const dueQueue = useMemo(
-    () => (eventsHydrated ? reviewQueue(annotations, events) : []),
-    [annotations, events, eventsHydrated],
+    () => (eventsHydrated ? reviewQueue(annotations, events, mountedAt) : []),
+    [annotations, events, eventsHydrated, mountedAt],
   )
 
   const rowKinds = (r: Row) => new Set(r.anns.map((a) => a.kind))

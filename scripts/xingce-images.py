@@ -126,12 +126,8 @@ def crop_pngs(doc, start, end):
         png = pix.tobytes("png")
         if len(png) < 20_000:
             continue  # 近空白裁片（组头页尾、页码残留）
-        out.append(png)
+        out.append(png_to_webp(png, 85))
     return out
-
-
-def to_dataurls(pngs):
-    return json.dumps(["data:image/png;base64," + base64.b64encode(b).decode() for b in pngs])
 
 
 def spans_of(doc, start, end):
@@ -170,6 +166,24 @@ def split_text_options(stem_texts):
         text = re.sub(r"^[A-E][.．]?\s*", "", stem_texts[i]) + "".join(stem_texts[i + 1 : end])
         opts.append({"key": k, "text": text.strip()})
     return stem_lines, opts
+
+
+def png_to_webp(png: bytes, quality: int) -> tuple[bytes, str]:
+    """线条图转有损 WebP：同画质体积约为 PNG 的 1/4，读取时浏览器直接解码。
+    Pillow 不可用时回退 PNG。"""
+    try:
+        import io
+
+        from PIL import Image
+        buf = io.BytesIO()
+        Image.open(io.BytesIO(png)).save(buf, "WEBP", quality=quality, method=6)
+        return buf.getvalue(), "webp"
+    except Exception:
+        return png, "png"
+
+
+def to_dataurls(items: list[tuple[bytes, str]]) -> str:
+    return json.dumps([f"data:image/{ext};base64," + base64.b64encode(b).decode() for b, ext in items])
 
 
 def clean_watermark(doc):
@@ -284,10 +298,10 @@ def question_parts(doc, lines, start, end, qrect):
         # x 不钳页边距：部分图形条（六宫格等）放置到 x>width-PAGE_MARGIN_X，钳住会切掉右端
         clip = pymupdf.Rect(0, y0, doc[pno].rect.width, y1)
         png = trimmed_png(doc, pno, clip)
-        # 5KB：题干已剥出，简单线条图形（正方体组合等）压得比带题干的整块小得多
-        if len(png) < 5_000:
+        webp, ext = png_to_webp(png, 80)
+        if len(webp) < 2_000:
             continue
-        out.append(png)
+        out.append((webp, ext))
     return stem_texts, out
 
 

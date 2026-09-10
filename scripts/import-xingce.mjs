@@ -20,12 +20,13 @@
  *       "options": [{"key":"A","text":"……"}, …],
  *       "answer": "C",
  *       "explanation": "……",
- *       "image": null                  // 题图文件名，存 public/xingce/{paper_id}/
+ *       "image": null                  // 题图：JSON 数组字符串的 data URL（入库时落盘 public/xingce/{paper_id}/，db 只存路径）
  *     }, …
  *   ]
  * }
  *
- * 产出：data/articles.db 新增 xg_papers / xg_questions 两表（与申论 papers/questions 平行，互不干扰）
+ * 产出：data/articles.db 新增 xg_papers / xg_questions 两表（与申论 papers/questions 平行，互不干扰）；
+ *       base64 题图/材料图写进 public/xingce/{paper_id}/（db 不存 base64，否则整库几十 MB 且每次入库 git 全量重写）
  *
  * 用法：node scripts/import-xingce.mjs [--src data/xingce] [--db data/articles.db] [--dry]
  */
@@ -34,6 +35,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
+const PUBLIC_XINGCE = path.join(ROOT, 'public', 'xingce')
 const argPath = (flag, fallback) => {
   const idx = process.argv.indexOf(flag)
   if (idx === -1) return path.join(ROOT, fallback)
@@ -112,6 +114,33 @@ function main() {
     console.error('请把行测真题 JSON 放进 data/xingce/（schema 见本文件头注释）')
     process.exit(1)
   }
+
+  /**
+   * base64 题图落盘 → 返回可入库的路径数组字符串。
+   * value 是 JSON 数组字符串的 data URL；已是路径（重跑）或空值时原样返回。
+   * 存量同名文件直接覆盖：文件名由卷号+题号/组号决定，重裁后内容随之更新。
+   */
+  function materialize(paperId, kind, key, value) {
+    if (!value) return null
+    let urls
+    try {
+      const parsed = JSON.parse(value)
+      urls = Array.isArray(parsed) ? parsed : [String(parsed)]
+    } catch {
+      urls = [value]
+    }
+    if (!urls.some((u) => u.startsWith('data:'))) return value
+    const dir = path.join(PUBLIC_XINGCE, paperId)
+    fs.mkdirSync(dir, { recursive: true })
+    const paths = urls.map((u, i) => {
+      const ext = u.slice(5, u.indexOf(';')).split('/')[1] || 'png'
+      const file = `${kind}${key}_${i}.${ext}`
+      fs.writeFileSync(path.join(dir, file), Buffer.from(u.slice(u.indexOf('base64,') + 7), 'base64'))
+      return `/xingce/${paperId}/${file}`
+    })
+    return JSON.stringify(paths)
+  }
+
   const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.json'))
   if (!files.length) {
     console.error(`${SRC} 下没有 .json 文件`)
@@ -165,12 +194,12 @@ function main() {
           q.subtype ?? null,
           q.groupId ?? null,
           q.groupStem ?? null,
-          q.groupImage ?? null,
+          materialize(paper.id, 'g', q.groupId ?? q.idx, q.groupImage ?? null),
           q.stem,
           JSON.stringify(q.options),
           q.answer ?? null,
           q.explanation ?? null,
-          q.image ?? null,
+          materialize(paper.id, 'q', q.idx, q.image ?? null),
         )
       }
       db.prepare('COMMIT').run()

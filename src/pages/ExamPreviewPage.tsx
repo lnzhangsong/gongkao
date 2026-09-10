@@ -10,7 +10,7 @@ import {
   type ExamPaperMeta,
   type ExamQuestion,
 } from '../lib/api'
-import { alertDialog, confirmDialog } from '../components/ui/ConfirmDialog'
+import { alertDialog, confirmDialog } from '../components/ui/confirm'
 import { ApiLoading } from '../components/ui/ApiLoading'
 import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
@@ -53,7 +53,6 @@ export default function ExamPreviewPage() {
   const [listError, setListError] = useState(false)
   const [detailError, setDetailError] = useState(false)
   const [draft, setDraft] = useState<ExamDetail | null>(null)
-  const [loadingDetail, setLoadingDetail] = useState(false)
   const [creatingBusy, setCreatingBusy] = useState(false)
   const [editing, setEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -124,16 +123,23 @@ export default function ExamPreviewPage() {
   const inList = !routeExamId
   /* 详情加载：进入 /exams/:examId 或试卷 id 变化时拉取（retryTick 供错误态重试） */
   const [retryTick, setRetryTick] = useState(0)
-  useEffect(() => {
-    if (!routeExamId) return
-    let alive = true
+  /* 切卷 / 重试时重置详情态：渲染期调整 state，替代 effect 内一连串同步 setState */
+  const detailKey = `${routeExamId ?? ''}#${retryTick}`
+  const [prevDetailKey, setPrevDetailKey] = useState(detailKey)
+  if (detailKey !== prevDetailKey) {
+    setPrevDetailKey(detailKey)
     setDraft(null)
     setDetailError(false)
-    setLoadingDetail(true)
     setEditing(false)
     setDirty(false)
     setSavedAt(null)
     setAnalysisIdx(null)
+  }
+  /* 「加载中」由 draft/detailError 派生，无需单独 state */
+  const loadingDetail = Boolean(routeExamId) && !draft && !detailError
+  useEffect(() => {
+    if (!routeExamId) return
+    let alive = true
     window.scrollTo({ top: 0 })
     fetchExam(routeExamId)
       .then((d) => {
@@ -141,9 +147,6 @@ export default function ExamPreviewPage() {
       })
       .catch(() => {
         if (alive) setDetailError(true)
-      })
-      .finally(() => {
-        if (alive) setLoadingDetail(false)
       })
     return () => {
       alive = false
@@ -161,11 +164,11 @@ export default function ExamPreviewPage() {
 
   const open = (id: string) => {
     listScrollRef.current = window.scrollY
-    navigate(`/exams/${encodeURIComponent(id)}`)
+    void navigate(`/exams/${encodeURIComponent(id)}`)
   }
 
   const backToList = () => {
-    navigate('/exams')
+    void navigate('/exams')
   }
 
   /* 编辑态有未保存修改时拦截刷新/关闭，避免长卷丢稿 */

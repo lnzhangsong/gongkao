@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { splitTermSegments } from './TermHighlight'
+import { splitTermSegments } from './termMatch'
 import type { GuiFanTerm } from '../../lib/api'
 import { formatArticleNo, formatLocalDate } from '../../data'
 

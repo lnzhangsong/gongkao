@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useSyncStore, syncNow } from '../lib/cloudSync'
-import { toast } from '../components/ui/Toast'
-import { confirmDialog } from '../components/ui/ConfirmDialog'
+import { toast } from '../components/ui/toastStore'
+import { confirmDialog } from '../components/ui/confirm'
 import '../styles/auth.css'
 
 /** ISO 时间 → 当地时区「今天显示 HH:mm，更早显示 M.D HH:mm」 */
@@ -28,14 +28,17 @@ export function AccountPage() {
 
   const [nickname, setNickname] = useState('')
   const [busy, setBusy] = useState(false)
+  /* profile 异步就绪后同步进输入框：渲染期调整 state（替代 effect 内 setState，避免级联渲染） */
+  const profileNick = profile?.nickname ?? ''
+  const [prevProfileNick, setPrevProfileNick] = useState(profileNick)
+  if (profileNick !== prevProfileNick) {
+    setPrevProfileNick(profileNick)
+    setNickname(profileNick)
+  }
 
   useEffect(() => {
-    if (status === 'out') navigate('/login', { replace: true })
+    if (status === 'out') void navigate('/login', { replace: true })
   }, [status, navigate])
-
-  useEffect(() => {
-    setNickname(profile?.nickname ?? '')
-  }, [profile?.nickname])
 
   if (status !== 'in' || !user) return null
 
@@ -69,7 +72,7 @@ export function AccountPage() {
     if (!ok) return
     await signOut()
     toast('已退出登录')
-    navigate('/')
+    void navigate('/')
   }
 
   return (

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../components/ui/toastStore'
 import '../styles/auth.css'
 
 type Notice = { kind: 'info' | 'error'; text: string } | null
@@ -22,7 +22,7 @@ export function AuthPage() {
 
   /* 已登录直接进账号页（含邮箱确认链接回跳后建立会话的场景） */
   useEffect(() => {
-    if (status === 'in') navigate('/account', { replace: true })
+    if (status === 'in') void navigate('/account', { replace: true })
   }, [status, navigate])
 
   /* 子页页头：与文库/规范词等 subpage-header 同语言（注册已关闭，仅登录） */
@@ -68,7 +68,7 @@ export function AuthPage() {
     try {
       await signIn(email.trim(), password)
       toast('已登录')
-      navigate('/account')
+      void navigate('/account')
     } catch (err) {
       setNotice({ kind: 'error', text: err instanceof Error ? err.message : '操作失败，请重试' })
     } finally {

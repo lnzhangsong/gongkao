@@ -50,11 +50,20 @@ function cachedGet<T>(url: string, fetcher: () => Promise<T>): Promise<T> {
   return req
 }
 
-/** 使会话缓存失效：命中任一前缀（按 URL 开头匹配）的条目被清除 */
+/** 使会话缓存失效：命中任一前缀（按 URL 开头匹配）的条目被清除。
+ *  Map 迭代器允许在遍历中删除当前项，无需先做数组快照 */
 export function invalidateCache(prefixes: string[]): void {
-  for (const key of [...sessionCache.keys()]) {
+  for (const key of sessionCache.keys()) {
     if (prefixes.some((p) => key.startsWith(p))) sessionCache.delete(key)
   }
+}
+
+/** 合并写令牌与调用方 headers。HeadersInit 也可能是 Headers 或 [key,value][]，
+ *  直接对象展开会得到数字下标；统一用 Headers 归一化。调用方 headers 覆盖写令牌 */
+function writeHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(writeToken())
+  new Headers(init).forEach((value, key) => headers.set(key, value))
+  return headers
 }
 
 /**
@@ -79,7 +88,7 @@ async function request<T>(url: string, init?: RequestInit, label?: string): Prom
   const timer = window.setTimeout(() => ctrl.abort(), DEFAULT_TIMEOUT_MS)
   try {
     const method = (init?.method ?? 'GET').toUpperCase()
-    const extra = method === 'GET' ? {} : { headers: { ...writeToken(), ...init?.headers } }
+    const extra = method === 'GET' ? {} : { headers: writeHeaders(init?.headers) }
     const res = await fetch(url, { ...init, ...extra, signal: init?.signal ?? ctrl.signal })
     const body = await res.text()
     if (!res.ok) {

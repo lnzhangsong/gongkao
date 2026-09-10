@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
         try {
           const res = await fetch(req)
           const cache = await caches.open(CACHE)
-          cache.put('/', res.clone())
+          await cache.put('/', res.clone())
           return res
         } catch {
           const shell = (await caches.match('/')) ?? (await caches.match(req))
@@ -55,7 +55,7 @@ self.addEventListener('fetch', (event) => {
       const res = await fetch(req)
       if (res.ok && (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/'))) {
         const cache = await caches.open(CACHE)
-        cache.put(req, res.clone())
+        await cache.put(req, res.clone())
       }
       return res
     })(),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../components/ui/toastStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { computeSelectionRange, flatText } from '../lib/offsets'
 import { isNoteEmpty, noteHtmlToText } from '../lib/richNote'
@@ -278,7 +278,9 @@ export function useAnnotationPopover(
     }
   }
 
-  const startNote = () => {
+  /* 函数声明（而非 const 箭头函数）：被上方的 applyHighlight / 键盘 effect 引用，
+     声明形式会被提升，避免「初始化前访问」的静态告警 */
+  function startNote() {
     if (!article || !popover) return
     setPendingNote({ start: popover.start, end: popover.end, text: popover.text })
     window.getSelection()?.removeAllRanges()
@@ -286,7 +288,7 @@ export function useAnnotationPopover(
   }
 
   /** 打开管理菜单：默认在选区上方，上方放不下则翻到下方 */
-  const openAnnPopover = (ids: string[], x: number, y: number) => {
+  function openAnnPopover(ids: string[], x: number, y: number) {
     const bodyRect = bodyRef.current?.getBoundingClientRect()
     const below = bodyRect ? bodyRect.top + y - 100 < 0 : false
     setAnnPopover({ ids, x, y, below })

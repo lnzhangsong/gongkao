@@ -12,7 +12,7 @@ import {
 } from '../../stores/examStudyStore'
 import { useAiStore, isAiConfigured } from '../../stores/aiStore'
 import { MenuSelect } from '../ui/MenuSelect'
-import { alertDialog } from '../ui/ConfirmDialog'
+import { alertDialog } from '../ui/confirm'
 
 /**
  * 要点列表（题目解析抽屉第一节）：

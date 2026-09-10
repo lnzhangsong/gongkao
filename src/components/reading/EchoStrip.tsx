@@ -4,6 +4,7 @@ import { useAnnotationStore } from '../../stores/annotationStore'
 import { useArticleStore } from '../../stores/articleStore'
 import { useShenlunStore } from '../../stores/shenlunStore'
 import { recallProbability } from '../../lib/mastery'
+import { useMountedAt } from '../../lib/useMountedAt'
 import { useLearningEventStore } from '../../stores/learningEventStore'
 import type { ArticleTopic } from '../../types'
 
@@ -24,6 +25,8 @@ export function EchoStrip({ articleId, topic }: { articleId: string; topic?: Art
   const events = useLearningEventStore((s) => s.events)
   const study = useShenlunStore((s) => s.study)
   const getArticle = useArticleStore((s) => s.getArticle)
+  /* 「X 天前存」的基准时刻（挂载时取一次，渲染期不再读时钟） */
+  const mountedAt = useMountedAt()
 
   const items = useMemo<EchoItem[]>(() => {
     const out: EchoItem[] = []
@@ -40,7 +43,7 @@ export function EchoStrip({ articleId, topic }: { articleId: string; topic?: Art
     const picked = [...sameTopic, ...ranked.filter((a) => !sameTopic.includes(a))].slice(0, 3)
     for (const a of picked) {
       const art = getArticle(a.articleId)
-      const days = Math.max(1, Math.round((Date.now() - new Date(a.createdAt).getTime()) / 86400000))
+      const days = Math.max(1, Math.round((mountedAt - new Date(a.createdAt).getTime()) / 86400000))
       out.push({
         key: a.id,
         to: `/reading/${a.articleId}?ann=${a.id}`,
@@ -62,7 +65,7 @@ export function EchoStrip({ articleId, topic }: { articleId: string; topic?: Art
       if (out.length >= 5) break
     }
     return out
-  }, [annotations, events, study, articleId, topic, getArticle])
+  }, [annotations, events, study, articleId, topic, getArticle, mountedAt])
 
   if (items.length === 0) return null
   return (

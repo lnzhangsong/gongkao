@@ -5,11 +5,15 @@ import { fetchXingce, type XingceDetail, type XingceQuestion } from '../lib/api'
 import { useXingceStore, xgKey } from '../stores/xingceStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { loadFontFamily } from '../lib/fonts'
+import { useMountedAt } from '../lib/useMountedAt'
 import { levelMark } from '../lib/examText'
 import { GroupStemText, DataUrls } from '../components/exam/GroupStemText'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
+
+/** 事件处理中读取当前时间（非渲染期），抽到模块作用域避免渲染路径直接调用时钟 */
+const nowMs = (): number => Date.now()
 
 /**
  * 练习 · 行测答题卡（/practice/:paperId；docs/行测做题模块设计方案.md X2）
@@ -17,8 +21,7 @@ import '../styles/practice.css'
  * 判分是确定性的（答案客观唯一），不经 AI、不经后端。
  */
 
-/** 卷内题目按题组切分展示单元：单题自成一组，资料分析一篇材料 5 题共用一个分屏 */
-interface Group {
+/** 卷内题目按题组切分展示单元：单题自成一组，资料分析一篇材料 5 题共用一个分屏 */ interface Group {
   groupId: number | null
   groupStem: string | null
   groupImage: string | null
@@ -71,7 +74,9 @@ export function XingcePracticePage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [stemOpen, setStemOpen] = useState(true) // 资料分析材料折叠
   const scrollTarget = useRef<number | null>(null)
-  const enteredAt = useRef(Date.now())
+  /* 进入当前题组的时刻：初值取挂载时刻，go() 时用 nowMs() 重置 */
+  const mountAt = useMountedAt()
+  const enteredAt = useRef(mountAt)
   const record = useXingceStore((s) => s.record)
   const removeMany = useXingceStore((s) => s.removeMany)
   const answers = useXingceStore((s) => s.answers)
@@ -138,7 +143,7 @@ export function XingcePracticePage() {
   const go = (next: number, scrollQ?: number) => {
     setPos(next)
     setPicked({})
-    enteredAt.current = Date.now()
+    enteredAt.current = nowMs()
     scrollTarget.current = scrollQ ?? null
   }
 
@@ -180,7 +185,7 @@ export function XingcePracticePage() {
       group.questions.map((q) => q.idx),
     )
     setPicked({})
-    enteredAt.current = Date.now()
+    enteredAt.current = nowMs()
   }
 
   /* 本组可判分题是否全部已判分（全部判分后按钮变「重刷本组」） */

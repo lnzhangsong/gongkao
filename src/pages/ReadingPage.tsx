@@ -4,12 +4,13 @@ import { Highlighter, StickyNote, Underline as UnderlineIcon, BookPlus } from 'l
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { addTerm } from '../lib/api'
-import { alertDialog } from '../components/ui/ConfirmDialog'
+import { alertDialog } from '../components/ui/confirm'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useThemeStore, THEMES, resolveTheme } from '../stores/themeStore'
 import { ArticleToolsMenu } from '../components/ui/ArticleToolsMenu'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
-import { TermText, hasTermCached } from '../components/reading/TermHighlight'
+import { TermText } from '../components/reading/TermHighlight'
+import { hasTermCached } from '../components/reading/termMatch'
 import { useFocusMode } from '../lib/useFocusMode'
 import { useReadingTimer } from '../hooks/useReadingTimer'
 import { useCycleTheme } from '../hooks/useCycleTheme'
@@ -315,7 +316,11 @@ export function ReadingPage() {
       window.setTimeout(() => setTermSaved('idle'), 1500)
     }
   }
-  const displayAnnotations = annotationsVisible ? articleAnnotations : []
+  /* 稳定引用：隐藏标注时不要每次渲染都新建 []，否则下游两个 useMemo 依赖每轮都变 */
+  const displayAnnotations = useMemo(
+    () => (annotationsVisible ? articleAnnotations : []),
+    [annotationsVisible, articleAnnotations],
+  )
 
   /* 段落切分与标注匹配只在正文/标注变化时重算一次：
      滚动、弹层、笔记编辑等高频 state 变化不再触发全正文 O(段落数×标注数) 重算 */

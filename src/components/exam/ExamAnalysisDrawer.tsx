@@ -36,7 +36,6 @@ export function ExamAnalysisDrawer({
   const { height: panelHeight, onHandleDown } = usePanelResize()
   /* 全屏：面板拉到 90vh，拖高把手暂时失效 */
   const [fullscreen, setFullscreen] = useState(false)
-  useEffect(() => setFullscreen(false), [paperId, q.idx])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -60,7 +59,14 @@ export function ExamAnalysisDrawer({
   const [running, setRunning] = useState(0)
   const onSectionBusy = (busy: boolean) => setRunning((n) => Math.max(0, n + (busy ? 1 : -1)))
   const hasTrace = Boolean(useExamStudyStore((st) => st.traces[traceKey(paperId, q.idx)]?.points.length))
-  useEffect(() => setTraceEditing(false), [paperId, q.idx])
+  /* 切题时重置本题的临时视图状态：渲染期调整 state（替代两处 effect 内 setState） */
+  const resetKey = `${paperId}#${q.idx}`
+  const [prevResetKey, setPrevResetKey] = useState(resetKey)
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey)
+    setFullscreen(false)
+    setTraceEditing(false)
+  }
 
   return createPortal(
     <>

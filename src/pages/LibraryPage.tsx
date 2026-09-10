@@ -98,20 +98,24 @@ export function LibraryPage() {
   const [fulltextIds, setFulltextIds] = useState<Set<string>>(new Set())
   useEffect(() => {
     const kw = q.trim()
-    if (!kw) {
-      setFulltextIds(new Set())
-      return
-    }
     let alive = true
-    const t = window.setTimeout(() => {
-      fetchMetaList({ q: kw })
-        .then((res) => {
-          if (alive) setFulltextIds(new Set(res.articles.map((a) => a.id)))
-        })
-        .catch(() => {
+    /* 清空也放进回调里执行：避免 effect 内同步 setState 触发级联渲染 */
+    const t = window.setTimeout(
+      () => {
+        if (!kw) {
           if (alive) setFulltextIds(new Set())
-        })
-    }, 300)
+          return
+        }
+        fetchMetaList({ q: kw })
+          .then((res) => {
+            if (alive) setFulltextIds(new Set(res.articles.map((a) => a.id)))
+          })
+          .catch(() => {
+            if (alive) setFulltextIds(new Set())
+          })
+      },
+      kw ? 300 : 0,
+    )
     return () => {
       alive = false
       window.clearTimeout(t)
@@ -174,7 +178,7 @@ export function LibraryPage() {
   /* 年份由文章日期动态推导，避免写死 */
   const years = useMemo(() => [...new Set(articles.map((a) => a.date.slice(0, 4)))].sort().join(' · '), [articles])
 
-  const open = (a: Article) => navigate(`/reading/${a.id}`)
+  const open = (a: Article) => void navigate(`/reading/${a.id}`)
 
   /** 悬停预取正文：点进阅读页时全文多半已在缓存（120ms 防飞掠） */
   const warm = (a: Article) => void useArticleStore.getState().ensureContent(a.id)

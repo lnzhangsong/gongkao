@@ -6,8 +6,9 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { useArticleStore } from '../stores/articleStore'
 import { useLearningEventStore } from '../stores/learningEventStore'
 import { reviewQueue } from '../lib/reviewQueue'
+import { useMountedAt } from '../lib/useMountedAt'
 import { ReviewModal } from '../components/notes/ReviewModal'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../components/ui/toastStore'
 import { formatLocalDate } from '../data'
 import { downloadJSON, downloadText, formatDateTime, monthOf } from '../lib/export'
 import { Pagination } from '../components/ui/Pagination'
@@ -63,6 +64,8 @@ export function NotesPage() {
   const removeMany = useAnnotationStore((s) => s.removeMany)
   const update = useAnnotationStore((s) => s.update)
   const getArticle = useArticleStore((s) => s.getArticle)
+  /* 「近 7 天」统计的基准时刻（挂载时取一次，渲染期不再读时钟） */
+  const mountedAt = useMountedAt()
 
   /* 筛选/搜索/页码进 URL：从阅读页返回时保留筛选，浏览器后退可回上一筛选态 */
   const [params, setParams] = useSearchParams()
@@ -150,7 +153,7 @@ export function NotesPage() {
       note: 0,
       memorize: 0,
     }
-    const sevenDays = Date.now() - 7 * 24 * 3600 * 1000
+    const sevenDays = mountedAt - 7 * 24 * 3600 * 1000
     for (const r of rows) {
       if (new Date(r.date).getTime() > sevenDays) m.recent += 1
       const kinds = rowKinds(r)
@@ -160,11 +163,11 @@ export function NotesPage() {
       if (r.anns.some((a) => a.memorized)) m.memorize += 1
     }
     return m
-  }, [rows])
+  }, [rows, mountedAt])
 
   const filtered = useMemo(() => {
     const kw = q.trim().toLowerCase()
-    const sevenDays = Date.now() - 7 * 24 * 3600 * 1000
+    const sevenDays = mountedAt - 7 * 24 * 3600 * 1000
     return rows.filter((r) => {
       const kinds = rowKinds(r)
       if (quick === 'recent' && new Date(r.date).getTime() < sevenDays) return false
@@ -182,38 +185,41 @@ export function NotesPage() {
       }
       return true
     })
-  }, [rows, quick, topic, q, mat])
+  }, [rows, quick, topic, q, mat, mountedAt])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   /* 筛选后结果变少时钳到最后一页，避免出现「页内无内容」的假空态 */
   const curPage = Math.min(page, totalPages)
-  const pageItems = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE)
+  /* 稳定引用：pageItems 每次渲染新建数组会让下游 useMemo（按月分组等）失效 */
+  const pageItems = useMemo(() => filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE), [filtered, curPage])
 
   const selectedRow = rows.find((r) => r.key === selectedKey) ?? pageItems[0] ?? null
 
   /* ---------- 防丢稿：批量勾选与句式模板 ---------- */
-  // 筛选变化后，已选集合里不再可见的行应移除（避免「导出/删除选中」带上不可见条目）
-  useEffect(() => {
-    if (checked.size === 0) return
-    const visible = new Set(filtered.map((r) => r.key))
-    let changed = false
-    for (const k of checked)
-      if (!visible.has(k)) {
-        changed = true
-        break
-      }
-    if (!changed) return
-    setChecked((prev) => {
+  // 筛选变化后，已选集合里不再可见的行应移除（避免「导出/删除选中」带上不可见条目）。
+  // 渲染期调整 state（以 filtered 身份变化为触发点），替代 effect 内 setState
+  const visibleKeys = useMemo(() => new Set(filtered.map((r) => r.key)), [filtered])
+  const [prevVisibleKeys, setPrevVisibleKeys] = useState(visibleKeys)
+  if (visibleKeys !== prevVisibleKeys) {
+    setPrevVisibleKeys(visibleKeys)
+    if (checked.size > 0) {
       const next = new Set<string>()
-      for (const k of prev) if (visible.has(k)) next.add(k)
-      return next
-    })
-  }, [filtered, checked])
+      for (const k of checked) if (visibleKeys.has(k)) next.add(k)
+      if (next.size !== checked.size) setChecked(next)
+    }
+  }
 
   // 句式模板输入：受控 + 300ms 防抖 + 切行/卸载时 flush
   const patternAnn = selectedRow?.anns.find((a) => a.materialType === 'pattern')
+  const patternSource = patternAnn?.pattern ?? ''
+  /* 切行 / 外部改写时渲染期同步草稿（替代 effect 内 setState） */
+  const [prevPatternSource, setPrevPatternSource] = useState(patternSource)
+  if (patternSource !== prevPatternSource) {
+    setPrevPatternSource(patternSource)
+    setPatternDraft(patternSource)
+  }
+  /* 切行 / 换模板时丢弃尚未落盘的防抖写入 */
   useEffect(() => {
-    setPatternDraft(patternAnn?.pattern ?? '')
     if (patternTimerRef.current) {
       window.clearTimeout(patternTimerRef.current)
       patternTimerRef.current = null

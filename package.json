@@ -20,20 +20,20 @@
     "prepare": "vp config"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.115.0",
-    "lucide-react": "^1.41.0",
+    "@supabase/supabase-js": "^2.116.0",
+    "lucide-react": "^1.43.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
-    "playwright-core": "^1.62.1",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.9.3",
     "vite": "catalog:",
     "vite-plus": "catalog:"
@@ -41,7 +41,7 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "11.25.0",
+      "version": "12.3.4",
       "onFail": "download"
     }
   }

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ApiLoading } from '../components/ui/ApiLoading'
 import { useXingceStore } from '../stores/xingceStore'
 import { fetchXingce, type XingceQuestion } from '../lib/api'
-import { DataUrls } from '../components/exam/GroupStemText'
+import { showTextStem } from '../lib/xingcePractice'
+import { CondLines, DataUrls } from '../components/exam/GroupStemText'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
 
@@ -109,10 +110,10 @@ export function XingceWrongPage() {
               <article className="practice-group" key={`${it.paperId}#${it.q.idx}`}>
                 <div className="practice-group-stem">
                   <small style={{ fontFamily: 'var(--mono)', opacity: 0.6 }}>{it.paperTitle}</small>
-                  {!it.q.image && (
+                  {showTextStem(it.q.stem) && (
                     <>
                       {'\n'}
-                      {it.q.idx}. {it.q.stem}
+                      {it.q.idx}. <CondLines text={it.q.stem} />
                     </>
                   )}
                 </div>
@@ -124,7 +125,11 @@ export function XingceWrongPage() {
                 <div className={`practice-verdict${it.picked ? ' is-wrong' : ''}`}>
                   {it.picked ? `你选了 ${it.picked}` : '未作答'} · 正确答案 {it.q.answer}
                 </div>
-                {it.q.explanation && <div className="practice-explain">{it.q.explanation}</div>}
+                {it.q.explanation && (
+                  <div className="practice-explain">
+                    <CondLines text={it.q.explanation} />
+                  </div>
+                )}
               </article>
             ))}
           </div>

@@ -74,3 +74,43 @@ export function formatDuration(seconds: number): string {
   const m = Math.floor(s / 60)
   return `${m}:${String(s % 60).padStart(2, '0')}`
 }
+
+/** 整题截图题的占位题干：流水线未能拆出题干文本时的回填值（xingce-images.py） */
+const IMG_STEM_PLACEHOLDER = /^第\d+题（见配图）$/
+
+/**
+ * 是否渲染文本题干。截图题的题干已由流水线拆成文本（图里只剩图形区），照常渲染；
+ * 只有数据仍是「第N题（见配图）」占位符（旧数据 / 矢量图形兜底）时才不重复显示。
+ */
+export function showTextStem(stem: string): boolean {
+  return !!stem && !IMG_STEM_PLACEHOLDER.test(stem)
+}
+
+/** 条件句行首标记：半/全角括号包 1-2 位数字或中文序号，以及带圈数字 */
+const COND_MARK_RE = /[（(]([0-9]{1,2}|[一二三四五六七八九十])[)）]|[①②③④⑤⑥⑦⑧⑨]/g
+const CIRCLED = '①②③④⑤⑥⑦⑧⑨'
+
+function condMarkNum(s: string): number | null {
+  const circled = CIRCLED.indexOf(s)
+  if (circled >= 0) return circled + 1
+  if (/^\d{1,2}$/.test(s)) return Number(s)
+  const cn = '一二三四五六七八九十'.indexOf(s)
+  return cn < 0 ? null : cn + 1
+}
+
+/**
+ * 题组材料里的「已知：(1)…；(2)…；(3)…」拆成每行一条，逻辑题逐条列条件更好读。
+ * 只在编号自 1 起恰好连续且 ≥2 个时拆；普通括号数字（如「(3) 支队伍」孤例）不拆。
+ */
+export function splitConditionLines(text: string): string[] {
+  const marks = [...text.matchAll(COND_MARK_RE)]
+    .map((m) => ({ i: m.index ?? 0, n: condMarkNum(m[0].replace(/[（(]/, '').replace(/[)）]/, '')) }))
+    .filter((m) => m.n != null)
+  if (marks.length < 2 || marks.some((m, j) => m.n !== j + 1)) return [text]
+  const lines: string[] = []
+  for (let j = 0; j < marks.length; j++) {
+    lines.push(text.slice(marks[j].i, marks[j + 1]?.i ?? text.length).trim())
+  }
+  const head = text.slice(0, marks[0].i).trim()
+  return head ? [head, ...lines] : lines
+}

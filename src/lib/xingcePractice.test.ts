@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { formatDuration, groupScore, optionCols, visualWidth } from './xingcePractice'
+import {
+  formatDuration,
+  groupScore,
+  optionCols,
+  showTextStem,
+  splitConditionLines,
+  visualWidth,
+} from './xingcePractice'
 import type { XingceQuestion } from './api'
 
 /**
@@ -142,5 +149,40 @@ describe('formatDuration', () => {
   it('负数与小数按取整处理', () => {
     expect(formatDuration(-5)).toBe('0s')
     expect(formatDuration(64.6)).toBe('1:05')
+  })
+})
+
+describe('showTextStem（截图题的题干是否走文本渲染）', () => {
+  it('流水线拆出的真题干渲染，占位符与空值不渲染', () => {
+    expect(showTextStem('从所给的四个选项中，选择最合适的一个填入问号处。')).toBe(true)
+    expect(showTextStem('第81题（见配图）')).toBe(false)
+    expect(showTextStem('')).toBe(false)
+  })
+
+  it('只匹配整段占位符：含题号不同、前后缀的不误伤', () => {
+    expect(showTextStem('第8题（见配图）')).toBe(false)
+    expect(showTextStem('第818题（见配图）')).toBe(false)
+    expect(showTextStem('第81题（见配图）如仍无法显示请看图')).toBe(true)
+  })
+})
+
+describe('splitConditionLines（材料条件句拆行）', () => {
+  it('编号自 1 连续 ≥2 个时拆行，前导句单独一行', () => {
+    expect(splitConditionLines('已知：(1)甲和乙同组；(2)丙和丁不同组')).toEqual([
+      '已知：',
+      '(1)甲和乙同组；',
+      '(2)丙和丁不同组',
+    ])
+  })
+
+  it('全角括号、中文序号、带圈数字也认', () => {
+    expect(splitConditionLines('（一）xxx；（二）yyy')).toEqual(['（一）xxx；', '（二）yyy'])
+    expect(splitConditionLines('①红球在场内②蓝球在场外')).toEqual(['①红球在场内', '②蓝球在场外'])
+  })
+
+  it('单个、不连续或非 1 起步的编号不拆', () => {
+    expect(splitConditionLines('共有 (3) 支队伍参赛')).toEqual(['共有 (3) 支队伍参赛'])
+    expect(splitConditionLines('从(2)号开始，到(4)号结束')).toEqual(['从(2)号开始，到(4)号结束'])
+    expect(splitConditionLines('')).toEqual([''])
   })
 })

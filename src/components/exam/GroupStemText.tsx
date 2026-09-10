@@ -1,10 +1,25 @@
 import type { ReactNode } from 'react'
+import { splitConditionLines } from '../../lib/xingcePractice'
 
 /**
  * 行测材料渲染器：把 groupStem 的 OCR 文本渲染成「段落 + 表格」。
  * 约定（xingce-ocr.py 产出）：连续含 " | " 的行是表格行，第一行为表头；
- * 其余行是标题/说明段落。表格行数不一致时以最长行为准，缺格补空。
+ * 其余行是标题/说明段落。段落里的「(1)…；(2)…」条件句拆成每行一条。
  */
+
+/** 条件句分行渲染：题干/解析里的「(1)…；(2)…」枚举每条一行 */
+export function CondLines({ text }: { text: string }) {
+  return (
+    <>
+      {splitConditionLines(text).map((seg, i, arr) => (
+        <span key={i}>
+          {seg}
+          {i < arr.length - 1 && <br />}
+        </span>
+      ))}
+    </>
+  )
+}
 
 function toRows(lines: string[]): string[][] {
   return lines.map((l) => l.split(' | ').map((c) => c.trim()))
@@ -58,7 +73,9 @@ export function GroupStemText({ text }: { text: string | null | undefined }) {
       )
       continue
     }
-    out.push(<p key={`p-${out.length}`}>{line}</p>)
+    for (const seg of splitConditionLines(line)) {
+      out.push(<p key={`p-${out.length}`}>{seg}</p>)
+    }
   }
   flush()
 

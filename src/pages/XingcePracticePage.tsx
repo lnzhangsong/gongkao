@@ -6,9 +6,9 @@ import { useXingceStore, xgKey } from '../stores/xingceStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { loadFontFamily } from '../lib/fonts'
 import { useMountedAt } from '../lib/useMountedAt'
-import { formatDuration, groupScore, optionCols } from '../lib/xingcePractice'
+import { formatDuration, groupScore, optionCols, showTextStem } from '../lib/xingcePractice'
 import { levelMark } from '../lib/examText'
-import { GroupStemText, DataUrls } from '../components/exam/GroupStemText'
+import { CondLines, GroupStemText, DataUrls } from '../components/exam/GroupStemText'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
@@ -508,15 +508,16 @@ export function XingcePracticePage() {
             const saved = answers[xgKey(paper.id, q.idx)]
             const qJudged = !!saved // 有存档即已判分：锁定选项并展示判定；没存档的题保持可作答
             const pick = qJudged ? saved.picked : (picked[q.idx] ?? '')
-            const imgQ = !!q.image // 整题截图：题干/选项都在图里，文本一律不重复渲染
+            // 纯图选项题：选项只是字母钮；补图题（图 + 文本选项）选项照常渲染文字
+            const imgQ = !!q.image && q.options.every((o) => !o.text)
             return (
               <section className="practice-q" key={q.idx} id={`q-${q.idx}`}>
-                {!imgQ && (
+                {showTextStem(q.stem) && (
                   <p className="practice-stem">
-                    <strong>{q.idx}.</strong> {q.stem}
+                    <strong>{q.idx}.</strong> <CondLines text={q.stem} />
                   </p>
                 )}
-                {imgQ && <DataUrls value={q.image} altPrefix={`第${q.idx}题`} />}
+                {q.image && <DataUrls value={q.image} altPrefix={`第${q.idx}题`} />}
                 <div
                   className={`practice-options cols-${optionCols([q])}${imgQ ? ' is-imgopts' : ''}`}
                   role="radiogroup"
@@ -549,7 +550,11 @@ export function XingcePracticePage() {
                     {pick === q.answer ? '✓ 回答正确' : `✗ 回答错误，正确答案 ${q.answer}`}
                   </div>
                 )}
-                {qJudged && q.explanation && <div className="practice-explain">{q.explanation}</div>}
+                {qJudged && q.explanation && (
+                  <div className="practice-explain">
+                    <CondLines text={q.explanation} />
+                  </div>
+                )}
                 {qJudged && !q.explanation && (
                   <div className="practice-explain is-empty">暂无解析——AI 解析辅助在 X4 接入</div>
                 )}

@@ -20,7 +20,7 @@ pnpm preview       # 预览生产构建
 - **Vite+（vp）+ Vite 8 + React 19 + TypeScript 5** —— 构建 / 测试 / lint / 格式化单 CLI
 - **React Router 7** —— 页面路由（含 `/practice` 行测线、`/login`、`/account`），前进后退，刷新保持
 - **Zustand 5**（`persist` 中间件）—— 状态管理；数据本地优先，localStorage（轻量）+ IndexedDB（文章、学习事件、行测作答）
-- **Supabase**（可选）—— Auth 登录 + Postgres 云同步；未配置环境变量时自动降级为纯本地
+- **Supabase**（可选）—— Auth 登录 + Postgres 云同步；未配置环境变量时自动降级为纯本地。SDK 约 55KB gzip，按需动态加载（登录态另存轻量 `authStatus` store），**不进首屏 bundle**
 - **Lucide React** —— 工具栏/操作图标
 - **CSS Variables** —— 令牌系统与五套主题（paper/blue/violet/night/graphite，未引入 Tailwind；2026-09 起按 Paper OS 收敛：圆角 10/16 两档、7×8 硬阴影、1180 版心，见 `design/design/DESIGN.md`）
 - 字体：DM Mono / DM Sans / Noto Sans SC / Noto Serif SC / Ma Shan Zheng / LXGW WenKai（Google Fonts）
@@ -71,7 +71,7 @@ React 页面组件
 - `useXingceStore` —— 行测作答（`paperId#qIdx`）
 - `useLearningEventStore` —— 学习事件流水（append-only，复习算法底座）
 - `useAiStore` / `useAiAssistStore` —— BYOK 配置 / AI 审题作答记录
-- `useAuthStore` —— Supabase 登录态与本机数据清理
+- `useAuthStatusStore` —— 登录态（轻量，首屏用）；`useAuthStore` —— 认证动作与云同步启停（重，按需加载）
 
 ### 数据模型
 

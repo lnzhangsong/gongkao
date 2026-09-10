@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { useAuthStatusStore } from '../stores/authStatus'
 import { useSyncStore, syncNow } from '../lib/cloudSync'
 import { toast } from '../components/ui/toastStore'
 import { confirmDialog } from '../components/ui/confirm'
@@ -19,9 +20,9 @@ function formatTime(iso: string): string {
 /** 账号页（/account）：资料展示、昵称修改、退出登录 */
 export function AccountPage() {
   const navigate = useNavigate()
-  const status = useAuthStore((s) => s.status)
-  const user = useAuthStore((s) => s.user)
-  const profile = useAuthStore((s) => s.profile)
+  const status = useAuthStatusStore((s) => s.status)
+  const user = useAuthStatusStore((s) => s.user)
+  const profile = useAuthStatusStore((s) => s.profile)
   const rename = useAuthStore((s) => s.rename)
   const signOut = useAuthStore((s) => s.signOut)
   const { lastSyncAt, error: syncError, syncing } = useSyncStore()

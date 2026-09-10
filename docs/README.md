@@ -7,6 +7,7 @@
 > **2026-09-05**：M1 按用户反馈多轮修订——解析面板改**底部上下分栏**（原文不再遮挡，正文可滚，可拖高/全屏）；原文标注改**句后内联「」解析**（高亮透明底+彩色下划线/删除线，无悬浮气泡）；要点讲解升级为教方法的**定位/材料/加工判断三步链**；全站圆圈光标下压掉原生手型光标；拆分两个大页面组件并清理死 CSS。
 > **2026-09-10 云同步正确性修复**（行测/账号线，详见根 `README.md` 账号章节与 `sql/sync.sql`）：① 退出登录漏清行测作答（换账号会串数据）；② `exam_study` 复合主键 `kind#key` 拉取时丢 kind 前缀，真题溯源/标注无法从云端恢复；③ 同步订阅未随登出解除、`runSync` 无并发保护；④ LWW 时间戳改由数据库 `now()` 赋值（`sql/sync.sql` v4 触发器）。
 > **2026-09-10 工程质量收口**：`vp lint` 清零（68 → 0 warning，含 `no-floating-promises`、React Hooks/纯性告警）；修好 Vite+ 迁移后失效的 `scripts/e2e.mjs`（原引用已不存在的 `node_modules/vite/bin/vite.js`，改用本地 `vp`）；e2e 增补行测刷题链路与登录/账号重定向断言，共 131 项全绿；补 `src/lib/cloudSync.test.ts`——mock Supabase 的云同步引擎集成测试 8 项（push/pull、LWW、墓碑、复合键、坏记录、订阅解绑、串行化），用变异验证确认能真正抓住对应 bug。
+> **2026-09-10 首屏体积与算法测试**：登录态拆为轻量 `authStatus` store、supabase-js 改按需动态加载，主 chunk gzip **142.6KB → 84.8KB（−41%）**；补学习/复习算法单测（`mastery` 遗忘曲线与回声排序、`reviewQueue` 到期规则、`learnerProfile` 状态推导），单测 66 → 87。
 
 ---
 

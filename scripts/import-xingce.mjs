@@ -20,13 +20,13 @@
  *       "options": [{"key":"A","text":"……"}, …],
  *       "answer": "C",
  *       "explanation": "……",
- *       "image": null                  // 题图：JSON 数组字符串的 data URL（入库时落盘 public/xingce/{paper_id}/，db 只存路径）
+ *       "image": null                  // 题图：JSON 数组字符串的 data URL（入库时落盘 data/xingce-img/{paper_id}/，db 只存路径）
  *     }, …
  *   ]
  * }
  *
  * 产出：data/articles.db 新增 xg_papers / xg_questions 两表（与申论 papers/questions 平行，互不干扰）；
- *       base64 题图/材料图写进 public/xingce/{paper_id}/（db 不存 base64，否则整库几十 MB 且每次入库 git 全量重写）
+ *       base64 题图/材料图写进 data/xingce-img/{paper_id}/（db 不存 base64，否则整库几十 MB 且每次入库 git 全量重写）
  *
  * 用法：node scripts/import-xingce.mjs [--src data/xingce] [--db data/articles.db] [--dry]
  */
@@ -35,7 +35,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
-const PUBLIC_XINGCE = path.join(ROOT, 'public', 'xingce')
+const IMG_DIR = path.join(ROOT, 'data', 'xingce-img')
 const argPath = (flag, fallback) => {
   const idx = process.argv.indexOf(flag)
   if (idx === -1) return path.join(ROOT, fallback)
@@ -130,13 +130,13 @@ function main() {
       urls = [value]
     }
     if (!urls.some((u) => u.startsWith('data:'))) return value
-    const dir = path.join(PUBLIC_XINGCE, paperId)
+    const dir = path.join(IMG_DIR, paperId)
     fs.mkdirSync(dir, { recursive: true })
     const paths = urls.map((u, i) => {
       const ext = u.slice(5, u.indexOf(';')).split('/')[1] || 'png'
       const file = `${kind}${key}_${i}.${ext}`
       fs.writeFileSync(path.join(dir, file), Buffer.from(u.slice(u.indexOf('base64,') + 7), 'base64'))
-      return `/xingce/${paperId}/${file}`
+      return `/xingce-img/${paperId}/${file}`
     })
     return JSON.stringify(paths)
   }

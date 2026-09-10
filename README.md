@@ -1,21 +1,26 @@
 # 读本 READBOOK
 
-每日人民日报深度内容与申论素材的精读工作台。从 `design/` 静态 HTML 原型（视觉已验收）转换而来的 Vite + React + TypeScript 应用，首版数据层使用 `localStorage`，后续可通过替换 Repository 数据访问层接入后端。
+每日人民日报深度内容与申论素材的精读工作台，并叠加国考**申论真题溯源**与**行测刷题**两条练习线。从 `design/` 静态 HTML 原型（视觉已验收）转换而来的 Vite+ / React / TypeScript 应用：数据**本地优先**（Zustand + IndexedDB / localStorage），登录后可按账号**云同步**（Supabase Auth + Postgres，按行 LWW），未配置 Supabase 时整站仍可离线单机使用。
 
 ## 快速开始
 
 ```bash
 pnpm install       # 项目用 pnpm（devEngines 强制，npm 会被拒绝）
 pnpm dev           # 开发服务器 http://localhost:5173（API 另起：pnpm dev:api，或 pnpm dev:all 一键双起）
+pnpm test          # 单元测试（vp test run）
+pnpm lint          # 代码检查（vp lint，0 error 为准）
 pnpm build         # 类型检查 + 生产构建（输出 dist/）
 pnpm preview       # 预览生产构建
 ```
 
+> 工具链是 **Vite+**（`vp` 单 CLI 包办 Vite / Vitest / Oxlint / Oxfmt），不是裸 Vite；`pnpm dev` 内部执行 `vp dev`。约定见 `AGENTS.md`。
+
 ## 技术栈
 
-- **Vite 8 + React 19 + TypeScript 7**
-- **React Router 7** —— 十个页面路由，浏览器前进后退，刷新保持
-- **Zustand 5**（`persist` 中间件）—— 状态管理 + localStorage 持久化
+- **Vite+（vp）+ Vite 8 + React 19 + TypeScript 5** —— 构建 / 测试 / lint / 格式化单 CLI
+- **React Router 7** —— 页面路由（含 `/practice` 行测线、`/login`、`/account`），前进后退，刷新保持
+- **Zustand 5**（`persist` 中间件）—— 状态管理；数据本地优先，localStorage（轻量）+ IndexedDB（文章、学习事件、行测作答）
+- **Supabase**（可选）—— Auth 登录 + Postgres 云同步；未配置环境变量时自动降级为纯本地
 - **Lucide React** —— 工具栏/操作图标
 - **CSS Variables** —— 令牌系统与五套主题（paper/blue/violet/night/graphite，未引入 Tailwind；2026-09 起按 Paper OS 收敛：圆角 10/16 两档、7×8 硬阴影、1180 版心，见 `design/design/DESIGN.md`）
 - 字体：DM Mono / DM Sans / Noto Sans SC / Noto Serif SC / Ma Shan Zheng / LXGW WenKai（Google Fonts）
@@ -24,15 +29,18 @@ pnpm preview       # 预览生产构建
 
 | 路由 | 页面 | 对应设计稿 |
 |---|---|---|
-| `/` | 首页工作台（今日推荐、继续阅读、最近阅读） | `design/pages/app.html` 首页部分 |
+| `/` | 首页工作台（今日推荐、继续阅读、最近阅读、复习队列） | `design/pages/app.html` 首页部分 |
 | `/library` | 文章库（搜索 / 主题 / 来源 / 状态筛选 / 排序 / 分页） | `design/pages/library.html` |
-| `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记） | `design/pages/reading.html` |
+| `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记、申论拆解） | `design/pages/reading.html` |
 | `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
-| `/settings` | 设置（字体、字号、行高、主题、动效、数据导出 / 清空） | `design/pages/settings.html` |
-| `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑） | `scripts/import-exams.mjs` 入库 |
+| `/settings` | 设置（字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html` |
+| `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析 | `scripts/import-exams.mjs` 入库 |
+| `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时） | `docs/行测做题模块设计方案.md` |
+| `/practice/wrong` | 行测错题本（接入复习队列，到期重做） | 同上 X3 |
 | `/terms` | 申论规范词库（1070+ 词，按主题检索） | `scripts/import-guifanci.mjs` 入库 |
 | `/assist` | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK） | `docs/申论写作AI辅助设计方案.md` |
 | `/admin` 系列 | 文章管理（列表 + 录入/编辑编辑器） | — |
+| `/login` · `/account` | 登录 / 账号（资料、同步状态、退出登录） | `sql/profiles.sql` · `sql/sync.sql` |
 
 > 全部进度（P1–P7、AI 线、Paper OS 设计系统落地）**以 `docs/README.md` 的路线图表为唯一真源**；设计系统规范见 `design/design/DESIGN.md`。
 
@@ -41,19 +49,29 @@ pnpm preview       # 预览生产构建
 ## 架构
 
 ```
-localStorage（persist 中间件）
+API /api/*（Vercel Function · node:sqlite 只读：文章 / 真题 / 行测 / 规范词）
      ↓
-Zustand stores（数据访问层，可替换为 REST API / Supabase / Firebase）
+Zustand stores（数据访问层，本地优先）
+     ↓  persist 中间件
+IndexedDB / localStorage
+     ↓  登录后（可选）
+Supabase（Auth + Postgres，按行 LWW 云同步，见 sql/sync.sql）
      ↓
 React 页面组件
 ```
 
 ### 状态拆分
 
-- `useArticleStore` —— 文章数据、阅读进度、收藏（`readbook:articles`）
+- `useArticleStore` —— 文章数据、阅读进度、收藏、本地编辑（`readbook:articles`）
 - `useReaderStore` —— 字号 / 行高 / 字体 / 阅读主题 / 减少动效 / 显示标注（`readbook:reader`）
-- `useAnnotationStore` —— 高亮 / 下划线 / 笔记统一模型（`readbook:annotations`）
+- `useAnnotationStore` —— 高亮 / 下划线 / 笔记统一模型 + 素材类型（`readbook:annotations`）
 - `useThemeStore` —— 页面主题（`readbook:theme`）
+- `useShenlunStore` —— 文章拆解 / 范文精读 / 学习状态
+- `useExamStudyStore` —— 申论真题答案溯源 + 原文标注（`trace#paperId#qIdx` / `mark#paperId#qIdx`）
+- `useXingceStore` —— 行测作答（`paperId#qIdx`）
+- `useLearningEventStore` —— 学习事件流水（append-only，复习算法底座）
+- `useAiStore` / `useAiAssistStore` —— BYOK 配置 / AI 审题作答记录
+- `useAuthStore` —— Supabase 登录态与本机数据清理
 
 ### 数据模型
 
@@ -124,27 +142,34 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 
 ## 端到端冒烟测试
 
-`scripts/e2e-smoke.mjs` 用本机 Microsoft Edge 无头模式跑通核心链路（115 项断言，自动拉起本地 API server）：
+`scripts/e2e.mjs` 一键入口：清理端口 → 拉起 `vp dev` → 运行 `scripts/e2e-smoke.mjs`（用本机 Microsoft Edge 无头模式跑通核心链路，脚本结束打印实际断言项数）：
 
 ```bash
 pnpm add -D playwright-core        # 需要本机安装 Microsoft Edge
-pnpm dev                           # 先启动开发服务器
-node scripts/e2e-smoke.mjs
+pnpm test:e2e                      # 一键：自动起服务 + 跑冒烟 + 收尾
 ```
 
-覆盖：五个路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、刷新后数据仍在。
+覆盖：路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、素材标记与申论拆解、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、数据导入合并、**行测刷题（列表 → 答题 → 判分 → 刷新后持久化 → 错题本）**、**登录页与未登录访问 `/account` 的重定向**、导航入口。共 130+ 项断言（脚本结束打印实际项数）。
 
-## 账号体系（Supabase 全托管：Auth + Postgres）
+> 尚未覆盖：真实 Supabase 的登录 / 退出与 RLS、触发器实际行为（需真实项目或测试账号）。
+> 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，8 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化），随 `pnpm test` 一起跑，不触网。
+
+## 账号体系与云同步（Supabase 全托管：Auth + Postgres）
 
 - 认证：Supabase Auth（邮箱密码 + 魔法链接免密登录），前端 SDK `@supabase/supabase-js`，session 由 SDK 持久化在 localStorage
-- 数据库：Supabase Postgres 的 `public.profiles` 表（昵称等资料）；前端 supabase-js 直连，RLS 行级权限保证每人只能读写自己的行，anon key 可公开
-- 页面：`/login`（登录/注册）、`/account`（资料与退出登录）；导航栏「ACCOUNT」入口未登录时自动指向登录页
-- 定位：当前阶段仅登录身份（各 store 本地数据不动），`profiles.id` 即 Supabase `auth.users.id`，为后续按用户同步阅读进度/笔记预留关联键
+- 资料：Supabase Postgres 的 `public.profiles` 表（昵称等）；RLS 行级权限保证每人只能读写自己的行，anon key 可公开
+- **云同步**（`sql/sync.sql`）：登录后把本机各 store 数据按行 upsert 到 Postgres，多设备一致。策略为**按行 LWW**（最后写入胜出）：
+  - 行表 9 张：`reading_progress` / `annotations`（删除走墓碑）/ `article_study` / `exam_study`（`kind+key` 复合主键）/ `learning_events`（append-only）/ `ai_assists` / `article_edits` / `xg_answers`，另有单行整包 `user_prefs` / `user_ai_config`
+  - 编辑触发**只推不拉**（`runPush`，4s 防抖）；登录首轮 / 窗口聚焦 / 手动「立即同步」才跑全量 push+pull（`runSync`）。两者共用一条串行队列，不会并发写 meta
+  - `updated_at` 由数据库 `now()` 赋值（`sql/sync.sql` v4 触发器），客户端不拿墙钟当权威，避免设备时钟偏差误判新旧
+  - 退出登录：停同步 → 清空本机全部用户数据（含行测作答）与同步时间戳 → 登出；换账号共用浏览器不串数据
+- 页面：`/login`（仅登录，注册已关闭）、`/account`（资料、同步状态、退出登录）；导航「ACCOUNT」未登录时指向登录页
 
 ### 开通步骤
 
 1. 创建 [Supabase](https://supabase.com) 项目，拿到 Project URL 与 anon key；如需免邮箱确认，在 Auth → Providers → Email 关闭 "Confirm email"
-2. Supabase 控制台 → SQL Editor → 粘贴执行 `sql/profiles.sql`（建 profiles 表 + RLS 策略 + 注册自动建行的触发器）
+2. Supabase 控制台 → SQL Editor → 依次粘贴执行 `sql/profiles.sql`（profiles 表 + RLS + 注册建行触发器）与 `sql/sync.sql`（同步表 + RLS + 时间戳触发器；幂等，可重复执行）
+   - 已建过库的：重跑 `sql/sync.sql` 即可补上 v4 时间戳触发器（不跑也能用，只是退回客户端时间戳）
 3. 配置环境变量（参考 `.env.example`）：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`
 4. Supabase Auth → URL Configuration 里把站点域名（本地 `http://localhost:5173` 与线上域名）加入 Redirect URLs，魔法链接与邮箱确认链接才能回跳
 

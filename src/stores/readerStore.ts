@@ -37,7 +37,6 @@ interface ReaderState {
   setReducedMotion: (v: boolean) => void
   setShowAnnotations: (v: boolean) => void
   setFocusMode: (v: boolean) => void
-  setMeasure: (v: ReaderSettings['measure']) => void
   setIndent: (v: boolean) => void
   setTermBox: (v: boolean) => void
   setSinglesPerScreen: (n: number) => void
@@ -57,7 +56,6 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   reducedMotion: false,
   showAnnotations: true,
   focusMode: false,
-  measure: 'normal',
   indent: true,
   termBox: true,
   singlesPerScreen: 10,
@@ -82,7 +80,6 @@ export const useReaderStore = create<ReaderState>()(
       setReducedMotion: (v) => set((s) => ({ settings: { ...s.settings, reducedMotion: v } })),
       setShowAnnotations: (v) => set((s) => ({ settings: { ...s.settings, showAnnotations: v } })),
       setFocusMode: (v) => set((s) => ({ settings: { ...s.settings, focusMode: v } })),
-      setMeasure: (v) => set((s) => ({ settings: { ...s.settings, measure: v } })),
       setIndent: (v) => set((s) => ({ settings: { ...s.settings, indent: v } })),
       setTermBox: (v) => set((s) => ({ settings: { ...s.settings, termBox: v } })),
       setSinglesPerScreen: (n) =>
@@ -92,16 +89,18 @@ export const useReaderStore = create<ReaderState>()(
     }),
     {
       name: 'readbook:reader',
-      version: 3,
+      version: 4,
       // v1：移除「黑体」选项，旧设置映射到思源宋体
       // v2：新增 focusMode / measure / indent，旧数据用默认值补齐（防止字段缺失为 undefined）
       // v3：新增 singlesPerScreen（行测练习每组题数），旧数据用默认值补齐
+      // v4：移除「版面宽度」（narrow 收窄）选项，历史字段一并清掉
       migrate: (persisted) => {
-        const p = persisted as { settings?: { fontFamily?: string } }
+        const p = persisted as { settings?: Record<string, unknown> }
         if (p.settings?.fontFamily === 'heiti') {
           p.settings.fontFamily = 'songti'
         }
         p.settings = { ...DEFAULT_SETTINGS, ...p.settings }
+        delete p.settings.measure
         return p as never
       },
     },

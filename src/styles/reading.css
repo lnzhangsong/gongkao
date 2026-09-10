@@ -116,11 +116,6 @@
   text-indent: 2em;
 }
 
-/* 版面收窄：约 40 字/行的舒适栏宽（设置 → 阅读偏好） */
-.reading-layout.narrow-measure > article {
-  max-width: min(100%, 720px);
-}
-
 /* 关闭段首缩进 */
 .article-body.no-indent > p {
   text-indent: 0;

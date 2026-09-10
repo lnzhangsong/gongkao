@@ -557,7 +557,7 @@ export function ReadingPage() {
         onToggleFocus={() => setFocusMode(!settings.focusMode)}
         onOpenShenlun={openShenlun}
       />
-      <main className={`reading-layout fade-in${settings.measure === 'narrow' ? ' narrow-measure' : ''}`}>
+      <main className="reading-layout fade-in">
         <TermDwellTracker articleId={articleId} />
         <article data-study-inline={studyInline ? 'on' : undefined}>
           <header className="article-head">

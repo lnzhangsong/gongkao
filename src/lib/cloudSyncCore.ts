@@ -37,7 +37,14 @@ export function diffRows<T>(
   return { upserts, tombstones }
 }
 
-/** Pull 判定：云端行是否应应用到本地（严格晚于 meta 记录的时间戳才算新） */
+/**
+ * Pull 判定：云端行是否应应用到本地（严格晚于 meta 记录的时间戳才算新）。
+ *
+ * 用字符串字典序比较：客户端 `toISOString()`（…123Z）与 Postgres（…123456+00:00）
+ * 的 `YYYY-MM-DDTHH:MM:SS.` 前缀格式一致，跨毫秒判定正确；同毫秒内两种写法不可比，
+ * 但那是亚毫秒窗口，且字符串比较能保留 Postgres 的微秒精度（Date.parse 会截断到毫秒，
+ * 反而无法区分同一毫秒内的两次写入）。不改成时间解析。
+ */
 export function shouldApply(cloudUpdatedAt: string, metaUpdatedAt: string | undefined): boolean {
   if (!metaUpdatedAt) return true
   return cloudUpdatedAt > metaUpdatedAt
@@ -53,4 +60,21 @@ export function mergePages<T>(pages: CloudRow<T>[][]): Map<string, CloudRow<T>> 
   const merged = new Map<string, CloudRow<T>>()
   for (const page of pages) for (const row of page) merged.set(row.k, row)
   return merged
+}
+
+/**
+ * 从云端行还原逻辑键。各表主键列名不同：
+ * annotations=ann_id / progress·study·edits=article_id / learning_events=event_id /
+ * ai_assists=assist_id / xg_answers=key，而 exam_study 是 (kind, key) 复合主键，
+ * 必须还原成 `trace#paperId#qIdx`，否则 apply 会把 kind 拆错、记录被静默丢弃。
+ */
+export function rowKey(r: Record<string, unknown>): string {
+  const kind = r.kind
+  const key = r.key
+  if (typeof kind === 'string' && typeof key === 'string') return `${kind}#${key}`
+  for (const col of ['ann_id', 'assist_id', 'article_id', 'event_id', 'key'] as const) {
+    const v = r[col]
+    if (typeof v === 'string' && v) return v
+  }
+  return ''
 }

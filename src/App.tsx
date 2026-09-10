@@ -20,7 +20,6 @@ const AssistPage = lazy(() => import('./pages/AssistPage').then((m) => ({ defaul
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
 const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
-import { useAuthStore } from './stores/authStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
 import { prefetchIdle } from './lib/api'
@@ -87,7 +86,9 @@ function App() {
   /* 启动时从 API 加载文章列表（meta，不含正文）；同时恢复登录会话 */
   useEffect(() => {
     void useArticleStore.getState().hydrate()
-    useAuthStore.getState().init()
+    /* 动态加载：authStore 会拉入 supabase-js + 云同步 + 各数据 store（约 57KB gzip），
+       而登录是可选能力。首屏只读轻量的 authStatus（Nav 用），SDK 异步补上 */
+    void import('./stores/authStore').then((m) => m.useAuthStore.getState().init())
     // 首屏动画最短展示时长：即使 API 秒回，也让 loading 完整呈现
     const t = window.setTimeout(() => setMinElapsed(true), LOADING_MIN_MS)
     return () => window.clearTimeout(t)

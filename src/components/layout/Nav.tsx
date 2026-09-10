@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { CircleUserRound, Menu, X } from 'lucide-react'
-import { useAuthStore } from '../../stores/authStore'
+import { useAuthStatusStore } from '../../stores/authStatus'
 
 const LINKS = [
   { to: '/', label: 'READ', end: true },
@@ -24,8 +24,9 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
-  /* 账号入口：已登录指向 /account，未登录指向 /login（统一用「ACCOUNT」，页面内部再分流） */
-  const authed = useAuthStore((s) => s.status === 'in')
+  /* 账号入口：已登录指向 /account，未登录指向 /login（统一用「ACCOUNT」，页面内部再分流）。
+     只读轻量的 authStatus，不把 supabase-js 拖进首屏 chunk */
+  const authed = useAuthStatusStore((s) => s.status === 'in')
   const accountTo = authed ? '/account' : '/login'
 
   /* 移动端面板的每个 NavLink 自带 onClick 收起（见下方渲染），

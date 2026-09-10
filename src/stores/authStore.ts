@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { startCloudSync, stopCloudSync } from '../lib/cloudSync'
 import { track } from '../lib/analytics'
+import { useAuthStatusStore, type AuthUser, type AuthProfile } from './authStatus'
 import { useArticleStore } from './articleStore'
 import { useAnnotationStore } from './annotationStore'
 import { useShenlunStore } from './shenlunStore'
@@ -15,16 +16,15 @@ import { useReaderStore } from './readerStore'
 import { useThemeStore } from './themeStore'
 
 /**
- * 账号体系（Supabase 全托管）：
+ * 账号体系（Supabase 全托管）——**动作层**。
+ *
  * - 认证：Supabase Auth；资料：Supabase Postgres 的 public.profiles 表（RLS 限本人读写）
- * - session 由 supabase-js 持久化在 localStorage，这里只做内存镜像与派生状态
+ * - 登录态存在轻量 store `useAuthStatusStore`（首屏 Nav 要同步读取，不能拖入 supabase-js），
+ *   本模块只放动作，并由 App 动态 import —— 连同 supabase-js 与云同步一起按需加载
+ * - session 由 supabase-js 持久化在 localStorage，这里只做内存镜像
  * - 未配置 VITE_SUPABASE_URL/ANON_KEY 时 supabase 为 null，整站功能不受影响
  */
-interface AuthState {
-  /** 'init' 恢复会话中 | 'unavailable' 未配置 Supabase | 'out' | 'in' */
-  status: 'init' | 'unavailable' | 'out' | 'in'
-  user: User | null
-  profile: { nickname: string | null; email: string | null }
+interface AuthActions {
   /** 恢复会话 + 订阅登录态变化（App 启动时调用一次） */
   init: () => void
   signUp: (email: string, password: string) => Promise<{ needsConfirm: boolean }>
@@ -37,7 +37,13 @@ interface AuthState {
   refreshProfile: () => Promise<void>
 }
 
-function toProfile(user: User | null, nickname: string | null): { nickname: string | null; email: string | null } {
+/** 当前登录用户（轻量镜像，只含 UI 需要的字段） */
+const currentUser = () => useAuthStatusStore.getState().user
+
+function toUser(user: User | null): AuthUser | null {
+  return user ? { id: user.id, email: user.email ?? null } : null
+}
+function toProfile(user: User | null, nickname: string | null): AuthProfile {
   return { nickname, email: user?.email ?? null }
 }
 
@@ -63,28 +69,24 @@ function clearLocalData() {
 
 /** 登录成功后的统一处理：置状态 + 拉取 profile（失败静默，不影响登录） */
 function onSignedIn(user: User) {
-  useAuthStore.setState({ status: 'in', user, profile: toProfile(user, null) })
+  useAuthStatusStore.setState({ status: 'in', user: toUser(user), profile: toProfile(user, null) })
   void useAuthStore.getState().refreshProfile()
   startCloudSync()
   track('auth_login', { provider: user.app_metadata?.provider ?? 'email' })
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
-  status: supabase ? 'init' : 'unavailable',
-  user: null,
-  profile: { nickname: null, email: null },
-
+export const useAuthStore = create<AuthActions>()(() => ({
   init: () => {
     if (!supabase) return
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) onSignedIn(data.session.user)
-      else set({ status: 'out' })
+      else useAuthStatusStore.setState({ status: 'out' })
     })
     supabase.auth.onAuthStateChange((_event, session: Session | null) => {
       if (session?.user) onSignedIn(session.user)
       else {
         stopCloudSync()
-        set({ status: 'out', user: null, profile: { nickname: null, email: null } })
+        useAuthStatusStore.setState({ status: 'out', user: null, profile: { nickname: null, email: null } })
       }
     })
   },
@@ -121,17 +123,17 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   rename: async (nickname) => {
-    const user = get().user
+    const user = currentUser()
     if (!supabase || !user) throw new Error('未登录')
     const clean = nickname.trim().slice(0, 24)
     /* upsert 必须带主键 id，PostgREST 才能定位行（首登补建行竞态下也幂等） */
     const { error } = await supabase.from('profiles').upsert({ id: user.id, nickname: clean })
     if (error) throw error
-    set((s) => ({ profile: { ...s.profile, nickname: clean } }))
+    useAuthStatusStore.setState((s) => ({ profile: { ...s.profile, nickname: clean } }))
   },
 
   refreshProfile: async () => {
-    const user = get().user
+    const user = currentUser()
     if (!supabase || !user) return
     const { data, error } = await supabase.from('profiles').select('nickname').eq('id', user.id).maybeSingle()
     if (error) return /* 表未建/网络失败不阻塞登录使用 */
@@ -140,6 +142,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       await supabase.from('profiles').insert({ id: user.id })
       return
     }
-    set({ profile: toProfile(user, data.nickname) })
+    useAuthStatusStore.setState({ profile: { nickname: data.nickname ?? null, email: user.email } })
   },
 }))

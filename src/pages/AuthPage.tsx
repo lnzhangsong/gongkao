@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
+import { useAuthStatusStore } from '../stores/authStatus'
 import { toast } from '../components/ui/toastStore'
 import '../styles/auth.css'
 
@@ -11,7 +12,7 @@ type Notice = { kind: 'info' | 'error'; text: string } | null
 /** 登录 / 注册页（/login）。未配置 Supabase 时给出提示并保留返回入口 */
 export function AuthPage() {
   const navigate = useNavigate()
-  const status = useAuthStore((s) => s.status)
+  const status = useAuthStatusStore((s) => s.status)
   const signIn = useAuthStore((s) => s.signIn)
   const signInWithMagicLink = useAuthStore((s) => s.signInWithMagicLink)
 

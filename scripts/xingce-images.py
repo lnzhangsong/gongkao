@@ -24,6 +24,8 @@ QNUM_RE = re.compile(r"^(\d{1,3})[.．]\s*")
 OPT_SPLIT_RE = re.compile(r"(?:^|\n|\s)([A-E])[．.]\s*")
 ANS_RE = re.compile(r"^(\d{1,3})[.．]\s*([A-E])\s*项?。", re.M)
 PAGEFOOT_RE = re.compile(r"第\d+页[,，]?\s*共?\d*页?|^第\s*\d+\s*部分|^\d{1,3}$")
+# 题干提到图但 JSON 里没图：文字被 OCR 收录、图形被丢的题（数量关系几何 / 图形推理由图选项）
+FIG_REF_RE = re.compile(r"下图|左图|右图|六个图形|如图")
 ZOOM = 2.5
 PAGE_MARGIN_X = 40
 PAGE_MARGIN_Y = 36
@@ -118,7 +120,8 @@ def crop_pngs(doc, start, end):
     for pno, y0, y1 in spans:
         if y1 - y0 < 8:
             continue
-        clip = pymupdf.Rect(PAGE_MARGIN_X, y0, doc[pno].rect.width - PAGE_MARGIN_X, y1)
+        # x 不钳页边距：材料图表有放置到 x>width-PAGE_MARGIN_X 的，钳住会切掉右端
+        clip = pymupdf.Rect(0, y0, doc[pno].rect.width, y1)
         pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=clip)
         png = pix.tobytes("png")
         if len(png) < 20_000:
@@ -144,15 +147,95 @@ def spans_of(doc, start, end):
     return out
 
 
-def question_pngs(doc, start, end):
-    """整题截图：图形/选项是内嵌图片，以下方最后一张图的底边为裁图下界，
-    尾随的下一题题干/页码不进来；中间无内嵌图的整页（下一大题文字页）跳过。
-    区域内完全没有内嵌图时退回区间裁法（矢量图形兜底）。"""
-    out = []
+def split_text_options(stem_texts):
+    """文字题选项拆分：以「单字母 + 空格或点」开头的行起新选项（「A 甲在…」「B.乙在…」混用），
+    其余行续接上一选项。键序须恰为 A-D 才认；否则返回 None（调用方沿用旧文本/旧选项）。"""
+    marks = []
+    for i, ln in enumerate(stem_texts):
+        m = re.match(r"^([A-E])(?:[.．]\s*|\s+)", ln)
+        if m:
+            marks.append((i, m.group(1)))
+    sel: list[tuple[int, str]] = []
+    ki = 0
+    for i, k in marks:
+        if ki < 4 and k == "ABCD"[ki]:
+            sel.append((i, k))
+            ki += 1
+    if ki != 4:
+        return None
+    stem_lines = stem_texts[: sel[0][0]]
+    opts = []
+    for j, (i, k) in enumerate(sel):
+        end = sel[j + 1][0] if j + 1 < len(sel) else len(stem_texts)
+        text = re.sub(r"^[A-E][.．]?\s*", "", stem_texts[i]) + "".join(stem_texts[i + 1 : end])
+        opts.append({"key": k, "text": text.strip()})
+    return stem_lines, opts
+
+
+def clean_watermark(doc):
+    """引流版水印的构成：内容贴图 = 彩色水印平铺(底图) + SMask 透明通道抠出图形形状
+    （alpha≈255 图形黑、≈0 透白、中间为半透明水印层）。SMask 二值化后水印消失、图形不变。"""
+    table = bytes(255 if v >= 200 else 0 for v in range(256))
+    fixed = 0
+    for x in range(1, doc.xref_length()):
+        try:
+            if doc.xref_get_key(x, "Subtype") != ("name", "/Image"):
+                continue
+            st, val = doc.xref_get_key(x, "SMask")
+        except Exception:
+            continue  # 引流版 PDF 有悬空 xref 条目
+        if st != "xref":
+            continue
+        try:
+            pix = pymupdf.Pixmap(doc, int(val.split()[0]))
+        except Exception:
+            continue
+        if pix.colorspace is None or pix.colorspace.n != 1:
+            continue
+        doc.update_stream(int(val.split()[0]), pix.samples.translate(table), compress=True)
+        fixed += 1
+    return fixed
+
+
+def trimmed_png(doc, pno, clip, pad=5):
+    """渲染后按非白像素收紧再留 pad 边：内容贴图的 bbox 常带大片空白边。"""
+    pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=clip)
+    w, h, n = pix.width, pix.height, pix.n
+    s = pix.samples
+    stride = w * n
+
+    def min_row(y):
+        return min(s[y * stride:(y + 1) * stride])
+
+    def min_col(x):
+        return min(min(s[x * n + c::stride]) for c in range(n))
+
+    top = next((y for y in range(h) if min_row(y) < 245), None)
+    if top is None:
+        return pix.tobytes("png")  # 空白片照原样返回，交给调用方的大小过滤
+    bot = next(y for y in range(h - 1, -1, -1) if min_row(y) < 245)
+    left = next(x for x in range(w) if min_col(x) < 245)
+    right = next(x for x in range(w - 1, -1, -1) if min_col(x) < 245)
+    nclip = pymupdf.Rect(
+        max(clip.x0, clip.x0 + left / ZOOM - pad),
+        max(clip.y0, clip.y0 + top / ZOOM - pad),
+        min(clip.x1, clip.x0 + (right + 1) / ZOOM + pad),
+        min(clip.y1, clip.y0 + (bot + 1) / ZOOM + pad),
+    )
+    return doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=nclip).tobytes("png")
+
+
+def question_parts(doc, lines, start, end, qrect):
+    """整题拆成 (题干文本行, 截图 bytes 列表)。
+    图形题：题干 = 题号行（qrect）+ 题号行之下、首页首张内嵌图上沿之上的文字行，随文本渲染不进图；
+    截图从首图上沿裁到末图下沿（图形、选项字母仍随图）。首页无图的跨页题整页文字归题干。
+    纯文字题（区域内无内嵌图）：跨页取全 span 文字归题干、截图为空列表。"""
+    sp = start[0]
+    sr = qrect
     spans = spans_of(doc, start, end)
-    sp = spans[0][0]
-    any_img = False
+    stem_bottom = None  # 首页题干区下沿（首张内嵌图上沿）
     trimmed: list[tuple[int, int, int]] = []
+    any_img = False
     for pno, y0, y1 in spans:
         if y1 - y0 < 8:
             continue
@@ -160,24 +243,52 @@ def question_pngs(doc, start, end):
             pymupdf.Rect(i["bbox"])
             for i in doc[pno].get_image_info()
             if i["bbox"][1] >= y0 - 6 and i["bbox"][3] <= y1 + 6 and i["bbox"][0] < doc[pno].rect.width - PAGE_MARGIN_X
+            # 页顶「优公教育」广告条：小 logo 图（h≈18pt）贴着页顶，排除后广告文字也落在裁图外
+            and not (i["bbox"][3] - i["bbox"][1] <= 25 and i["bbox"][1] <= PAGE_MARGIN_Y + 30)
         ]
         if rects:
             any_img = True
-            bottom = min(y1, max(r.y1 for r in rects) + 6)
-            trimmed.append((pno, y0, bottom))
-        elif pno == sp:
-            trimmed.append((pno, y0, y1))  # 首页至少保留题干文字
-        # 中间页/尾页无图：是下一题的文字，跳过
+            top = min(r.y0 for r in rects) - 6
+            if pno == sp:
+                stem_bottom = top
+            trimmed.append((pno, top, min(y1, max(r.y1 for r in rects) + 6)))
+        # 无图页：首页纯题干不出图；中间/尾页无图是下一题的文字，跳过
     if not any_img:
-        return crop_pngs(doc, start, end)
+        # 纯文字题：跨页取全 span 文字归题干
+        stem_texts = []
+        for pno, rect, text in lines:
+            if PAGEFOOT_RE.match(text):
+                continue
+            if any(p == pno and y0 - 2 <= rect.y0 < y1 + 2 for p, y0, y1 in spans) and (
+                pno != sp or rect.y0 >= sr.y0 - 1
+            ):
+                stem_texts.append(text)
+        return stem_texts, []
+    if stem_bottom is None:
+        stem_bottom = doc[sp].rect.height - FOOTER  # 题干在首页、图形在后续页
+    stem_texts = []
+    stem_y1 = None  # 首页题干行最低底边
+    for pno, rect, text in lines:
+        if pno != sp or PAGEFOOT_RE.match(text):
+            continue
+        # 题干行 = 从题号行起、起始位置在图区上沿之前的行（行底可能紧贴甚至齐平图沿）
+        if rect.y0 >= sr.y0 - 1 and rect.y0 < stem_bottom + 2:
+            stem_texts.append(text)
+            stem_y1 = max(stem_y1 or 0, rect.y1)
+    # 裁图上沿让位：不切进题干行的下半截（题干底边与图形间隙不足 6pt 时按题干底边起裁）
+    if trimmed and trimmed[0][0] == sp and stem_y1 is not None:
+        p0, y0, y1 = trimmed[0]
+        trimmed[0] = (p0, min(max(y0, stem_y1 + 2), y1), y1)
+    out = []
     for pno, y0, y1 in trimmed:
-        clip = pymupdf.Rect(PAGE_MARGIN_X, y0, doc[pno].rect.width - PAGE_MARGIN_X, y1)
-        pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=clip)
-        png = pix.tobytes("png")
-        if len(png) < 20_000:
+        # x 不钳页边距：部分图形条（六宫格等）放置到 x>width-PAGE_MARGIN_X，钳住会切掉右端
+        clip = pymupdf.Rect(0, y0, doc[pno].rect.width, y1)
+        png = trimmed_png(doc, pno, clip)
+        # 5KB：题干已剥出，简单线条图形（正方体组合等）压得比带题干的整块小得多
+        if len(png) < 5_000:
             continue
         out.append(png)
-    return out
+    return stem_texts, out
 
 
 def parse_answers(pdf: Path):
@@ -222,6 +333,9 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
     existing = {q["idx"] for q in paper["questions"]}
     max_q = max(existing)
     doc = pymupdf.open(str(paper_pdf))
+    wm = clean_watermark(doc)
+    if wm:
+        print(f"  水印清理：{wm} 张贴图")
     lines = build_index(doc)
     chain = question_chain(lines, max_q + 1)
 
@@ -290,31 +404,25 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             img_by_group[gid] = to_dataurls(pngs)
             print(f"  组{gid}（{members[0]}-{members[-1]}）材料截图 {len(pngs)} 张")
 
-    # 2) 恢复被丢的图片形态题（JSON 里缺号的）
+    # 2) 图片形态题：JSON 里缺号的恢复；已有 image 的重裁一遍
+    #    （题干行改为文本渲染、截图只留图形区，2026-09-11）
     answers = parse_answers(ans_pdf)
+    by_idx = {q["idx"]: q for q in paper["questions"]}
     missing = [n for n in range(1, max_q + 1) if n not in existing]
+    # 候选：已有 image 的重裁；题干提到图但没图的补图（2026-09-11）
+    need_img = {n for n, q in by_idx.items()
+                if not q.get("image") and FIG_REF_RE.search(q.get("stem") or "")}
     restored = []
-    for n in missing:
+    recropped = 0
+    stub: list[int] = []  # 源 PDF 即为存根（「N.缺」）的文字题
+    for n in sorted(set(missing) | {n for n, q in by_idx.items() if q.get("image")} | need_img):
         if n not in chain:
-            print(f"  ! 题{n}：试卷 PDF 未定位到，跳过")
+            if n in missing:
+                print(f"  ! 题{n}：试卷 PDF 未定位到，跳过")
             continue
-        endpos = bound_after(n, (chain[n][0], chain[n][1].y1))
-        pngs = question_pngs(doc, (chain[n][0], chain[n][1].y0 - 2), endpos)
-        if not pngs:
-            continue
-        # 题干文本：定位行到裁图下界之间的文字（过滤页脚/页码）
-        sp, sr = chain[n]
-        ep, er = endpos
-        texts = []
-        for pno, rect, text in lines:
-            if (pno > sp or (pno == sp and rect.y0 > sr.y1)) and (pno < ep or (pno == ep and rect.y1 < er + 2)):
-                if not PAGEFOOT_RE.match(text):
-                    texts.append(text)
-        stem, opts = split_stem_options(" ".join(texts), n)
-        stem = re.sub(r"^\d{1,3}[.．]\s*", "", stem)
-        # 图片选项题里尾粘进题干的选项字母（「…占比关系的是：D」）
-        stem = re.sub(r"[：:，,。]\s*[A-E]\s*[.．]?\s*$", "", stem).rstrip()
-        ans, expl = answers.get(n, (None, None))
+        old = by_idx.get(n)
+        had_img = bool(old and old.get("image"))
+        opts = old["options"] if old else [{"key": k, "text": ""} for k in "ABCD"]
         # section/groupId 继承相邻题（资料分析里的图形题不是图形推理）
         prev_q = next((q for q in reversed(paper["questions"]) if q["idx"] < n), None)
         next_q = next((q for q in paper["questions"] if q["idx"] > n), None)
@@ -323,6 +431,62 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             section, subtype, gid = prev_q["section"], None, prev_q["groupId"]
         elif prev_q and next_q and prev_q.get("groupId") and prev_q["groupId"] == next_q.get("groupId"):
             section, subtype, gid = prev_q["section"], None, prev_q["groupId"]
+        start = (chain[n][0], chain[n][1].y0 - 2)
+        stem_texts, pngs = question_parts(doc, lines, start, bound_after(n, (chain[n][0], chain[n][1].y1)), chain[n][1])
+        if stem_texts:
+            # 题号行已并入 stem_texts：先剥行首题号，防 split 内 cut_leak(·, n) 误切在题号上；
+            # 中文行直接相连，不走空格 join（否则「分类正/确的一项是」会拼出「正 确」）
+            raw = re.sub(r"^\d{1,3}[.．]\s*", "", "".join(stem_texts))
+            stem, opts2 = split_stem_options(raw, n)
+            # 图片选项题里尾粘进题干的选项字母（「…占比关系的是：D」）
+            stem = re.sub(r"[：:，,。]\s*[A-E]\s*[.．]?\s*$", "", stem).rstrip()
+        else:
+            stem, opts2 = "", []
+        if not pngs:
+            # 纯文字题（区域内无内嵌图）：完整题干走文本，撤销历史上误挂的整题截图
+            split_result = split_text_options(stem_texts)
+            stem_lines, opts2 = split_result if split_result else (stem_texts, [])
+            raw = re.sub(r"^\d{1,3}[.．]\s*", "", "".join(stem_lines))
+            stem = cut_ad(cut_leak(raw, n)).rstrip()
+            ans, expl = answers.get(n, (None, None))
+            if old:
+                if not had_img:
+                    continue  # 本就是文字题且未挂图，无需动
+                if stem:
+                    old["stem"] = stem
+                if opts2:
+                    old["options"] = opts2
+                old["image"] = None
+                recropped += 1
+                print(f"  题{n} 转文字题：题干 {len(old['stem'])} 字，选项 {len(opts2) or '沿用旧值'}，移除整题截图")
+                continue
+            if len(stem) < 10:
+                stub.append(n)
+                print(f"  ! 题{n}：源 PDF 即为存根（题干 {len(stem)} 字），不恢复")
+                continue
+            restored.append({
+                "idx": n,
+                "section": section,
+                "subtype": subtype if section == "判断推理" else None,
+                "groupId": gid,
+                **({"groupStem": prev_q["groupStem"], "groupImage": img_by_group.get(gid)} if gid and prev_q.get("groupStem") else {}),
+                "stem": stem or f"第{n}题（见配图）",
+                "options": opts2 or opts,
+                "answer": ans,
+                "explanation": expl,
+                "image": None,
+            })
+            print(f"  题{n} 恢复（文字题）：{section}{gid or ''} 题干 {len(stem)} 字，答案 {ans or '缺'}")
+            continue
+        if not stem:
+            stem = old["stem"] if old else f"第{n}题（见配图）"
+        if old:
+            old["stem"] = stem
+            old["image"] = to_dataurls(pngs)
+            recropped += 1
+            print(f"  题{n} {'重裁' if had_img else '补图'}：题干 {len(stem)} 字，截图 {len(pngs)} 张")
+            continue
+        ans, expl = answers.get(n, (None, None))
         restored.append({
             "idx": n,
             "section": section,
@@ -363,13 +527,16 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
         for o in q["options"]:
             o["text"] = decontam(o["text"])
     unloc = [n for n in missing if n not in chain]
-    if unloc:
+    if unloc or stub:
         paper["warnings"] = [w for w in (paper.get("warnings") or []) if "源 PDF 缺题" not in w]
-        paper["warnings"].append(f"题号 {unloc} 在试卷源 PDF 中即为「缺」（引流版缺题），无法恢复")
-        paper["warnings"] = [w for w in (paper.get("warnings") or [])
-                             if "未收录" not in w and "图片形态" not in w]
-        paper["warnings"].append(
-            f"图形/图片选项题 {len(restored)} 题以整题截图恢复（image 字段），文字系 PDF 文本层原文")
+        if unloc:
+            paper["warnings"].append(f"题号 {unloc} 在试卷源 PDF 中即为「缺」（引流版缺题），无法恢复")
+        if stub:
+            paper["warnings"].append(f"题号 {stub} 在试卷源 PDF 中即为「缺」（引流版缺题），无法恢复")
+    paper["warnings"] = [w for w in (paper.get("warnings") or [])
+                         if "未收录" not in w and "图片形态" not in w]
+    paper["warnings"].append(
+        f"图形/图片形态题以「题干文本 + 图形区截图」存储：本轮重裁 {recropped} 题、新恢复 {len(restored)} 题")
     json_path.write_text(json.dumps(paper, ensure_ascii=False, indent=1))
     doc.close()
     print(f"✓ {json_path.name}：组图 {len(img_by_group)} 组，恢复 {len(restored)} 题")

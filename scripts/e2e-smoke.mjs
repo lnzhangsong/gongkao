@@ -929,6 +929,32 @@ if (xgCards > 0) {
       '刷新后作答与判分仍在',
       (await page.locator('.practice-sheet-cell.is-right, .practice-sheet-cell.is-wrong').count()) > 0,
     )
+
+    /* ---------- 键盘作答（刷题提速）：Esc 关答题卡 → ←/→ 翻屏 → A–E 直选 → Enter 提交 ---------- */
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(250)
+    check('键盘 Esc 收起答题卡', (await page.locator('.practice-sheet-body').count()) === 0)
+
+    const headSel = '.practice-group .content-head span'
+    const headBefore = await page.locator(headSel).first().innerText()
+    await page.keyboard.press('ArrowRight')
+    await page.waitForTimeout(300)
+    const headAfter = await page.locator(headSel).first().innerText()
+    check('键盘 → 翻到下一屏', headAfter !== headBefore, `${headBefore} → ${headAfter}`)
+    await page.keyboard.press('ArrowLeft')
+    await page.waitForTimeout(300)
+    check('键盘 ← 翻回上一屏', (await page.locator(headSel).first().innerText()) === headBefore)
+
+    /* 连按选项键：依次落到本组每道未判分的题（上限 10 题/屏，两个 abcde 周期足够） */
+    const verdictsBefore = await page.locator('.practice-verdict').count()
+    for (let i = 0; i < 20; i++) await page.keyboard.press('abcde'[i % 5])
+    await page.waitForTimeout(200)
+    check('键盘连按可顺序作答', (await page.locator('.practice-opt.picked').count()) > 0)
+
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(400)
+    check('键盘 Enter 提交本组', (await page.locator('.practice-verdict').count()) > verdictsBefore)
+    check('整组判分小结出现', (await page.locator('.practice-summary').count()) > 0)
   }
 
   await open('/practice/wrong')

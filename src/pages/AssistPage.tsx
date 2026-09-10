@@ -18,6 +18,7 @@ import {
 import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { useLearningEventStore } from '../stores/learningEventStore'
 import { echoCompare } from '../lib/mastery'
+import { useMountedAt } from '../lib/useMountedAt'
 import { draftFramework, type MaterialCandidate } from '../lib/aiAssist'
 import { track } from '../lib/analytics'
 import { inferExamCandidates, draftFullExam, type InferExamResult } from '../lib/aiExamGen'
@@ -50,6 +51,8 @@ export function AssistPage() {
   /* ---------- 素材候选：素材标注 × 文章 meta，按主题筛选 ---------- */
   const articleById = useMemo(() => new Map(articles.map((a) => [a.id, a] as const)), [articles])
   const events = useLearningEventStore((s) => s.events)
+  /* 排序基准时刻（挂载时取一次）：渲染期不读时钟 */
+  const mountedAt = useMountedAt()
   /* 回声排序（使用即复习）：可提取概率低的素材排前，AI 更容易挑中它们——用一次就是复习一次 */
   const materials = useMemo<MaterialCandidate[]>(() => {
     const list: MaterialCandidate[] = []
@@ -59,8 +62,8 @@ export function AssistPage() {
       if (topic && art?.topic !== topic) continue
       list.push({ annotation: a, articleTitle: art?.title ?? a.articleId, articleTopic: art?.topic })
     }
-    return list.sort((x, y) => echoCompare(x, y, events))
-  }, [annotations, articleById, topic, events])
+    return list.sort((x, y) => echoCompare(x, y, events, mountedAt))
+  }, [annotations, articleById, topic, events, mountedAt])
 
   /* ---------- AI-4 反向联想：从文章联想到命题角度（?infer=<articleId>，拆解面板入口） ---------- */
   const [searchParams, setSearchParams] = useSearchParams()

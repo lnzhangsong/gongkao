@@ -13,13 +13,13 @@ import type { LearningEvent } from '../stores/learningEventStore'
 
 const RE_REVIEW_DAYS = 7
 
-export function reviewQueue(annotations: Annotation[], events: LearningEvent[]): Annotation[] {
+/** 到期队列：池筛选 + 到期规则 + 排序。`now` 由调用方传入（同 mastery，保持渲染纯性） */
+export function reviewQueue(annotations: Annotation[], events: LearningEvent[], now: number): Annotation[] {
   const lastAt = new Map<string, string>()
   for (const e of events) {
     const prev = lastAt.get(e.objectId)
     if (!prev || e.at > prev) lastAt.set(e.objectId, e.at)
   }
-  const now = Date.now()
   const pool = annotations.filter(
     (a) =>
       a.kind === 'highlight' && (a.materialType === 'quote' || a.materialType === 'pattern') && a.memorized === true,

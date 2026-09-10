@@ -37,8 +37,8 @@ export function HomePage() {
   const events = useLearningEventStore((s) => s.events)
   const eventsHydrated = useLearningEventStore((s) => s._hasHydrated)
   const dueCount = useMemo(
-    () => (eventsHydrated ? reviewQueue(annotations, events).length : 0),
-    [annotations, events, eventsHydrated],
+    () => (eventsHydrated ? reviewQueue(annotations, events, mountedAt).length : 0),
+    [annotations, events, eventsHydrated, mountedAt],
   )
 
   /** 进行中的阅读（有进度、未读完、最近读过） */

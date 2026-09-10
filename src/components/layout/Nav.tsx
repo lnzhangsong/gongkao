@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { CircleUserRound, Menu, X } from 'lucide-react'
-import { useAuthStatusStore } from '../../stores/authStatus'
 
 const LINKS = [
   { to: '/', label: 'READ', end: true },
@@ -24,10 +23,9 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
-  /* 账号入口：已登录指向 /account，未登录指向 /login（统一用「ACCOUNT」，页面内部再分流）。
-     只读轻量的 authStatus，不把 supabase-js 拖进首屏 chunk */
-  const authed = useAuthStatusStore((s) => s.status === 'in')
-  const accountTo = authed ? '/account' : '/login'
+  /* 账号已并入设置页（/settings 的「账号」分区），这里的入口只做深链跳转：
+     不再读登录态，导航栏因此完全不依赖 authStatus / supabase-js */
+  const ACCOUNT_TO = '/settings#account'
 
   /* 移动端面板的每个 NavLink 自带 onClick 收起（见下方渲染），
      无需再挂「路由变化 → setState」的 effect（那也会触发级联渲染告警） */
@@ -67,9 +65,8 @@ export function Nav() {
             {l.label}
           </NavLink>
         ))}
-        <NavLink to={accountTo} className={({ isActive }) => (isActive ? 'active' : '')} aria-label="账号">
-          <CircleUserRound size={15} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-          ACCOUNT
+        <NavLink to={ACCOUNT_TO} className="nav-account" aria-label="账号" title="账号（设置页）">
+          <CircleUserRound size={16} />
         </NavLink>
       </div>
       <div className="nav-right">{today()}</div>
@@ -100,7 +97,7 @@ export function Nav() {
               </NavLink>
             ))}
             <NavLink
-              to={accountTo}
+              to={ACCOUNT_TO}
               className={({ isActive }) => (isActive ? 'active' : '')}
               onClick={() => setMenuOpen(false)}
             >

@@ -21,9 +21,9 @@ export function AuthPage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
 
-  /* 已登录直接进账号页（含邮箱确认链接回跳后建立会话的场景） */
+  /* 已登录直接进设置页账号分区（含邮箱确认链接回跳后建立会话的场景） */
   useEffect(() => {
-    if (status === 'in') void navigate('/account', { replace: true })
+    if (status === 'in') void navigate('/settings#account', { replace: true })
   }, [status, navigate])
 
   /* 子页页头：与文库/规范词等 subpage-header 同语言（注册已关闭，仅登录） */
@@ -69,7 +69,7 @@ export function AuthPage() {
     try {
       await signIn(email.trim(), password)
       toast('已登录')
-      void navigate('/account')
+      void navigate('/settings#account')
     } catch (err) {
       setNotice({ kind: 'error', text: err instanceof Error ? err.message : '操作失败，请重试' })
     } finally {

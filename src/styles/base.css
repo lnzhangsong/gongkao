@@ -183,6 +183,7 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
 
 .nav-links {
   display: flex;
+  align-items: center;
   gap: 25px;
   font: 12px var(--mono);
   color: var(--muted);
@@ -202,6 +203,22 @@ button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
 .nav-links a.active {
   color: var(--ink);
   border-bottom: 1px solid var(--ink);
+}
+
+/* 账号入口：内容已并入设置页，这里只留图标做深链（与文字项居中对齐） */
+.nav-links a.nav-account {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+}
+
+.nav-links a.nav-account:hover {
+  color: var(--ink);
+}
+
+/* 在 /settings 上时「SETTINGS」已高亮，图标不再重复加下划线 */
+.nav-links a.nav-account.active {
+  border-bottom-color: transparent;
 }
 
 .nav-right {

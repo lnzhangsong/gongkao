@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { BookOpen, Download, Minus, Plus, Trash2, Upload } from 'lucide-react'
 import { useThemeStore, THEMES } from '../stores/themeStore'
 import { useReaderStore, FONT_FAMILIES } from '../stores/readerStore'
@@ -16,8 +16,10 @@ import { downloadJSON } from '../lib/export'
 import { parseImportData } from '../lib/import'
 import { idbStorage } from '../lib/idbStorage'
 import { alertDialog, confirmDialog } from '../components/ui/confirm'
+import { AccountSection } from '../components/account/AccountSection'
 
 const SECTIONS = [
+  { id: 'account', label: '账号' },
   { id: 'reading', label: '阅读偏好' },
   { id: 'display', label: '显示与主题' },
   { id: 'ai', label: 'AI 服务' },
@@ -62,9 +64,24 @@ export function SettingsPage() {
   const upsertArticles = useArticleStore((s) => s.upsertArticles)
 
   const navigate = useNavigate()
+  const { hash } = useLocation()
 
-  const [active, setActive] = useState('reading')
+  /* 支持 /settings#account 这类深链（导航栏账号图标即走此入口）：
+     初始高亮直接落在目标分区，避免先闪一下「阅读偏好」 */
+  const hashId = hash.replace(/^#/, '')
+  const [active, setActive] = useState(SECTIONS.some((s) => s.id === hashId) ? hashId : 'reading')
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+
+  /* hash 变化时定位到对应分区（同一路由内切换 hash 不会重挂组件，所以必须监听而非只读初值）。
+     等一帧再滚：页面刚挂载，字体与懒加载内容尚未定型 */
+  useEffect(() => {
+    if (!hashId || !SECTIONS.some((s) => s.id === hashId)) return
+    const raf = requestAnimationFrame(() => {
+      sectionRefs.current[hashId]?.scrollIntoView({ block: 'start' })
+      setActive(hashId)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [hashId])
 
   /* 导航高亮跟随滚动 */
   useEffect(() => {
@@ -198,6 +215,17 @@ export function SettingsPage() {
         </nav>
 
         <section>
+          <div
+            className="settings-section"
+            id="account"
+            ref={(el) => {
+              sectionRefs.current.account = el
+            }}
+          >
+            <h2>账号</h2>
+            <AccountSection />
+          </div>
+
           <div
             className="settings-section"
             id="reading"

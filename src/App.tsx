@@ -18,7 +18,6 @@ const XingceWrongPage = lazy(() => import('./pages/XingceWrongPage').then((m) =>
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const AssistPage = lazy(() => import('./pages/AssistPage').then((m) => ({ default: m.AssistPage })))
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
-const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
 import { useArticleStore } from './stores/articleStore'
 import { useReaderStore } from './stores/readerStore'
@@ -87,7 +86,8 @@ function App() {
   useEffect(() => {
     void useArticleStore.getState().hydrate()
     /* 动态加载：authStore 会拉入 supabase-js + 云同步 + 各数据 store（约 57KB gzip），
-       而登录是可选能力。首屏只读轻量的 authStatus（Nav 用），SDK 异步补上 */
+       而登录是可选能力，不能让首屏阻塞在它上面。状态放轻量 authStatus，
+       SDK 与其余数据 store 异步补上（Nav 不读登录态：账号入口固定深链到设置页） */
     void import('./stores/authStore').then((m) => m.useAuthStore.getState().init())
     // 首屏动画最短展示时长：即使 API 秒回，也让 loading 完整呈现
     const t = window.setTimeout(() => setMinElapsed(true), LOADING_MIN_MS)
@@ -153,9 +153,10 @@ function App() {
               <Route path="/terms" element={<TermsPage />} />
               {/* AI 审题 + 作答框架 */}
               <Route path="/assist" element={<AssistPage />} />
-              {/* 账号：登录/注册 与 个人资料 */}
+              {/* 账号：登录页 /login；资料与退出登录已并入设置页「账号」分区 */}
               <Route path="/login" element={<AuthPage />} />
-              <Route path="/account" element={<AccountPage />} />
+              {/* 旧链接（含邮件回跳 / 历史书签）兼容：账号页已下沉到设置页 */}
+              <Route path="/account" element={<Navigate to="/settings#account" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

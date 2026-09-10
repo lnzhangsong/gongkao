@@ -18,7 +18,7 @@ pnpm preview       # 预览生产构建
 ## 技术栈
 
 - **Vite+（vp）+ Vite 8 + React 19 + TypeScript 5** —— 构建 / 测试 / lint / 格式化单 CLI
-- **React Router 7** —— 页面路由（含 `/practice` 行测线、`/login`、`/account`），前进后退，刷新保持
+- **React Router 7** —— 页面路由（含 `/practice` 行测线、`/login`），前进后退，刷新保持；`/account` 保留为旧链接重定向
 - **Zustand 5**（`persist` 中间件）—— 状态管理；数据本地优先，localStorage（轻量）+ IndexedDB（文章、学习事件、行测作答）
 - **Supabase**（可选）—— Auth 登录 + Postgres 云同步；未配置环境变量时自动降级为纯本地。SDK 约 55KB gzip，按需动态加载（登录态另存轻量 `authStatus` store），**不进首屏 bundle**
 - **Lucide React** —— 工具栏/操作图标
@@ -33,14 +33,14 @@ pnpm preview       # 预览生产构建
 | `/library` | 文章库（搜索 / 主题 / 来源 / 状态筛选 / 排序 / 分页） | `design/pages/library.html` |
 | `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记、申论拆解） | `design/pages/reading.html` |
 | `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
-| `/settings` | 设置（字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html` |
+| `/settings` | 设置（账号资料与云同步、字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html` |
 | `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析 | `scripts/import-exams.mjs` 入库 |
 | `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时） | `docs/行测做题模块设计方案.md` |
 | `/practice/wrong` | 行测错题本（接入复习队列，到期重做） | 同上 X3 |
 | `/terms` | 申论规范词库（1070+ 词，按主题检索） | `scripts/import-guifanci.mjs` 入库 |
 | `/assist` | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK） | `docs/申论写作AI辅助设计方案.md` |
 | `/admin` 系列 | 文章管理（列表 + 录入/编辑编辑器） | — |
-| `/login` · `/account` | 登录 / 账号（资料、同步状态、退出登录） | `sql/profiles.sql` · `sql/sync.sql` |
+| `/login` | 登录（账号资料、同步状态、退出登录已并入 `/settings#account`） | `sql/profiles.sql` · `sql/sync.sql` |
 
 > 全部进度（P1–P7、AI 线、Paper OS 设计系统落地）**以 `docs/README.md` 的路线图表为唯一真源**；设计系统规范见 `design/design/DESIGN.md`。
 
@@ -149,7 +149,7 @@ pnpm add -D playwright-core        # 需要本机安装 Microsoft Edge
 pnpm test:e2e                      # 一键：自动起服务 + 跑冒烟 + 收尾
 ```
 
-覆盖：路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、素材标记与申论拆解、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、数据导入合并、**行测刷题（列表 → 答题 → 判分 → 刷新后持久化 → 错题本）**、**登录页与未登录访问 `/account` 的重定向**、导航入口。共 130+ 项断言（脚本结束打印实际项数）。
+覆盖：路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、素材标记与申论拆解、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、数据导入合并、**行测刷题（列表 → 答题 → 判分 → 刷新后持久化 → 错题本）**、**登录页与旧 `/account` 深链到 `/settings#account` 的重定向**、导航入口。共 130+ 项断言（脚本结束打印实际项数）。
 
 > 尚未覆盖：真实 Supabase 的登录 / 退出与 RLS、触发器实际行为（需真实项目或测试账号）。
 > 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，8 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化），随 `pnpm test` 一起跑，不触网。
@@ -163,7 +163,7 @@ pnpm test:e2e                      # 一键：自动起服务 + 跑冒烟 + 收�
   - 编辑触发**只推不拉**（`runPush`，4s 防抖）；登录首轮 / 窗口聚焦 / 手动「立即同步」才跑全量 push+pull（`runSync`）。两者共用一条串行队列，不会并发写 meta
   - `updated_at` 由数据库 `now()` 赋值（`sql/sync.sql` v4 触发器），客户端不拿墙钟当权威，避免设备时钟偏差误判新旧
   - 退出登录：停同步 → 清空本机全部用户数据（含行测作答）与同步时间戳 → 登出；换账号共用浏览器不串数据
-- 页面：`/login`（仅登录，注册已关闭）、`/account`（资料、同步状态、退出登录）；导航「ACCOUNT」未登录时指向登录页
+- 页面：`/login`（仅登录，注册已关闭）；账号资料、同步状态与退出登录在**设置页的「账号」分区**（`/settings#account`）。导航栏保留账号图标作为该分区的深链入口；`/account` 保留为旧链接（含邮件回跳）重定向
 
 ### 开通步骤
 

@@ -325,9 +325,90 @@
     padding: 15px 0;
     flex-wrap: wrap;
   }
+  /* 窄屏设置导航变成吸顶横条（100–134），锚点定位要多让开这一条，否则分区标题被压住 */
+  .settings-section {
+    scroll-margin-top: 146px;
+  }
   .setting-control {
     margin-top: 6px;
   }
+  /* 窄屏下昵称输入撑满可用宽度（右侧仍留保存按钮） */
+  .settings-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+/* —— 账号（设置页账号分区；登录页样式见 auth.css）—— */
+.settings-account-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+}
+
+.settings-account-avatar {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 22px var(--display);
+  background: var(--pick-b);
+}
+
+.settings-account-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-account-text strong {
+  font: 500 15px var(--sans);
+}
+
+.settings-account-text span {
+  font: 12px var(--mono);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 设置页行内输入（昵称）：与 .ai-field input 同语言 */
+.settings-input {
+  width: 190px;
+  font: 400 13px/1.5 var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.settings-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--ink));
+}
+
+.settings-input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+/* 同步中的图标旋转（减少动效时停用） */
+.ghost .spin {
+  animation: api-spin 0.8s linear infinite;
+}
+
+.reduced-motion .ghost .spin {
+  animation: none;
 }
 
 /* —— AI 服务（BYOK）—— */

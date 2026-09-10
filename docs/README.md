@@ -9,6 +9,8 @@
 > **2026-09-10 工程质量收口**：`vp lint` 清零（68 → 0 warning，含 `no-floating-promises`、React Hooks/纯性告警）；修好 Vite+ 迁移后失效的 `scripts/e2e.mjs`（原引用已不存在的 `node_modules/vite/bin/vite.js`，改用本地 `vp`）；e2e 增补行测刷题链路与登录/账号重定向断言，共 131 项全绿；补 `src/lib/cloudSync.test.ts`——mock Supabase 的云同步引擎集成测试 8 项（push/pull、LWW、墓碑、复合键、坏记录、订阅解绑、串行化），用变异验证确认能真正抓住对应 bug。
 > **2026-09-10 首屏体积与算法测试**：登录态拆为轻量 `authStatus` store、supabase-js 改按需动态加载，主 chunk gzip **142.6KB → 84.8KB（−41%）**；补学习/复习算法单测（`mastery` 遗忘曲线与回声排序、`reviewQueue` 到期规则、`learnerProfile` 状态推导），单测 66 → 87。
 > **2026-09-10 渲染纯性收尾 + 数据层测试**：`recallProbability` / `echoCompare` / `reviewQueue` 的 `now` 改为调用方传入（此前内部读 `Date.now()`，却在渲染路径的 useMemo / 排序里被调用）；补 `import`（跨设备迁移解析）、`richNote`（**XSS 净化，安全边界**）、`export`（时间格式化与下载触发）单测，引入 `happy-dom` 作为 DOM 测试环境；单测 87 → 123。`reviewQueue` 的固定 7 天间隔仍是文档 §五登记的演进项（非缺陷）。
+> **2026-09-10 行测刷题体验**：键盘作答（A–E 选项 / ←→ 切题 / Enter 提交 / Esc 退出）、整组判分小结、选项分栏按视觉宽度自适应、答题卡跟随与跳题偏移；顺手修掉「题组标题与材料贴太紧」和「答题卡跳题被吸顶页头遮挡」两个可见缺陷。e2e 138 项全绿。
+> **2026-09-10 账号并入设置页**：`/account` 独立页取消，账号资料 / 昵称 / 云同步状态 / 退出登录整体下沉为设置页首个分区「账号」（`/settings#account`，支持 hash 深链定位）；导航栏「ACCOUNT」文字项收敛为人像图标深链；`/account` 保留为旧链接（含魔法链接邮件回跳）重定向。登录态判断从导航栏移除，`authStatus` 不再进首屏依赖。
 
 ---
 

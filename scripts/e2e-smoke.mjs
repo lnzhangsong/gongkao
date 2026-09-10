@@ -877,6 +877,83 @@ await page.waitForTimeout(900) // 前端 300ms 防抖 + 服务端检索
 const ftRows = await page.locator('.article-row').count()
 check('全文搜索正文命中', ftRows > 0, `kw=${kw}　meta命中=${metaHit}　${ftRows} 行`)
 
+// ---------- 行测练习（列表 → 答题 → 判分 → 持久化 → 错题本） ----------
+console.log('\n---- 行测练习 ----')
+await open('/practice')
+await page.waitForTimeout(700)
+const xgCards = await page.locator('.exam-grid .exam-card').count()
+check('行测列表渲染试卷卡片', xgCards >= 3, `${xgCards} 张`)
+
+if (xgCards > 0) {
+  await page.locator('.exam-grid .exam-card').first().click()
+  await page.waitForSelector('.practice-q', { timeout: 8000 }).catch(() => {})
+  const paperPath = new URL(page.url()).pathname
+  check('进入行测答题页', /^\/practice\/.+/.test(paperPath), paperPath)
+  check('答题页渲染题目', (await page.locator('.practice-q').count()) > 0)
+  check('答题页渲染选项', (await page.locator('.practice-opt').count()) > 0)
+
+  const paperId = decodeURIComponent(paperPath.split('/').pop())
+  const xgDetail = await fetch(`http://localhost:${API_PORT}/api/xingce?id=${encodeURIComponent(paperId)}`).then((r) =>
+    r.json(),
+  )
+  /* 引流版数据有缺答案的题，挑一道有答案的题作答才能判分 */
+  const target = (xgDetail.questions ?? []).find((q) => q.answer && (q.options ?? []).length > 0)
+  check('试卷含可判分题', Boolean(target), target ? `第${target.idx}题` : '无')
+
+  await page.locator('.practice-sheet-toggle').click()
+  await page.waitForTimeout(250)
+  check('答题卡渲染题号格', (await page.locator('.practice-sheet-cell').count()) === xgDetail.questions.length)
+
+  if (target) {
+    await page
+      .locator('.practice-sheet-cell', { hasText: new RegExp(`^${target.idx}$`) })
+      .first()
+      .click()
+    await page.waitForTimeout(400)
+    const q = page.locator(`#q-${target.idx}`)
+    await q.locator('.practice-opt:not([disabled])').first().click()
+    await page.locator('.practice-nav-btn.is-primary').click()
+    await page.waitForTimeout(400)
+    const verdict = q.locator('.practice-verdict')
+    check('提交本组后出判定', (await verdict.count()) > 0)
+    check('判分结果显示对错', /回答(正确|错误)/.test(await verdict.first().innerText()))
+
+    /* 刷新后作答仍在（xingceStore → IndexedDB 持久化）。
+       答题卡浮层默认收起，需先展开才能看到题号格的对错标记 */
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('.practice-q', { timeout: 8000 }).catch(() => {})
+    await page.waitForTimeout(500)
+    await page.locator('.practice-sheet-toggle').click()
+    await page.waitForTimeout(250)
+    check(
+      '刷新后作答与判分仍在',
+      (await page.locator('.practice-sheet-cell.is-right, .practice-sheet-cell.is-wrong').count()) > 0,
+    )
+  }
+
+  await open('/practice/wrong')
+  await page.waitForTimeout(500)
+  check('错题本页渲染', (await page.locator('.exam-page').count()) === 1)
+}
+
+// ---------- 账号（未配置 Supabase 时降级为提示；已配置时显示登录表单） ----------
+console.log('\n---- 账号 / 登录 ----')
+await open('/login')
+await page.waitForTimeout(600)
+const hasEmailInput = (await page.locator('input[type="email"]').count()) === 1
+const loginText = await page.locator('.auth-page').innerText()
+check(
+  '登录页渲染（表单或未配置提示）',
+  (await page.locator('.auth-page').count()) === 1 && (hasEmailInput || loginText.includes('账号服务未配置')),
+)
+
+await open('/account')
+await page.waitForTimeout(700)
+check('未登录访问 /account 跳转登录页', new URL(page.url()).pathname === '/login', page.url())
+
+await open('/')
+check('导航含 PRACTICE 入口', (await page.locator('.nav-links a', { hasText: 'PRACTICE' }).count()) === 1)
+
 // ---------- 摘要 ----------
 console.log('\n================ 测试摘要 ================')
 const fails = results.filter((r) => !r.ok)

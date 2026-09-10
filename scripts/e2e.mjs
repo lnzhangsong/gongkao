@@ -1,12 +1,15 @@
 /**
- * 端到端冒烟测试一键入口（npm run test:e2e）：
+ * 端到端冒烟测试一键入口（pnpm test:e2e）：
  * 1. 清理 5173 / 8787 残留端口（避免上次失败遗留的进程）
- * 2. 后台拉起 vite dev（5173）——e2e-smoke.mjs 内会自行拉起 API server（8787）
- * 3. 轮询 5173 直到 vite 就绪
- * 4. 运行 scripts/e2e-smoke.mjs（本脚本未退出前由其 set 超时兜底）
- * 5. 结束后杀掉 vite dev 进程
+ * 2. 后台拉起 dev server（5173）——项目用 Vite+，走本地 vp 二进制（vite-plus 迁移后
+ *    已无 node_modules/vite/bin/vite.js；vp dev 内部即 Vite）；e2e-smoke.mjs 内会自行拉起 API server（8787）
+ * 3. 轮询 5173 直到就绪
+ * 4. 运行 scripts/e2e-smoke.mjs
+ * 5. 结束后杀掉 dev server 进程
  */
 import { spawn, execSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import process from 'node:process'
 
 const WEB_PORT = 5173
@@ -20,18 +23,29 @@ function killPort(port) {
   }
 }
 
+/** 本地 vp 二进制（Vite+ 的 dev/build/test 统一入口） */
+function resolveVp() {
+  const name = process.platform === 'win32' ? 'vp.cmd' : 'vp'
+  const bin = path.resolve('node_modules', '.bin', name)
+  if (!existsSync(bin)) {
+    console.error('[e2e] 找不到 node_modules/.bin/vp，请先 pnpm install')
+    process.exit(1)
+  }
+  return bin
+}
+
 // 1) 清残留端口
 killPort(WEB_PORT)
 killPort(API_PORT)
 
-// 2) 拉起 vite dev（默认端口 5173）
-const vite = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--port', String(WEB_PORT)], {
+// 2) 拉起 dev server（Vite+：vp dev 即 Vite dev）
+const dev = spawn(resolveVp(), ['dev', '--port', String(WEB_PORT)], {
   stdio: 'pipe', // 收集 stderr 以便诊断；不继承避免刷屏
   detached: false,
 })
-let viteOutput = ''
-vite.stderr.on('data', (d) => {
-  viteOutput += d.toString()
+let devOutput = ''
+dev.stderr.on('data', (d) => {
+  devOutput += d.toString()
 })
 
 // 3) 轮询 5173 直到可响应
@@ -46,16 +60,16 @@ async function waitForDev(port, timeoutMs = 30000) {
     }
     await new Promise((r) => setTimeout(r, 300))
   }
-  console.error(`[e2e] vite dev 未在 ${timeoutMs}ms 内就绪。\n${viteOutput.slice(-2000)}`)
+  console.error(`[e2e] dev server 未在 ${timeoutMs}ms 内就绪。\n${devOutput.slice(-2000)}`)
   return false
 }
 
 const ready = await waitForDev(WEB_PORT)
 if (!ready) {
-  vite.kill('SIGTERM')
+  dev.kill('SIGTERM')
   process.exit(1)
 }
-console.log(`[e2e] vite dev 就绪（http://localhost:${WEB_PORT}）`)
+console.log(`[e2e] dev server 就绪（http://localhost:${WEB_PORT}）`)
 
 // 4) 运行冒烟脚本（继承 stdio，让其 PASS/FAIL 直接输出；错误则退出码非 0）
 const smoke = spawn(process.execPath, ['scripts/e2e-smoke.mjs'], {
@@ -64,8 +78,8 @@ const smoke = spawn(process.execPath, ['scripts/e2e-smoke.mjs'], {
 })
 const code = await new Promise((resolve) => smoke.on('close', resolve))
 
-// 5) 收尾：杀掉 vite dev
-vite.kill('SIGTERM')
+// 5) 收尾：杀掉 dev server
+dev.kill('SIGTERM')
 
 console.log(`[e2e] 冒烟结束，退出码 ${code}`)
 process.exit(code ?? 1)

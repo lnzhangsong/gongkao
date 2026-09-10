@@ -219,6 +219,8 @@
   font: 12px var(--mono);
   letter-spacing: 0.06em;
   color: #2e7d32;
+  /* 判定落屏时轻微回弹（减少动效由 html.reduced-motion 全局关闭） */
+  animation: practice-opt-settle 0.2s ease-out;
 }
 
 .practice-verdict.is-wrong {
@@ -487,4 +489,54 @@
 .practice-sheet-toggle.is-open {
   background: var(--ink);
   color: var(--paper);
+}
+
+/* ---------- 判分反馈与键盘提示 ---------- */
+
+/* 选项落定：轻微回弹，避免结果「凭空出现」 */
+@keyframes practice-opt-settle {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.practice-opt.right,
+.practice-opt.wrong {
+  animation: practice-opt-settle 0.2s ease-out;
+}
+
+/* 键盘作答提示（小屏无实体键盘，媒体查询里隐藏） */
+.practice-keyhint {
+  font: 11px var(--mono);
+  color: var(--muted);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* 本组判分小结：全部判分后常驻吸顶区，滚到题组末尾也能看到 */
+.practice-summary {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  margin-top: 6px;
+  font: 12px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+  animation: practice-opt-settle 0.2s ease-out;
+}
+
+.practice-summary strong {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .practice-keyhint {
+    display: none;
+  }
 }

@@ -6,6 +6,7 @@ import { useXingceStore, xgKey } from '../stores/xingceStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { loadFontFamily } from '../lib/fonts'
 import { useMountedAt } from '../lib/useMountedAt'
+import { formatDuration, groupScore, optionCols } from '../lib/xingcePractice'
 import { levelMark } from '../lib/examText'
 import { GroupStemText, DataUrls } from '../components/exam/GroupStemText'
 import { MenuSelect } from '../components/ui/MenuSelect'
@@ -56,13 +57,84 @@ function groupQuestions(qs: XingceQuestion[], perScreen: number): Group[] {
   return groups
 }
 
-/** 选项布局：短选项（数字/百分比/词语）横排多列，长文本单列 */
-function optionCols(qs: XingceQuestion[]): 1 | 2 | 4 {
-  const all = qs.flatMap((q) => q.options)
-  const maxLen = Math.max(0, ...all.map((o) => o.text.length))
-  if (maxLen <= 6) return 4
-  if (maxLen <= 18) return 2
-  return 1
+/** 选项布局与整组小结见 lib/xingcePractice.ts（纯函数，带单测） */
+
+/**
+ * 键盘作答（刷题提速）：A–E 直选、←/→ 翻屏、Enter 提交本组、Esc 关答题卡。
+ *
+ * 做成「只挂监听、不渲染内容」的子组件：主组件在数据未就绪时有提前 return，
+ * hooks 不能写在提前 return 之后。
+ */
+function PracticeKeyNav({
+  enabled,
+  pos,
+  lastPos,
+  sheetOpen,
+  onGo,
+  onSubmit,
+  onPick,
+  onCloseSheet,
+}: {
+  enabled: boolean
+  pos: number
+  lastPos: number
+  sheetOpen: boolean
+  onGo: (next: number) => void
+  onSubmit: () => void
+  onPick: (letter: string) => void
+  onCloseSheet: () => void
+}) {
+  /* 处理函数每次渲染都会变，放进 ref；DOM 监听只挂一次 */
+  const handlerRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  useEffect(() => {
+    handlerRef.current = (e) => {
+      if (!enabled) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      /* 正在输入（含 contenteditable）时不拦截任何键 */
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
+        return
+      }
+      if (sheetOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          onCloseSheet()
+        }
+        return
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (pos > 0) onGo(pos - 1)
+        return
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (pos < lastPos) onGo(pos + 1)
+        return
+      }
+      /* Enter 一律作「提交本组」：鼠标点过选项/答题卡后焦点就落在按钮上，
+         若让给原生激活，主流程反而失效（判分后按钮还是 disabled）。
+         链接除外（它只能用 Enter 激活）；按钮仍可用空格原生激活，无键盘可达性损失 */
+      if (e.key === 'Enter') {
+        if (t?.tagName === 'A') return
+        e.preventDefault()
+        onSubmit()
+        return
+      }
+      const letter = e.key.toUpperCase()
+      if (/^[A-E]$/.test(letter)) {
+        e.preventDefault()
+        onPick(letter)
+      }
+    }
+    /* 无依赖数组：每次渲染都刷新到最新闭包，监听本身不重挂 */
+  })
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => handlerRef.current(e)
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
+  return null
 }
 
 export function XingcePracticePage() {
@@ -123,6 +195,12 @@ export function XingcePracticePage() {
     scrollTarget.current = null
   }, [pos, paper])
 
+  /* 答题卡打开 / 换屏时把「当前屏」的题号格滚进可视区（题组内 10 题时不在首屏） */
+  useEffect(() => {
+    if (!sheetOpen) return
+    document.querySelector('.practice-sheet-cell.is-current')?.scrollIntoView({ block: 'nearest' })
+  }, [sheetOpen, pos])
+
   if (error)
     return (
       <div className="exam-page">
@@ -158,23 +236,24 @@ export function XingcePracticePage() {
   /* 提交：只判「已作答且未判分」的题；没做的保持可作答，之后可再次提交 */
   const submit = () => {
     if (!group) return
-    const seconds = Math.round((Date.now() - enteredAt.current) / 1000 / group.questions.length)
-    for (const q of group.questions) {
-      if (q.answer == null) continue
-      const key = xgKey(paper.id, q.idx)
-      if (answers[key]) continue // 已判分的题不动
-      const p = picked[q.idx] ?? ''
-      if (!p) continue // 未作答的不判
+    const pending = group.questions.filter((q) => q.answer != null && !answers[xgKey(paper.id, q.idx)] && picked[q.idx])
+    if (pending.length === 0) return
+    /* 用时按整组均分到本次判分的题上。注意不能「先除再四舍五入」——那会丢秒，
+       而「本组小结」显示的正是这些 seconds 之和；用先取整再补余数保证总和准确 */
+    const elapsed = Math.max(1, Math.round((Date.now() - enteredAt.current) / 1000))
+    const per = Math.floor(elapsed / pending.length)
+    const remainder = elapsed - per * pending.length
+    pending.forEach((q, i) => {
       record({
         paperId: paper.id,
         qIdx: q.idx,
-        picked: p,
-        correct: p === q.answer,
-        seconds,
+        picked: picked[q.idx],
+        correct: picked[q.idx] === q.answer,
+        seconds: per + (i < remainder ? 1 : 0),
         origin: 'practice',
         updatedAt: new Date().toISOString(),
       })
-    }
+    })
   }
 
   /* 点「重刷本组」：清空本组全部作答记录，从头做 */
@@ -200,6 +279,19 @@ export function XingcePracticePage() {
   const wrongCount = doneCount - rightCount
   const pct = Math.round((doneCount / paper.questions.length) * 100)
   const isMaterialGroup = group?.groupId != null && (!!group.groupStem || !!group.groupImage)
+
+  /* 本组判分小结（对 N / 共 M、用时）：用时取每题记录的 seconds 之和，渲染期不读时钟 */
+  const score = group ? groupScore(group.questions, (idx) => answers[xgKey(paper.id, idx)]) : null
+
+  /** 键盘直选：落到本组第一道「未判分且尚未选」的题，于是连按 A、B、C 即可顺序作答 */
+  const pickByLetter = (letter: string) => {
+    if (!group) return
+    const pickable = group.questions.filter((q) => q.answer != null && !answers[xgKey(paper.id, q.idx)])
+    if (pickable.length === 0) return
+    const target = pickable.find((q) => !picked[q.idx]) ?? pickable[0]
+    if (!target.options.some((o) => o.key === letter)) return
+    setPicked((s) => ({ ...s, [target.idx]: letter }))
+  }
 
   return (
     <div
@@ -281,7 +373,19 @@ export function XingcePracticePage() {
             <span className="is-right">对 {rightCount}</span>
             <span className="is-wrong">错 {wrongCount}</span>
           </div>
+          {/* 键盘提示：小屏隐藏（无实体键盘） */}
+          <span className="practice-keyhint">A–E 选 · ←→ 翻屏 · Enter 提交</span>
         </div>
+
+        {/* 本组判分小结：全部判分后常驻吸顶区，滚到题组末尾也能看到 */}
+        {allJudged && score && (
+          <div className="practice-summary" role="status">
+            <span>
+              本组 <strong>{score.right}</strong> / {score.total} 题
+            </span>
+            <span className="practice-summary-time">用时 {formatDuration(score.seconds)}</span>
+          </div>
+        )}
 
         {/* 答题卡浮层挂在吸顶 header 内：header 钉住时面板跟着钉住，滚动不消失 */}
         {sheetOpen && (
@@ -349,6 +453,18 @@ export function XingcePracticePage() {
           </div>
         )}
       </header>
+
+      {/* 键盘作答监听（不渲染内容） */}
+      <PracticeKeyNav
+        enabled={!!group}
+        pos={pos}
+        lastPos={groups.length - 1}
+        sheetOpen={sheetOpen}
+        onGo={go}
+        onSubmit={submit}
+        onPick={pickByLetter}
+        onCloseSheet={() => setSheetOpen(false)}
+      />
 
       {group && (
         <article className="practice-group fade-in" key={pos}>

@@ -984,10 +984,46 @@ check(
 
 await open('/account')
 await page.waitForTimeout(700)
-check('未登录访问 /account 跳转登录页', new URL(page.url()).pathname === '/login', page.url())
+check(
+  '旧 /account 深链重定向到设置页账号分区',
+  new URL(page.url()).pathname === '/settings' && new URL(page.url()).hash === '#account',
+  page.url(),
+)
+check('设置页含「账号」分区', (await page.locator('#account').count()) === 1)
+check('未登录时账号分区给出登录入口', (await page.locator('#account button.ghost').count()) === 1)
+check('账号分区未登录不显示昵称输入', (await page.locator('#account .settings-input').count()) === 0)
+
+await open('/settings')
+await page.waitForTimeout(600)
+check(
+  '设置页账号分区在未登录时展示登录引导',
+  (await page.locator('.settings-nav button', { hasText: '账号' }).count()) === 1,
+)
 
 await open('/')
 check('导航含 PRACTICE 入口', (await page.locator('.nav-links a', { hasText: 'PRACTICE' }).count()) === 1)
+check(
+  '导航账号入口为图标并深链到设置页账号分区',
+  (await page.locator('.nav-links a.nav-account').getAttribute('href')) === '/settings#account' &&
+    (await page.locator('.nav-links a.nav-account').innerText()).trim() === '',
+)
+const navAligned = await page.evaluate(() => {
+  const tops = [...document.querySelectorAll('.nav-links > a')].map((a) => Math.round(a.getBoundingClientRect().top))
+  return Math.max(...tops) - Math.min(...tops) <= 2
+})
+check('账号图标与文字导航项垂直对齐', navAligned)
+
+/* 窄屏：分区导航变吸顶横条，深链锚点必须让开它（否则分区标题被压住） */
+await page.setViewportSize({ width: 390, height: 844 })
+await open('/settings#data')
+await page.waitForTimeout(500)
+const mobileGap = await page.evaluate(() => {
+  const sec = document.querySelector('#data')
+  const chips = document.querySelector('.settings-nav').getBoundingClientRect()
+  return Math.round(sec.getBoundingClientRect().top - chips.bottom)
+})
+check('窄屏深链分区标题不被吸顶横条遮挡', mobileGap >= 8, `间距 ${mobileGap}px`)
+await page.setViewportSize({ width: 1440, height: 900 })
 
 // ---------- 摘要 ----------
 console.log('\n================ 测试摘要 ================')

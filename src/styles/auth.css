@@ -1,7 +1,8 @@
 /* ============================================================
-   登录/注册页 与 账号页（/login、/account）
+   登录页（/login）
    页头复用全站 .subpage-header；卡片遵循 Paper OS：
    1px 墨线 + radius-sm(10) + 7px 8px 硬阴影
+   账号资料区（设置页「账号」分区）见 styles/settings.css 的 .settings-account-*
    ============================================================ */
 
 .auth-body {
@@ -162,76 +163,6 @@
   border-radius: var(--radius-xs);
 }
 
-/* —— 账号页 —— */
-
-.auth-identity {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.auth-avatar {
-  width: 56px;
-  height: 56px;
-  flex: none;
-  border: 1px solid var(--ink);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: 400 24px var(--display);
-  background: var(--pick-b);
-}
-
-.auth-identity-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.auth-identity-text strong {
-  font: 500 16px var(--sans);
-}
-
-.auth-identity-text span {
-  font: 12px var(--mono);
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.auth-divider {
-  border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
-  margin: 4px 0;
-}
-
-.auth-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.auth-logout {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--danger);
-  font: 13px var(--sans);
-  cursor: pointer;
-}
-
-.auth-logout:hover {
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-
 @media (max-width: 720px) {
   .auth-body {
     padding: 32px 20px 72px;
@@ -240,52 +171,4 @@
   .auth-card {
     padding: 20px;
   }
-}
-
-/* 同步状态区 */
-.auth-sync {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: 1px dashed var(--muted);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-}
-
-.auth-sync-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.auth-sync-text span {
-  font: 12px var(--mono);
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-
-.auth-sync-text small {
-  font: 12px var(--sans);
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.auth-sync-btn {
-  flex: none;
-  padding: 8px 14px;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: inherit;
-  font: 13px var(--sans);
-  cursor: pointer;
-}
-
-.auth-sync-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }

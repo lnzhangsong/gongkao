@@ -4,9 +4,10 @@ import { supabaseConfigured } from '../lib/supabaseConfig'
 /**
  * 登录态（轻量 store）。
  *
- * 存在的理由：首屏导航栏要同步判断「是否已登录」来决定 ACCOUNT 指向，而认证逻辑所在的
- * authStore 会拉入 supabase-js + 云同步 + 各数据 store（约 57KB gzip）。
- * 把状态放在这里、动作放在 authStore，首屏就不必为可选能力付体积。
+ * 存在的理由：认证逻辑所在的 authStore 会拉入 supabase-js + 云同步 + 各数据 store
+ * （约 57KB gzip），而首屏需要的是「是否已登录 / 是否已配置」这种极轻的判断
+ * （账号分区、登录页分流、启动引导）。把状态放在这里、动作放在 authStore，
+ * 可选能力就不必进首屏 chunk。
  */
 
 /** 'init' 恢复会话中 | 'unavailable' 未配置 Supabase | 'out' | 'in' */

@@ -9,6 +9,7 @@ import { useMountedAt } from '../lib/useMountedAt'
 import { formatDuration, groupScore, optionCols, showTextStem } from '../lib/xingcePractice'
 import { levelMark } from '../lib/examText'
 import { CondLines, GroupStemText, DataUrls } from '../components/exam/GroupStemText'
+import { xingceGroupImage, xingceQuestionImage } from '../data/xingceImages'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
@@ -285,7 +286,8 @@ export function XingcePracticePage() {
   const rightCount = paper.questions.filter((q) => answers[xgKey(paper.id, q.idx)]?.correct).length
   const wrongCount = doneCount - rightCount
   const pct = Math.round((doneCount / paper.questions.length) * 100)
-  const isMaterialGroup = group?.groupId != null && (!!group.groupStem || !!group.groupImage)
+  const isMaterialGroup =
+    group?.groupId != null && (!!group.groupStem || !!xingceGroupImage(paper.id, group.questions[0].groupId))
 
   /* 本组判分小结（对 N / 共 M、用时）：用时取每题记录的 seconds 之和，渲染期不读时钟 */
   const score = group ? groupScore(group.questions, (idx) => answers[xgKey(paper.id, idx)]) : null
@@ -493,9 +495,12 @@ export function XingcePracticePage() {
               </button>
               {stemOpen && (
                 <div className="practice-stem-body">
-                  {group.groupImage ? (
+                  {xingceGroupImage(paper.id, group.questions[0].groupId) ? (
                     // 材料截图里已含完整文字，只渲染图，避免重复
-                    <DataUrls value={group.groupImage} altPrefix={`第${group.questions[0].idx}题组材料`} />
+                    <DataUrls
+                      value={xingceGroupImage(paper.id, group.questions[0].groupId)!}
+                      altPrefix={`第${group.questions[0].idx}题组材料`}
+                    />
                   ) : (
                     <GroupStemText text={group.groupStem} />
                   )}
@@ -509,7 +514,8 @@ export function XingcePracticePage() {
             const qJudged = !!saved // 有存档即已判分：锁定选项并展示判定；没存档的题保持可作答
             const pick = qJudged ? saved.picked : (picked[q.idx] ?? '')
             // 纯图选项题：选项只是字母钮；补图题（图 + 文本选项）选项照常渲染文字
-            const imgQ = !!q.image && q.options.every((o) => !o.text)
+            const qImg = xingceQuestionImage(paper.id, q.idx)
+            const imgQ = !!qImg && q.options.every((o) => !o.text)
             return (
               <section className="practice-q" key={q.idx} id={`q-${q.idx}`}>
                 {showTextStem(q.stem) && (
@@ -517,7 +523,7 @@ export function XingcePracticePage() {
                     <strong>{q.idx}.</strong> <CondLines text={q.stem} />
                   </p>
                 )}
-                {q.image && <DataUrls value={q.image} altPrefix={`第${q.idx}题`} />}
+                {qImg && <DataUrls value={qImg} altPrefix={`第${q.idx}题`} />}
                 <div
                   className={`practice-options cols-${optionCols([q])}${imgQ ? ' is-imgopts' : ''}`}
                   role="radiogroup"

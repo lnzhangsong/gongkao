@@ -116,29 +116,32 @@ function main() {
   }
 
   /**
-   * base64 题图落盘 → 返回可入库的路径数组字符串。
-   * value 是 JSON 数组字符串的 data URL；已是路径（重跑）或空值时原样返回。
-   * 存量同名文件直接覆盖：文件名由卷号+题号/组号决定，重裁后内容随之更新。
+   * base64 题图/材料图落盘 data/xingce-img/{paper_id}/，供前端 import.meta.glob 打进构建。
+   * value 是 JSON 数组字符串的 data URL；已是文件（重跑）或空值时跳过。
+   * 文件名由卷号+题号/组号决定（q{idx}_N / g{groupId}_N），重裁后内容随之覆盖更新。
+   * db 不存图片路径——前端按「卷号+题号/组号」约定取图。
    */
-  function materialize(paperId, kind, key, value) {
-    if (!value) return null
-    let urls
+  const imageDims = {}
+  function writeImages(paperId, kind, key, value) {
+    if (!value) return
+    let items
     try {
       const parsed = JSON.parse(value)
-      urls = Array.isArray(parsed) ? parsed : [String(parsed)]
+      items = Array.isArray(parsed) ? parsed : [parsed]
     } catch {
-      urls = [value]
+      items = [{ u: value }]
     }
-    if (!urls.some((u) => u.startsWith('data:'))) return value
     const dir = path.join(IMG_DIR, paperId)
     fs.mkdirSync(dir, { recursive: true })
-    const paths = urls.map((u, i) => {
+    items.forEach((it, i) => {
+      const u = typeof it === 'string' ? it : it.u
       const ext = u.slice(5, u.indexOf(';')).split('/')[1] || 'png'
-      const file = `${kind}${key}_${i}.${ext}`
-      fs.writeFileSync(path.join(dir, file), Buffer.from(u.slice(u.indexOf('base64,') + 7), 'base64'))
-      return `/xingce-img/${paperId}/${file}`
+      fs.writeFileSync(
+        path.join(dir, `${kind}${key}_${i}.${ext}`),
+        Buffer.from(u.slice(u.indexOf('base64,') + 7), 'base64'),
+      )
+      if (it.w > 0 && it.h > 0) imageDims[`${paperId}/${kind}${key}_${i}`] = { w: it.w, h: it.h }
     })
-    return JSON.stringify(paths)
   }
 
   const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.json'))
@@ -187,6 +190,9 @@ function main() {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       for (const q of paper.questions) {
+        // 图片只落盘不进库：前端按「卷号+题号/组号」从构建产物取图
+        writeImages(paper.id, 'g', q.groupId ?? q.idx, q.groupImage ?? null)
+        writeImages(paper.id, 'q', q.idx, q.image ?? null)
         ins.run(
           paper.id,
           q.idx,
@@ -194,12 +200,12 @@ function main() {
           q.subtype ?? null,
           q.groupId ?? null,
           q.groupStem ?? null,
-          materialize(paper.id, 'g', q.groupId ?? q.idx, q.groupImage ?? null),
+          null,
           q.stem,
           JSON.stringify(q.options),
           q.answer ?? null,
           q.explanation ?? null,
-          materialize(paper.id, 'q', q.idx, q.image ?? null),
+          null,
         )
       }
       db.prepare('COMMIT').run()
@@ -214,6 +220,15 @@ function main() {
     }
   }
   console.log(`完成：${ok}/${files.length} 个文件`)
+
+  // 生成尺寸清单 TS：前端按「卷号/文件名」查 w/h，给 <img> 预留布局防抖动
+  const dimsLines = Object.entries(imageDims)
+    .map(([k, d]) => `  '${k}': { w: ${d.w}, h: ${d.h} },`)
+    .join('\n')
+  fs.writeFileSync(
+    path.join(ROOT, 'src', 'data', 'xingceImageDims.generated.ts'),
+    `/** 由 scripts/import-xingce.mjs 生成：题图/材料图像素尺寸（<img> 预留布局防抖动）。勿手改。 */\nexport const XINGCE_IMAGE_DIMS: Record<string, { w: number; h: number }> = {\n${dimsLines}\n}\n`,
+  )
   db?.close()
 }
 

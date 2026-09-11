@@ -4,6 +4,7 @@ import { useXingceStore } from '../stores/xingceStore'
 import { fetchXingce, type XingceQuestion } from '../lib/api'
 import { showTextStem } from '../lib/xingcePractice'
 import { CondLines, DataUrls } from '../components/exam/GroupStemText'
+import { xingceGroupImage, xingceQuestionImage } from '../data/xingceImages'
 import '../styles/exam-preview.css'
 import '../styles/practice.css'
 
@@ -106,32 +107,36 @@ export function XingceWrongPage() {
             <span>{list.length} 题</span>
           </div>
           <div className="fade-in">
-            {list.map((it) => (
-              <article className="practice-group" key={`${it.paperId}#${it.q.idx}`}>
-                <div className="practice-group-stem">
-                  <small style={{ fontFamily: 'var(--mono)', opacity: 0.6 }}>{it.paperTitle}</small>
-                  {showTextStem(it.q.stem) && (
-                    <>
-                      {'\n'}
-                      {it.q.idx}. <CondLines text={it.q.stem} />
-                    </>
-                  )}
-                </div>
-                {it.q.image ? (
-                  <DataUrls value={it.q.image} altPrefix={`第${it.q.idx}题`} />
-                ) : (
-                  it.q.groupImage && <DataUrls value={it.q.groupImage} altPrefix={`第${it.q.idx}题组材料`} />
-                )}
-                <div className={`practice-verdict${it.picked ? ' is-wrong' : ''}`}>
-                  {it.picked ? `你选了 ${it.picked}` : '未作答'} · 正确答案 {it.q.answer}
-                </div>
-                {it.q.explanation && (
-                  <div className="practice-explain">
-                    <CondLines text={it.q.explanation} />
+            {list.map((it) => {
+              const qImg = xingceQuestionImage(it.paperId, it.q.idx)
+              const gImg = xingceGroupImage(it.paperId, it.q.groupId)
+              return (
+                <article className="practice-group" key={`${it.paperId}#${it.q.idx}`}>
+                  <div className="practice-group-stem">
+                    <small style={{ fontFamily: 'var(--mono)', opacity: 0.6 }}>{it.paperTitle}</small>
+                    {showTextStem(it.q.stem) && (
+                      <>
+                        {'\n'}
+                        {it.q.idx}. <CondLines text={it.q.stem} />
+                      </>
+                    )}
                   </div>
-                )}
-              </article>
-            ))}
+                  {qImg ? (
+                    <DataUrls value={qImg} altPrefix={`第${it.q.idx}题`} />
+                  ) : (
+                    gImg && <DataUrls value={gImg} altPrefix={`第${it.q.idx}题组材料`} />
+                  )}
+                  <div className={`practice-verdict${it.picked ? ' is-wrong' : ''}`}>
+                    {it.picked ? `你选了 ${it.picked}` : '未作答'} · 正确答案 {it.q.answer}
+                  </div>
+                  {it.q.explanation && (
+                    <div className="practice-explain">
+                      <CondLines text={it.q.explanation} />
+                    </div>
+                  )}
+                </article>
+              )
+            })}
           </div>
         </section>
       ))}

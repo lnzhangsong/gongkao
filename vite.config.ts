@@ -155,14 +155,9 @@ export default defineConfig({
   plugins: lazyPlugins(() => [react()]),
   server: {
     port: 5173,
-    // 开发时把 /api 转发到本地 API server（node:sqlite）；
-    // /xingce-img 的题图/材料图落盘在 data/xingce-img/（不在 public/），同样走 api server
+    // 开发时把 /api 转发到本地 API server（node:sqlite）
     proxy: {
       '/api': {
-        target: 'http://localhost:8787',
-        changeOrigin: true,
-      },
-      '/xingce-img': {
         target: 'http://localhost:8787',
         changeOrigin: true,
       },

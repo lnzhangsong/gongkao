@@ -112,6 +112,7 @@
 .practice-img {
   display: block;
   max-width: 100%;
+  height: auto; /* width/height 属性预留布局后，缩宽时高度跟随，不变形 */
   border: 1px solid var(--ink);
   border-radius: var(--radius-sm);
   margin: 10px 0;

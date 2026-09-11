@@ -126,7 +126,9 @@ def crop_pngs(doc, start, end):
         png = pix.tobytes("png")
         if len(png) < 20_000:
             continue  # 近空白裁片（组头页尾、页码残留）
-        out.append(png_to_webp(png, 85))
+        item = dict(zip(("b", "ext", "w", "h"), png_to_webp(png, 85)))
+        item["w"], item["h"] = pix.width, pix.height
+        out.append(item)
     return out
 
 
@@ -168,22 +170,35 @@ def split_text_options(stem_texts):
     return stem_lines, opts
 
 
-def png_to_webp(png: bytes, quality: int) -> tuple[bytes, str]:
+def png_to_webp(png: bytes, quality: int) -> tuple[bytes, str, int, int]:
     """线条图转有损 WebP：同画质体积约为 PNG 的 1/4，读取时浏览器直接解码。
-    Pillow 不可用时回退 PNG。"""
+    （试过转灰度 L：有损 WebP 内部本就走 YUV，灰度只省 0.4%，不值得。）
+    Pillow 不可用时回退 PNG（尺寸 0 交给前端省略宽高属性）。返回 (bytes, ext, w, h)。"""
     try:
         import io
 
         from PIL import Image
+        img = Image.open(io.BytesIO(png))
+        w, h = img.size
         buf = io.BytesIO()
-        Image.open(io.BytesIO(png)).save(buf, "WEBP", quality=quality, method=6)
-        return buf.getvalue(), "webp"
+        img.save(buf, "WEBP", quality=quality, method=6)
+        return buf.getvalue(), "webp", w, h
     except Exception:
-        return png, "png"
+        return png, "png", 0, 0
 
 
-def to_dataurls(items: list[tuple[bytes, str]]) -> str:
-    return json.dumps([f"data:image/{ext};base64," + base64.b64encode(b).decode() for b, ext in items])
+def to_image_json(items: list[dict]) -> str:
+    """[{b, ext, w, h}] → JSON 数组字符串 [{u: dataURL, w, h}]，w/h 供前端预留布局"""
+    return json.dumps(
+        [
+            {
+                "u": f"data:image/{it['ext']};base64," + base64.b64encode(it["b"]).decode(),
+                "w": it["w"],
+                "h": it["h"],
+            }
+            for it in items
+        ]
+    )
 
 
 def clean_watermark(doc):
@@ -212,7 +227,7 @@ def clean_watermark(doc):
 
 
 def trimmed_png(doc, pno, clip, pad=5):
-    """渲染后按非白像素收紧再留 pad 边：内容贴图的 bbox 常带大片空白边。"""
+    """渲染后按非白像素收紧再留 pad 边：内容贴图的 bbox 常带大片空白边。返回 (png, w, h)。"""
     pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=clip)
     w, h, n = pix.width, pix.height, pix.n
     s = pix.samples
@@ -226,7 +241,7 @@ def trimmed_png(doc, pno, clip, pad=5):
 
     top = next((y for y in range(h) if min_row(y) < 245), None)
     if top is None:
-        return pix.tobytes("png")  # 空白片照原样返回，交给调用方的大小过滤
+        return pix.tobytes("png"), w, h  # 空白片照原样返回，交给调用方的大小过滤
     bot = next(y for y in range(h - 1, -1, -1) if min_row(y) < 245)
     left = next(x for x in range(w) if min_col(x) < 245)
     right = next(x for x in range(w - 1, -1, -1) if min_col(x) < 245)
@@ -236,7 +251,8 @@ def trimmed_png(doc, pno, clip, pad=5):
         min(clip.x1, clip.x0 + (right + 1) / ZOOM + pad),
         min(clip.y1, clip.y0 + (bot + 1) / ZOOM + pad),
     )
-    return doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=nclip).tobytes("png")
+    final = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=nclip)
+    return final.tobytes("png"), final.width, final.height
 
 
 def question_parts(doc, lines, start, end, qrect):
@@ -297,11 +313,12 @@ def question_parts(doc, lines, start, end, qrect):
     for pno, y0, y1 in trimmed:
         # x 不钳页边距：部分图形条（六宫格等）放置到 x>width-PAGE_MARGIN_X，钳住会切掉右端
         clip = pymupdf.Rect(0, y0, doc[pno].rect.width, y1)
-        png = trimmed_png(doc, pno, clip)
-        webp, ext = png_to_webp(png, 80)
-        if len(webp) < 2_000:
+        png, w, h = trimmed_png(doc, pno, clip)
+        item = dict(zip(("b", "ext", "w", "h"), png_to_webp(png, 80)))
+        item["w"], item["h"] = w, h
+        if len(item["b"]) < 2_000:
             continue
-        out.append((webp, ext))
+        out.append(item)
     return stem_texts, out
 
 
@@ -415,7 +432,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             continue
         pngs = crop_pngs(doc, hdr, (chain[first_q][0], chain[first_q][1].y0 - 2))
         if pngs:
-            img_by_group[gid] = to_dataurls(pngs)
+            img_by_group[gid] = to_image_json(pngs)
             print(f"  组{gid}（{members[0]}-{members[-1]}）材料截图 {len(pngs)} 张")
 
     # 2) 图片形态题：JSON 里缺号的恢复；已有 image 的重裁一遍
@@ -496,7 +513,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             stem = old["stem"] if old else f"第{n}题（见配图）"
         if old:
             old["stem"] = stem
-            old["image"] = to_dataurls(pngs)
+            old["image"] = to_image_json(pngs)
             recropped += 1
             print(f"  题{n} {'重裁' if had_img else '补图'}：题干 {len(stem)} 字，截图 {len(pngs)} 张")
             continue
@@ -511,7 +528,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             "options": opts or [{"key": k, "text": ""} for k in "ABCD"],
             "answer": ans,
             "explanation": expl,
-            "image": to_dataurls(pngs),
+            "image": to_image_json(pngs),
         })
         print(f"  题{n} 恢复：{section}{gid or ''} 截图 {len(pngs)} 张，答案 {ans or '缺'}")
 

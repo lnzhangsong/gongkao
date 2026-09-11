@@ -1,5 +1,5 @@
 /**
- * 端到端冒烟测试一键入口（pnpm test:e2e）：
+ * 端到端冒烟测试一键入口（vp run test:e2e）：
  * 1. 清理 5173 / 8787 残留端口（避免上次失败遗留的进程）
  * 2. 后台拉起 dev server（5173）——项目用 Vite+，走本地 vp 二进制（vite-plus 迁移后
  *    已无 node_modules/vite/bin/vite.js；vp dev 内部即 Vite）；e2e-smoke.mjs 内会自行拉起 API server（8787）

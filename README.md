@@ -5,15 +5,15 @@
 ## 快速开始
 
 ```bash
-pnpm install       # 项目用 pnpm（devEngines 强制，npm 会被拒绝）
-pnpm dev           # 开发服务器 http://localhost:5173（API 另起：pnpm dev:api，或 pnpm dev:all 一键双起）
-pnpm test          # 单元测试（vp test run）
-pnpm lint          # 代码检查（vp lint，0 error 为准）
-pnpm build         # 类型检查 + 生产构建（输出 dist/）
-pnpm preview       # 预览生产构建
+vp install         # 安装依赖（vp 统一封装，包管理器仍是 pnpm）
+vp dev             # 开发服务器 http://localhost:5173（API 另起：vp run dev:api，或 vp run dev:all 一键双起）
+vp test run        # 单元测试（watch：vp test）
+vp check           # 格式化 + lint + 类型检查
+vp run build       # 类型检查 + 生产构建（输出 dist/）
+vp preview         # 预览生产构建
 ```
 
-> 工具链是 **Vite+**（`vp` 单 CLI 包办 Vite / Vitest / Oxlint / Oxfmt），不是裸 Vite；`pnpm dev` 内部执行 `vp dev`。约定见 `AGENTS.md`。
+> 工具链是 **Vite+**（`vp` 单 CLI 包办 Vite / Vitest / Oxlint / Oxfmt），不是裸 Vite，也不直接跑 pnpm；`vp` 内部用 pnpm 管依赖。约定见 `AGENTS.md`。
 
 ## 技术栈
 
@@ -145,14 +145,14 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 `scripts/e2e.mjs` 一键入口：清理端口 → 拉起 `vp dev` → 运行 `scripts/e2e-smoke.mjs`（用本机 Microsoft Edge 无头模式跑通核心链路，脚本结束打印实际断言项数）：
 
 ```bash
-pnpm add -D playwright-core        # 需要本机安装 Microsoft Edge
-pnpm test:e2e                      # 一键：自动起服务 + 跑冒烟 + 收尾
+vp add -D playwright-core          # 需要本机安装 Microsoft Edge
+vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收尾
 ```
 
 覆盖：路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、素材标记与申论拆解、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、数据导入合并、**行测刷题（列表 → 答题 → 判分 → 刷新后持久化 → 错题本）**、**登录页与旧 `/account` 深链到 `/settings#account` 的重定向**、导航入口。共 130+ 项断言（脚本结束打印实际项数）。
 
 > 尚未覆盖：真实 Supabase 的登录 / 退出与 RLS、触发器实际行为（需真实项目或测试账号）。
-> 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，8 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化），随 `pnpm test` 一起跑，不触网。
+> 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，8 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化），随 `vp test run` 一起跑，不触网。
 
 ## 账号体系与云同步（Supabase 全托管：Auth + Postgres）
 

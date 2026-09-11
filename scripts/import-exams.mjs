@@ -5,9 +5,11 @@
  * 数据源：《01】国考真题资料_AI解析》下的镜像 md（AI 解析产物，带 YAML 元数据）
  * 产出：data/articles.db（与文章同库，papers / materials / questions 三表）
  *
- * 用法：node scripts/import-exams.mjs [--src <解析目录>] [--db <输出db>] [--dry] [--min-year <年份>]
+ * ⚠️ 已被 PDF 管线取代：2000–2025 全量现由 scripts/parse-shenlun-pdf.py（PDF → data/shenlun/*.json）
+ *    + scripts/import-shenlun.mjs 维护（PDF 直提，行结构完整）。本脚本保留给 md 源，
+ *    其 md 行结构已损坏、解析质量不保证，默认只导入 2024 起，避免误覆盖 PDF 管线数据。
  *
- * 2023 及之前的卷源数据有误，2026-09-12 已从库中删除；重导时默认只导入 2024 起。
+ * 用法：node scripts/import-exams.mjs [--src <解析目录>] [--db <输出db>] [--dry] [--min-year <年份>]
  *
  * 解析策略：宽容适配各年份三种标题写法
  *   - 标准版：【给定资料】/【作答要求】/参考答案
@@ -28,7 +30,7 @@ const DB = process.argv.includes('--db')
   ? path.resolve(process.argv[process.argv.indexOf('--db') + 1])
   : path.join(ROOT, 'data/articles.db')
 const DRY = process.argv.includes('--dry')
-/* 2023 及之前卷源数据有误（2026-09-12 已从库中删除）：默认不导入，需要时显式传 --min-year 0 放开 */
+/* 旧的 md 源行结构已损坏：默认只导入 2024 起，避免覆盖 PDF 管线数据；确需重导旧年份显式传 --min-year 0 */
 const MIN_YEAR = process.argv.includes('--min-year')
   ? Number(process.argv[process.argv.indexOf('--min-year') + 1])
   : 2024

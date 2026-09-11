@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="data:," />
+    <!-- 站点图标：印章式「读」字（马善政楷书字形转路径，跨平台一致）；SVG 优先，PNG 兜底 -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>读本 READBOOK · 每日精读</title>
     <!-- 阅读正文字体（思源宋体/思源黑体）不再首屏加载：由 src/lib/fonts.ts 在切换字体时按需注入，避免拖慢首屏 -->
     <!-- 仅保留界面小字体（DM Sans/DM Mono/马善政楷书为装饰性拉丁/标题字体）异步加载 -->

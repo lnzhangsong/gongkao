@@ -103,6 +103,8 @@ export interface ReaderSettings {
   termBox: boolean
   /** 行测练习：零散单题每组（分屏）题目数 */
   singlesPerScreen: number
+  /** 行测错题本：每页题目数 */
+  wrongPageSize: number
 }
 
 export type AnnotationKind = 'highlight' | 'underline' | 'note'

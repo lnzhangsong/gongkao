@@ -40,6 +40,9 @@ export function XingceListPage() {
     return [...m.entries()].sort((a, b) => b[0] - a[0])
   }, [papers])
 
+  /* 错题数 = 最近一次作答仍做错的题（与错题本 /practice/wrong 的成员一致） */
+  const wrongCount = useMemo(() => Object.values(answers).filter((a) => !a.correct).length, [answers])
+
   return (
     <div className="exam-page">
       <header className="subpage-header exam-hero">
@@ -53,6 +56,10 @@ export function XingceListPage() {
         </div>
         <div className="exam-hero-side">
           <p className="subpage-copy">历年国考行测真题，客观题点选作答、即时判分，错题自动进入复习队列。</p>
+          {/* 错题本入口：跨卷汇总最近一次做错的题（/practice/wrong） */}
+          <button className="text-btn practice-wrong-entry" onClick={() => nav('/practice/wrong')}>
+            {wrongCount > 0 ? `错题本 · ${wrongCount} 题待重做 →` : '错题本 →'}
+          </button>
         </div>
       </header>
 

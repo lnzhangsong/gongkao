@@ -551,11 +551,7 @@ export function XingcePracticePage() {
                     )
                   })}
                 </div>
-                {qJudged && (
-                  <div className={`practice-verdict${pick === q.answer ? '' : ' is-wrong'}`}>
-                    {pick === q.answer ? '✓ 回答正确' : `✗ 回答错误，正确答案 ${q.answer}`}
-                  </div>
-                )}
+                {/* 判定结果只靠选项的红/绿框表达；解析紧跟其后 */}
                 {qJudged && q.explanation && (
                   <div className="practice-explain">
                     <CondLines text={q.explanation} />

@@ -46,6 +46,15 @@
   margin: 0;
 }
 
+/* 错题本入口（练习列表 hero 侧）：文案下方留距，宽度随文字 */
+.exam-hero .practice-wrong-entry {
+  display: inline-block;
+  margin-top: 14px;
+  font: 13px/1.6 var(--serif);
+  border-bottom: 1px solid currentcolor;
+  padding-bottom: 2px;
+}
+
 .exam-year-head {
   margin-top: 44px;
 }

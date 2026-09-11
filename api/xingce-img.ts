@@ -13,11 +13,12 @@ const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url)
-  const rel = decodeURIComponent(url.pathname.replace(/^\/xingce-img\//, ''))
-  if (rel.includes('..') || !/\.(png|webp)$/.test(rel)) {
-    return new Response('Not Found', { status: 404 })
-  }
+  // vercel.json rewrite 把文件相对路径放在 ?path=（重写后 pathname 已变成 /api/xingce-img）
   try {
+    const rel = decodeURIComponent(url.searchParams.get('path') ?? url.pathname.replace(/^\/xingce-img\//, ''))
+    if (rel.includes('..') || !/\.(png|webp)$/.test(rel)) {
+      return new Response('Not Found', { status: 404 })
+    }
     const data = await fs.readFile(path.join(PROJECT_ROOT, 'data', 'xingce-img', rel))
     return new Response(new Uint8Array(data), {
       headers: {

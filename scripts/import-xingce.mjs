@@ -132,6 +132,10 @@ function validate(paper, _file) {
     seen.add(q.idx)
     if (!SECTIONS.includes(q.section)) errs.push(`${at} section 非法：${q.section}`)
     if (!q.stem) errs.push(`${at} stem 为空`)
+    /* 逻辑填空题干被截断的特征（2026 副省 38-45 实际踩过）：「依次填入…」被切剩「依次」 */ else if (
+      /[。！？] ?依次$/.test(q.stem)
+    )
+      warns.push(`第${q.idx}题题干疑似截断（以「依次」结尾）`)
     const opts = q.options
     const keys = Array.isArray(opts) ? opts.map((o) => o.key) : []
     if (!Array.isArray(opts) || opts.length < 2) {

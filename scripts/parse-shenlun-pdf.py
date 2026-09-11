@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """申论国考真题：PDF → 结构化 JSON（data/shenlun/*.json）
 
-背景：`_AI解析` 下的 md 行结构已损坏（题目/答案挤在一行），2000–2023 直接入库会产出错数据。
+背景：`_AI解析` 下的 md 行结构已损坏（题目/答案挤在一行），直接入库会产出错数据。
 本脚本改为从推荐版 PDF 直接用 PyMuPDF 提取（行结构干净），再切分为
 材料 / 题目（题干+要求）/ 参考答案，落 `data/shenlun/*.json`；
-入库由 scripts/import-shenlun.mjs 完成（仅写 2000–2023，保留库内 2024/2025）。
+入库由 scripts/import-shenlun.mjs 完成（覆盖 2000–2025 全量，按 id 先删后插）。
 
 用法：python3 scripts/parse-shenlun-pdf.py [--pdf-dir DIR] [--md-dir DIR] [--out DIR] [--only 2020]
 """

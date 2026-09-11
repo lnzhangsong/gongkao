@@ -48,6 +48,47 @@ const DRY = process.argv.includes('--dry')
 
 const SECTIONS = ['政治理论', '常识判断', '言语理解', '言语理解与表达', '数量关系', '判断推理', '资料分析']
 
+/** 句末标点：上一行以这些结尾时是真心换行（分句/分段边界），可带收尾引号/括号，不并入下一行 */
+const REFLOW_TERMINAL_RE = /[。！？；…：.!?][”』」)]*$/
+/** 行首枚举标记：下一行以这些开头时保留换行（①②③/(1)/一、/1. 逐条一行，配合前端 CondLines） */
+const REFLOW_MARK_RE =
+  /^(?:[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮]|[（(][0-9一二三四五六七八九十]{1,3}[)）]|[一二三四五六七八九十]{1,3}、|\d{1,2}[.、](?!\d)|【)/
+
+/**
+ * 重排解析文本：把视觉换行造成的句中硬断行并回一句（如「均无明\n显规律」「②号沿着宫格\n最外圈…」），
+ * 真边界保留——句末标点后的换行、枚举标记行首的换行（①②③/(1)/1. 逐条一行，配合前端 CondLines）、
+ * 空行（段落；连续空行收敛为一个）。表格行（含 " | "）不参与合并。
+ * 只作用于解析与选项文本；题干/材料的换行是有意结构，不重排。
+ */
+function reflowText(text) {
+  if (!text || !text.includes('\n')) return text
+  const out = []
+  for (const raw of text.split('\n')) {
+    const line = raw.trim()
+    if (!line) {
+      if (out.length && out[out.length - 1] !== '') out.push('')
+      continue
+    }
+    const prev = out.length ? out[out.length - 1] : null
+    const joinable =
+      prev &&
+      prev !== '' &&
+      !prev.includes(' | ') &&
+      !line.includes(' | ') &&
+      !REFLOW_TERMINAL_RE.test(prev) &&
+      !REFLOW_MARK_RE.test(line)
+    if (joinable) {
+      /* 两侧都是 ASCII 时补空格，避免英文单词被粘连；中文直接相连 */
+      const sep = /[A-Za-z0-9]$/.test(prev) && /^[A-Za-z0-9]/.test(line) ? ' ' : ''
+      out[out.length - 1] = prev + sep + line
+    } else {
+      out.push(line)
+    }
+  }
+  while (out.length && out[out.length - 1] === '') out.pop()
+  return out.join('\n')
+}
+
 function ensureTables(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS xg_papers (
   id TEXT PRIMARY KEY,
@@ -167,7 +208,10 @@ function main() {
     }
     db.prepare('BEGIN').run()
     try {
-      const warnings = warns.length ? [...(paper.warnings ?? []), ...warns].join('\n') : (paper.warnings ?? null)
+      // paper.warnings 可能是字符串（老 parse-xingce26 格式）、字符串数组（xingce-images.py）或缺失
+      const paperWarns = Array.isArray(paper.warnings) ? paper.warnings : paper.warnings ? [String(paper.warnings)] : []
+      const allWarns = [...paperWarns, ...warns]
+      const warnings = allWarns.length ? allWarns.join('\n') : null
       db.prepare(
         `INSERT INTO xg_papers (id, year, level, title, duration_min, source_file, question_count, warnings)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -193,6 +237,9 @@ function main() {
         // 图片只落盘不进库：前端按「卷号+题号/组号」从构建产物取图
         writeImages(paper.id, 'g', q.groupId ?? q.idx, q.groupImage ?? null)
         writeImages(paper.id, 'q', q.idx, q.image ?? null)
+        // 解析/选项重排：PDF 视觉换行的句中断行并回一句。题干与材料不重排——
+        // 它们的换行是导入时就有意拼接/分条的结构（当前数据均为零换行）
+        const options = q.options.map((o) => ({ ...o, text: reflowText(o.text ?? '') }))
         ins.run(
           paper.id,
           q.idx,
@@ -202,9 +249,9 @@ function main() {
           q.groupStem ?? null,
           null,
           q.stem,
-          JSON.stringify(q.options),
+          JSON.stringify(options),
           q.answer ?? null,
-          q.explanation ?? null,
+          reflowText(q.explanation ?? '') || null,
           null,
         )
       }

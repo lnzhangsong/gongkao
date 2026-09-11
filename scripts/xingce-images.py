@@ -7,6 +7,7 @@
 - 被丢的图形推理/图片选项题 → 恢复整题：image + stem + answer/explanation（解析 PDF 补）
 
 用法：python3 scripts/xingce-images.py <试卷目录> <解析目录> <json目录>
+      加 --answers-only 只回填答案（解析 PDF 文字解析行 + 黄色高亮标记），不动图片
 定位策略：行级 bbox 文本 → 题号候选链（严格递增，跳过卷首「注意事项 1.」类伪题号）
 """
 import base64
@@ -342,6 +343,63 @@ def parse_answers(pdf: Path):
     return out
 
 
+def is_yellow(fill) -> bool:
+    return bool(fill) and fill[0] > 0.85 and fill[1] > 0.85 and fill[2] < 0.6
+
+
+def parse_highlight_answers(pdf: Path):
+    """解析 PDF 黄色高亮 → {题号: 答案字母}。
+
+    引流版对没有文字解析的题不写「N.X。【解析】」行，只在正确选项整行
+    （或图形推理题题干行尾的答案字母）铺黄色高亮块——那是 (≈1,1,0) 的矢量
+    填充矩形，纯文本提取完全看不到，须用 get_drawings() 定位后映射回覆盖的
+    选项词（「B.职能型…」）或行尾字母。归属规则：高亮块属于阅读序里最近的
+    上一个题号行，且跨页延续（题号行常在页尾、高亮选项在次页开头）。
+    用已入库答案交叉校验 259 题全部一致。"""
+    doc = pymupdf.open(str(pdf))
+    out: dict[int, str] = {}
+    cur = None  # 当前题号
+    for page in doc:
+        rects = [d["rect"] for d in page.get_drawings() if is_yellow(d.get("fill"))]
+        lines = []
+        for b in page.get_text("dict")["blocks"]:
+            if b["type"] != 0:
+                continue
+            for l in b["lines"]:
+                text = "".join(s["text"] for s in l["spans"]).strip()
+                if text:
+                    lines.append((pymupdf.Rect(l["bbox"]), text))
+        lines.sort(key=lambda x: (round(x[0].y0), x[0].x0))
+        words = page.get_text("words") if rects else []
+        for rect, text in lines:
+            m = QNUM_RE.match(text)
+            if m:
+                cur = int(m.group(1))
+            # 高亮块比文字行高，用「块中心落在行带内」判定；命中后取块内以「X.」
+            # 开头的词为选项字母
+            hit = [r for r in rects if rect.y0 - 3 <= (r.y0 + r.y1) / 2 <= rect.y1 + 3
+                   and r.x1 > rect.x0 and r.x0 < rect.x1]
+            if not hit:
+                continue
+            letter = None
+            for w in words:
+                x0, y0, x1, y1, word = w[:5]
+                if any(r.x0 <= (x0 + x1) / 2 <= r.x1 and r.y0 <= (y0 + y1) / 2 <= r.y1 for r in hit):
+                    wm = re.match(r"^([A-E])[．.、)）]", word)
+                    if wm:
+                        letter = wm.group(1)
+                        break
+            # 题干行尾答案字母样式：「…使之呈现一定的规律性。D」
+            if not letter:
+                em = re.search(r"[。？?：:，,]\s*([A-E])\s*$", text)
+                if em and any(r.x1 > rect.x1 - 15 for r in hit):
+                    letter = em.group(1)
+            if letter and cur:
+                out.setdefault(cur, letter)
+    doc.close()
+    return out
+
+
 def split_stem_options(raw, nxt: int | None = None):
     """题干文本里若带 A. B. 选项行则拆出；否则选项留空（图片形态）。
     拆出的选项必须是完整的 A-D 且文本非空，否则视为图片选项（纯图片选项题 A./B. 空标记）。"""
@@ -359,10 +417,32 @@ def split_stem_options(raw, nxt: int | None = None):
     return stem0.strip(), []
 
 
-def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
+def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool = False):
     paper = json.loads(json_path.read_text())
     existing = {q["idx"] for q in paper["questions"]}
     max_q = max(existing)
+
+    answers = parse_answers(ans_pdf)
+    hl_answers = parse_highlight_answers(ans_pdf)
+
+    # 0) 答案回填：JSON 里 answer 为空的题（引流版只对部分题写文字解析，其余靠
+    #    黄色高亮标答案），从解析 PDF 的「N.X。【解析】」行 + 黄色高亮两路补齐
+    filled = 0
+    for q in paper["questions"]:
+        if not q.get("answer"):
+            a = answers.get(q["idx"], (None, None))[0] or hl_answers.get(q["idx"])
+            if a:
+                q["answer"] = a
+                filled += 1
+    if filled:
+        print(f"  答案回填 {filled} 题（解析 PDF 文字行/黄色高亮）")
+
+    if answers_only:
+        # 尾部补 \n：与仓库格式化工具（oxfmt）约定一致，避免每轮重跑都多出格式 diff
+        json_path.write_text(json.dumps(paper, ensure_ascii=False, indent=2) + "\n")
+        print(f"✓ {json_path.name}（仅答案）：回填 {filled} 题")
+        return
+
     doc = pymupdf.open(str(paper_pdf))
     wm = clean_watermark(doc)
     if wm:
@@ -437,7 +517,6 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
 
     # 2) 图片形态题：JSON 里缺号的恢复；已有 image 的重裁一遍
     #    （题干行改为文本渲染、截图只留图形区，2026-09-11）
-    answers = parse_answers(ans_pdf)
     by_idx = {q["idx"]: q for q in paper["questions"]}
     missing = [n for n in range(1, max_q + 1) if n not in existing]
     # 候选：已有 image 的重裁；题干提到图但没图的补图（2026-09-11）
@@ -480,6 +559,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             raw = re.sub(r"^\d{1,3}[.．]\s*", "", "".join(stem_lines))
             stem = cut_ad(cut_leak(raw, n)).rstrip()
             ans, expl = answers.get(n, (None, None))
+            ans = ans or hl_answers.get(n)
             if old:
                 if not had_img:
                     continue  # 本就是文字题且未挂图，无需动
@@ -518,6 +598,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
             print(f"  题{n} {'重裁' if had_img else '补图'}：题干 {len(stem)} 字，截图 {len(pngs)} 张")
             continue
         ans, expl = answers.get(n, (None, None))
+        ans = ans or hl_answers.get(n)
         restored.append({
             "idx": n,
             "section": section,
@@ -568,20 +649,22 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path):
                          if "未收录" not in w and "图片形态" not in w]
     paper["warnings"].append(
         f"图形/图片形态题以「题干文本 + 图形区截图」存储：本轮重裁 {recropped} 题、新恢复 {len(restored)} 题")
-    json_path.write_text(json.dumps(paper, ensure_ascii=False, indent=1))
+    json_path.write_text(json.dumps(paper, ensure_ascii=False, indent=2) + "\n")
     doc.close()
     print(f"✓ {json_path.name}：组图 {len(img_by_group)} 组，恢复 {len(restored)} 题")
 
 
 def main():
-    paper_dir, ans_dir, json_dir = (Path(a) for a in sys.argv[1:4])
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    paper_dir, ans_dir, json_dir = (Path(a) for a in args)
+    answers_only = "--answers-only" in sys.argv
     level_kw = {"副省级": "副省级", "地市级": "地市", "行政执法": "行政执法"}
     for jp in sorted(json_dir.glob("*.json")):
         level = next(k for k in level_kw if k in jp.name)
         paper_pdf = next(paper_dir.glob(f"*{level_kw[level]}*.pdf"))
         ans_pdf = next(ans_dir.glob(f"*{level_kw[level]}*.pdf"))
         print(f"→ {jp.name} ← {paper_pdf.name}")
-        process(jp, paper_pdf, ans_pdf)
+        process(jp, paper_pdf, ans_pdf, answers_only=answers_only)
 
 
 main()

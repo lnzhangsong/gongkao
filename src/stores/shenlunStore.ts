@@ -4,6 +4,7 @@ import type { ArticleSkeleton, ParagraphSummary } from '../types'
 import { idbStorage } from '../lib/idbStorage'
 import { deriveStatus, hasStudyContent } from '../lib/learnerProfile'
 import { useLearningEventStore } from './learningEventStore'
+import { track } from '../lib/analytics'
 
 /** 学习状态：未学 / 学习中 / 已掌握 */
 export type StudyStatus = 'new' | 'learning' | 'mastered'
@@ -84,7 +85,11 @@ export const useShenlunStore = create<ArticleState>()(
           const auto = deriveStatus(merged)
           if (auto) merged.status = auto
           /* 证据采集（事件层）：出现实质加工内容即记一次，同日自动去重 */
-          if (hasStudyContent(merged)) useLearningEventStore.getState().log('deconstruct', articleId)
+          if (hasStudyContent(merged)) {
+            useLearningEventStore.getState().log('deconstruct', articleId)
+            /* 产品埋点：只报文章 id，不报拆解出的观点/段意内容 */
+            track('shenlun_deconstruct', { articleId })
+          }
           return { study: { ...s.study, [articleId]: merged } }
         }),
 

@@ -4,6 +4,8 @@
  *   此前壳也 cache-first，发新版后浏览器一直用旧 index.html 引旧 JS，造成「更新不生效」
  * - hashed assets / 字体：cache-first（文件名带 hash 内容不可变，可放心长缓存）
  * - /api/* 一律不缓存（数据离线由应用层 IndexedDB 兜底，避免读到过期数据）
+ * - /ingest/* 一律不介入（PostHog 反代）：埋点是跨域转发的 POST/beacon，
+ *   经 SW 兜一圈既无收益，还可能让 sendBeacon 在页面卸载时被延迟
  * - 版本更新：CACHE 名变更后 activate 时清理旧缓存
  */
 const CACHE = 'readbook-v2'
@@ -28,6 +30,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api/')) return
+  if (url.pathname.startsWith('/ingest/')) return
 
   // 页面导航：network-first，拿到新壳顺带刷新缓存；断网回退旧壳
   if (req.mode === 'navigate') {

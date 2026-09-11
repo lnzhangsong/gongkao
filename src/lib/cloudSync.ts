@@ -12,6 +12,7 @@ import { useXingceStore, asXgAnswer, type XgAnswer } from '../stores/xingceStore
 import { useAiStore } from '../stores/aiStore'
 import { useLearningEventStore, type LearningEvent } from '../stores/learningEventStore'
 import { useReaderStore } from '../stores/readerStore'
+import { track } from './analytics'
 import { useThemeStore } from '../stores/themeStore'
 
 /**
@@ -380,33 +381,45 @@ async function pullWhole(
 async function runSyncInner(): Promise<void> {
   if (!running || !supabase) return
   setSync({ syncing: true, error: null })
+  /* 产品埋点用：当前正在处理的表（出错时定位是哪张表），以及本轮耗时 */
+  let currentTable = ''
+  const startedAt = Date.now()
   try {
     let changedPref = false
     const userId = await currentUserId()
     if (!userId) return
     /* 整包类（偏好/AI 配置）先拉后推：登录首轮先吃云上较新的一份，避免本机旧配置盖掉其他设备的新配置 */
+    currentTable = 'user_prefs'
     if (await pullWhole('user_prefs', currentPrefs, applyPrefs)) changedPref = true
+    currentTable = 'user_ai_config'
     if (await pullWhole('user_ai_config', aiConfig, applyAiConfig)) changedPref = true
     /* 行表先 push 后 pull：本地未推送修改先占住本机时间戳，LWW 才不会被旧云行反压。
      * 首轮快照为空 → 登录前匿名期间产生的本地数据也会全部推送 */
     for (const [table, ad] of Object.entries(ADAPTERS)) {
+      currentTable = table
       if (await pushTable(table, ad, userId)) snapshot[table] = ad.getRows()
     }
     let changed = changedPref
     for (const [table, ad] of Object.entries(ADAPTERS)) {
+      currentTable = table
       if (await pullTable(table, ad)) {
         changed = true
         snapshot[table] = ad.getRows()
       }
     }
+    currentTable = 'user_prefs'
     if (await pushWhole('user_prefs', currentPrefs(), userId)) changed = true
+    currentTable = 'user_ai_config'
     if (await pushWhole('user_ai_config', aiConfig(), userId)) changed = true
     saveMeta(meta)
     if (changed) setSync({ lastSyncAt: nowISO() })
     else setSync({ lastSyncAt: useSyncStore.getState().lastSyncAt ?? nowISO() })
     lastPullAt = Date.now()
+    track('sync_done', { duration_ms: Date.now() - startedAt })
   } catch (err) {
     setSync({ error: err instanceof Error ? err.message : String(err) })
+    /* 只报出错的表名与耗时，不报错误正文（可能带上账号/权限细节） */
+    track('sync_error', { table: currentTable, duration_ms: Date.now() - startedAt })
   } finally {
     setSync({ syncing: false })
   }

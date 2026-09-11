@@ -3,4 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string
   readonly VITE_SUPABASE_ANON_KEY?: string
+  /** PostHog 项目 API Key（phc_…）；缺失时埋点整体静默禁用 */
+  readonly VITE_POSTHOG_KEY?: string
+  /** PostHog 采集端点；默认走自身域名反代 `/ingest`，填完整 URL 可直连 */
+  readonly VITE_POSTHOG_HOST?: string
 }

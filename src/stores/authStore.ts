@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { startCloudSync, stopCloudSync } from '../lib/cloudSync'
-import { track } from '../lib/analytics'
+import { identify, resetAnalytics, track } from '../lib/analytics'
 import { useAuthStatusStore, type AuthUser, type AuthProfile } from './authStatus'
 import { useArticleStore } from './articleStore'
 import { useAnnotationStore } from './annotationStore'
@@ -72,6 +72,9 @@ function onSignedIn(user: User) {
   useAuthStatusStore.setState({ status: 'in', user: toUser(user), profile: toProfile(user, null) })
   void useAuthStore.getState().refreshProfile()
   startCloudSync()
+  /* 先 identify 再 track：两个调用挂在同一个 SDK 就绪 Promise 上，按注册顺序执行，
+   * 故 login 事件必定归属到已识别的用户（只传 user id，不传邮箱/昵称） */
+  identify(user.id)
   track('auth_login', { provider: user.app_metadata?.provider ?? 'email' })
 }
 
@@ -117,6 +120,8 @@ export const useAuthStore = create<AuthActions>()(() => ({
     /* 顺序关键：先停引擎 → 再清本机 → 最后登出。
      * 引擎若还活着会把清空动作 diff 成「全部删除」推上云，毁掉云端真实数据 */
     track('auth_logout')
+    /* 解除身份关联并换匿名 id：退出后的事件不能再记在上一个账号名下 */
+    resetAnalytics()
     stopCloudSync()
     clearLocalData()
     await supabase.auth.signOut()

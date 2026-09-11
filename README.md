@@ -21,6 +21,7 @@ vp preview         # 预览生产构建
 - **React Router 7** —— 页面路由（含 `/practice` 行测线、`/login`），前进后退，刷新保持；`/account` 保留为旧链接重定向
 - **Zustand 5**（`persist` 中间件）—— 状态管理；数据本地优先，localStorage（轻量）+ IndexedDB（文章、学习事件、行测作答）
 - **Supabase**（可选）—— Auth 登录 + Postgres 云同步；未配置环境变量时自动降级为纯本地。SDK 约 55KB gzip，按需动态加载（登录态另存轻量 `authStatus` store），**不进首屏 bundle**
+- **PostHog**（可选）—— 产品埋点（pageview + 白名单功能事件）；SDK 约 20KB gzip，空闲时动态加载，不上报 PII。未配置 `VITE_POSTHOG_KEY` 时整体静默禁用
 - **Lucide React** —— 工具栏/操作图标
 - **CSS Variables** —— 令牌系统与五套主题（paper/blue/violet/night/graphite，未引入 Tailwind；2026-09 起按 Paper OS 收敛：圆角 10/16 两档、7×8 硬阴影、1180 版心，见 `design/design/DESIGN.md`）
 - 字体：DM Mono / DM Sans / Noto Sans SC / Noto Serif SC / Ma Shan Zheng / LXGW WenKai（Google Fonts）
@@ -174,6 +175,19 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 4. Supabase Auth → URL Configuration 里把站点域名（本地 `http://localhost:5173` 与线上域名）加入 Redirect URLs，魔法链接与邮箱确认链接才能回跳
 
 两项 Supabase 环境变量缺省时，登录入口仅显示「未配置」提示，站点其余功能完全不受影响。
+
+### 产品埋点（可选）
+
+PostHog 云（美区）承载 pageview 与一组白名单功能事件，**不采集任何个人身份信息**
+（不传邮箱/昵称/正文/笔记内容），事件清单与隐私策略见 `docs/产品埋点设计方案.md`。
+
+1. 在 [PostHog](https://posthog.com) 注册项目（美区），拿 Project API Key（`phc_…`）
+2. 在 `.env` / `.env.local` 与 Vercel 项目环境变量里填 `VITE_POSTHOG_KEY=phc_…`
+   （`VITE_POSTHOG_HOST` 留空即可）
+3. 上报走自身域名 `/ingest` 反代（`vercel.json` rewrite + `vite.config.ts` dev proxy），
+   既避开广告插件拦截，也免去国内直连的跨境延迟
+
+`VITE_POSTHOG_KEY` 缺省时整个埋点模块静默禁用：不加载 SDK、不发请求、不报错，功能完全不受影响。
 
 ### 运维备注（Supabase 免费版）
 

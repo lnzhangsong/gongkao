@@ -5,7 +5,9 @@
  * 数据源：《01】国考真题资料_AI解析》下的镜像 md（AI 解析产物，带 YAML 元数据）
  * 产出：data/articles.db（与文章同库，papers / materials / questions 三表）
  *
- * 用法：node scripts/import-exams.mjs [--src <解析目录>] [--db <输出db>] [--dry]
+ * 用法：node scripts/import-exams.mjs [--src <解析目录>] [--db <输出db>] [--dry] [--min-year <年份>]
+ *
+ * 2023 及之前的卷源数据有误，2026-09-12 已从库中删除；重导时默认只导入 2024 起。
  *
  * 解析策略：宽容适配各年份三种标题写法
  *   - 标准版：【给定资料】/【作答要求】/参考答案
@@ -21,11 +23,15 @@ import path from 'node:path'
 const ROOT = path.resolve(import.meta.dirname, '..')
 const SRC = process.argv.includes('--src')
   ? path.resolve(process.argv[process.argv.indexOf('--src') + 1])
-  : '/Users/nif/Documents/人民时评/【01】国考真题资料_AI解析'
+  : '/Users/tomcat/Documents/docs/【01】国考真题资料_AI解析'
 const DB = process.argv.includes('--db')
   ? path.resolve(process.argv[process.argv.indexOf('--db') + 1])
   : path.join(ROOT, 'data/articles.db')
 const DRY = process.argv.includes('--dry')
+/* 2023 及之前卷源数据有误（2026-09-12 已从库中删除）：默认不导入，需要时显式传 --min-year 0 放开 */
+const MIN_YEAR = process.argv.includes('--min-year')
+  ? Number(process.argv[process.argv.indexOf('--min-year') + 1])
+  : 2024
 
 // ---------- md 解析 ----------
 
@@ -225,7 +231,7 @@ function cleanMaterial(content) {
     const before = m.index > 0 ? content[m.index - 1] : '\n'
     const after = content.slice(m.index + 4, m.index + 6)
     if (after.startsWith('两')) continue // 注意事项 boilerplate：「与作答要求两部分构成」
-    if (before in '\n【、三二一' || /^\s*[（(一二三四五1-9【问\n]/.test(after)) {
+    if ('\n【、三二一'.includes(before) || /^\s*[（(一二三四五1-9【问\n]/.test(after)) {
       return content
         .slice(0, m.index)
         .replace(/[【（(]\s*$/, '')
@@ -427,8 +433,11 @@ function walkMd(dir) {
 const papers = []
 for (const f of walkMd(SRC)) {
   const parsed = parsePaper(path.relative(SRC, f), fs.readFileSync(f, 'utf8'))
-  if (parsed) papers.push(parsed)
+  if (!parsed) continue
+  if (MIN_YEAR && parsed.paper.year < MIN_YEAR) continue
+  papers.push(parsed)
 }
+if (MIN_YEAR) console.log(`--min-year ${MIN_YEAR}：跳过 ${MIN_YEAR} 年之前的卷`)
 
 // 同年同级重复卷（如 _1213233422 后缀）取字数更大的一份
 const seen = new Map()

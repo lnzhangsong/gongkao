@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { idbStorage } from '../lib/idbStorage'
 import { useLearningEventStore } from './learningEventStore'
+import { track } from '../lib/analytics'
 
 /**
  * 答案溯源 store（申论方法论与答案溯源设计方案 §四，M1）：
@@ -172,13 +173,18 @@ export const useExamStudyStore = create<ExamStudyState>()(
       setPoints: (paperId, qIdx, points, origin) =>
         set((s) => {
           /* 证据采集（事件层，第 3 期输出端回流）：完成一次要点加工，对象为该题 trace */
-          if (points.length > 0) useLearningEventStore.getState().log('exam-answer', traceKey(paperId, qIdx))
+          if (points.length > 0) {
+            useLearningEventStore.getState().log('exam-answer', traceKey(paperId, qIdx))
+            /* 产品埋点：只报卷/题定位与来源，不报要点内容 */
+            track('exam_trace', { paperId, qIdx, origin })
+          }
           return upsertTrace(s, paperId, qIdx, (cur) => ({ ...cur, points, origin }))
         }),
 
       addPoint: (paperId, qIdx, point) =>
         set((s) => {
           useLearningEventStore.getState().log('exam-answer', traceKey(paperId, qIdx))
+          track('exam_trace', { paperId, qIdx, origin: 'manual' })
           return upsertTrace(s, paperId, qIdx, (cur) => ({ ...cur, points: [...cur.points, point], origin: 'manual' }))
         }),
 

@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Annotation } from '../types'
 import { idbStorage } from '../lib/idbStorage'
 import { useLearningEventStore } from './learningEventStore'
+import { track } from '../lib/analytics'
 
 interface AnnotationState {
   annotations: Annotation[]
@@ -55,6 +56,8 @@ export const useAnnotationStore = create<AnnotationState>()(
         const now = new Date().toISOString()
         const annotation: Annotation = { ...a, id: genId(), createdAt: now, updatedAt: now }
         set((s) => ({ annotations: [annotation, ...s.annotations] }))
+        /* 产品埋点：只报类型与文章 id，不报选中的原文 */
+        track('annotation_add', { kind: annotation.kind, articleId: annotation.articleId })
         return annotation
       },
 

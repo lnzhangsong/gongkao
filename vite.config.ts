@@ -157,6 +157,19 @@ export default defineConfig({
     port: 5173,
     // 开发时把 /api 转发到本地 API server（node:sqlite）
     proxy: {
+      // PostHog 反代（生产对应 vercel.json 的两条 rewrite）：SDK 的 api_host 是 /ingest，
+      // 本地也走同源，避免开发时直连 us.i.posthog.com 失败或被广告插件拦截。
+      // 更具体的 /ingest/static 必须排在 /ingest 前面，否则静态资源会被转发到错误的域
+      '/ingest/static': {
+        target: 'https://us-assets.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest\/static/, '/static'),
+      },
+      '/ingest': {
+        target: 'https://us.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
       '/api': {
         target: 'http://localhost:8787',
         changeOrigin: true,

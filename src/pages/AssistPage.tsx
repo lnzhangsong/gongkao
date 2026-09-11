@@ -107,12 +107,13 @@ export function AssistPage() {
     if (!inferArticle || l2Busy) return
     setL2Busy(c.question)
     try {
-      track('assist_full_exam')
       const d = await draftFullExam({
         article: inferArticle,
         question: c.question,
         questionType: c.questionType,
       })
+      /* 产品埋点：只在出题成功后上报（失败在上面的 catch 里另有提示） */
+      track('assist_generate', { mode: 'full_exam', questionType: c.questionType })
       const rec = emptyRecord(d.question, d.questionType, inferArticle.topic)
       rec.stance = d.requirements
       rec.outline = d.referencePoints.map((text) => ({
@@ -160,13 +161,14 @@ export function AssistPage() {
     }
     setBusy(true)
     try {
-      track('assist_framework')
       const d = await draftFramework({
         question: question.trim(),
         questionType: qType,
         topic: topic || undefined,
         materials,
       })
+      /* 产品埋点：只在生成成功后上报，题干/材料内容一律不外传 */
+      track('assist_generate', { mode: 'framework', questionType: qType })
       const rec = emptyRecord(question.trim(), qType, topic || undefined)
       rec.stance = d.stance
       rec.outline = d.points.map((p) => ({

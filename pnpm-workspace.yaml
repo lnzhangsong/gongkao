@@ -1,6 +1,8 @@
 allowBuilds:
   # 可选性能依赖（ws 的 zlib 加速），纯 JS 回退即可，无需编译
   bufferutil: false
+  # posthog-js 的传递依赖，postinstall 只打印赞助信息，无需执行
+  core-js: false
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@0.3.0
   vite-plus: 0.3.0

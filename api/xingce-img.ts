@@ -12,10 +12,15 @@ import { fileURLToPath } from 'node:url'
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export default async function handler(req: Request): Promise<Response> {
-  const url = new URL(req.url)
-  // vercel.json rewrite 把文件相对路径放在 ?path=（重写后 pathname 已变成 /api/xingce-img）
+  // 注意：Vercel 传入的 req.url 是相对路径（/xingce-img/…?path=…），new URL() 会抛 Invalid URL，
+  // 所以手工拆查询串；文件相对路径由 vercel.json rewrite 以 ?path= 注入
   try {
-    const rel = decodeURIComponent(url.searchParams.get('path') ?? url.pathname.replace(/^\/xingce-img\//, ''))
+    const query = req.url.split('?')[1] ?? ''
+    const fromParam = new URLSearchParams(query).get('path')
+    const rel = decodeURIComponent(fromParam ?? req.url.split('?')[0].replace(/^\/xingce-img\//, '')).replace(
+      /^\/+/,
+      '',
+    )
     if (rel.includes('..') || !/\.(png|webp)$/.test(rel)) {
       return new Response('Not Found', { status: 404 })
     }

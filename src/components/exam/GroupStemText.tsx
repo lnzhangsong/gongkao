@@ -83,30 +83,35 @@ export function GroupStemText({ text }: { text: string | null | undefined }) {
 }
 
 /**
- * 截图渲染：groupImage/image 字段是 JSON 数组字符串的 data URL（xingce-images.py 产出，
- * 跨页材料为多张），也可能是单个 data URL。空值/解析失败一律渲染 null。
+ * 截图渲染：value 是 JSON 数组字符串，元素为图片地址或 { src, w, h }（带尺寸时给
+ * <img> 加 width/height，加载前预留布局防抖动）。空值/解析失败一律渲染 null。
  */
 export function DataUrls({ value, altPrefix }: { value: string | null | undefined; altPrefix: string }) {
   if (!value) return null
-  let urls: string[] = []
+  let items: unknown[] = []
   try {
     const parsed: unknown = JSON.parse(value)
-    urls = Array.isArray(parsed) ? (parsed as string[]) : [String(parsed)]
+    items = Array.isArray(parsed) ? parsed : [parsed]
   } catch {
-    if (value.startsWith('data:')) urls = [value]
+    if (value.startsWith('data:')) items = [value]
     else return null
   }
   return (
     <>
-      {urls.map((src, i) => (
-        <img
-          className="practice-img"
-          key={i}
-          src={src}
-          alt={urls.length > 1 ? `${altPrefix}图${i + 1}` : `${altPrefix}配图`}
-          loading="lazy"
-        />
-      ))}
+      {items.map((raw, i) => {
+        const it = typeof raw === 'string' ? { src: raw } : (raw as { src: string; w?: number; h?: number })
+        return (
+          <img
+            className="practice-img"
+            key={i}
+            src={it.src}
+            width={it.w || undefined}
+            height={it.h || undefined}
+            alt={items.length > 1 ? `${altPrefix}图${i + 1}` : `${altPrefix}配图`}
+            loading="lazy"
+          />
+        )
+      })}
     </>
   )
 }

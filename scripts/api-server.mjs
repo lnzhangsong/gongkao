@@ -12,7 +12,6 @@
 import { createServer } from 'node:http'
 import { DatabaseSync } from 'node:sqlite'
 import { createHash } from 'node:crypto'
-import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -264,24 +263,6 @@ const server = createServer((req, res) => {
     }
     res.writeHead(resp.status, headers)
     res.end(await resp.text())
-  }
-
-  // 行测题图/材料图：data/xingce-img/{paper}/{file}，与 Vercel 的 api/xingce-img.ts 同逻辑
-  if (url.pathname.startsWith('/xingce-img/') && req.method === 'GET') {
-    const rel = decodeURIComponent(url.pathname.slice('/xingce-img/'.length))
-    if (!rel.includes('..') && /\.(png|webp)$/.test(rel)) {
-      const file = path.join(PROJECT_ROOT, 'data', 'xingce-img', rel)
-      if (fs.existsSync(file)) {
-        res.writeHead(200, {
-          'content-type': rel.endsWith('.webp') ? 'image/webp' : 'image/png',
-          'cache-control': 'public, max-age=3600',
-        })
-        res.end(fs.readFileSync(file))
-        return
-      }
-    }
-    res.writeHead(404).end()
-    return
   }
 
   if (url.pathname === '/api/articles' && req.method === 'GET') {

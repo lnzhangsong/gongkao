@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 申论国考真题（2000–2023）入库
+ * 申论国考真题（2000–2025）入库
  *
  * 数据源：data/shenlun/*.json —— 每卷一个文件，由 scripts/parse-shenlun-pdf.py 从推荐版 PDF 提取：
  * {
@@ -13,8 +13,7 @@
  * }
  *
  * 产出：data/articles.db 的 papers / materials / questions 三表（与文章/行测同库）。
- * ⚠️ 仅写入 2000–2023：库内 2024/2025 共 6 卷为人工校对版，本脚本不读不删不改。
- *    对本批每卷按 id 先删后插，其余年份整表保留。
+ * 全量年份统一走本管线（含 2024/2025）：按 id 先删后插，未出现在 data/shenlun 的卷保持不动。
  *
  * 用法：node scripts/import-shenlun.mjs [--src data/shenlun] [--db data/articles.db] [--dry]
  */
@@ -32,18 +31,11 @@ const argPath = (flag, fallback) => {
 const SRC = argPath('--src', 'data/shenlun')
 const DB = argPath('--db', 'data/articles.db')
 const DRY = process.argv.includes('--dry')
-/** 库内已人工校对的年份，禁止覆盖 */
-const PROTECTED_YEARS = new Set([2024, 2025])
 
 const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.json'))
 const papers = []
 for (const f of files) {
-  const j = JSON.parse(fs.readFileSync(path.join(SRC, f), 'utf8'))
-  if (PROTECTED_YEARS.has(j.year)) {
-    console.log(`跳过受保护年份 ${j.id}`)
-    continue
-  }
-  papers.push(j)
+  papers.push(JSON.parse(fs.readFileSync(path.join(SRC, f), 'utf8')))
 }
 papers.sort((a, b) => a.year - b.year || a.level.localeCompare(b.level))
 

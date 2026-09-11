@@ -40,6 +40,7 @@ interface ReaderState {
   setIndent: (v: boolean) => void
   setTermBox: (v: boolean) => void
   setSinglesPerScreen: (n: number) => void
+  setWrongPageSize: (n: number) => void
   /** 应用导入的阅读器设置（缺省字段保持默认） */
   applySettings: (patch: Partial<ReaderSettings>) => void
   resetSettings: () => void
@@ -59,6 +60,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   indent: true,
   termBox: true,
   singlesPerScreen: 10,
+  wrongPageSize: 10,
 }
 
 export const useReaderStore = create<ReaderState>()(
@@ -84,16 +86,19 @@ export const useReaderStore = create<ReaderState>()(
       setTermBox: (v) => set((s) => ({ settings: { ...s.settings, termBox: v } })),
       setSinglesPerScreen: (n) =>
         set((s) => ({ settings: { ...s.settings, singlesPerScreen: Math.min(20, Math.max(5, n)) } })),
+      setWrongPageSize: (n) =>
+        set((s) => ({ settings: { ...s.settings, wrongPageSize: Math.min(20, Math.max(5, n)) } })),
       applySettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     {
       name: 'readbook:reader',
-      version: 4,
+      version: 5,
       // v1：移除「黑体」选项，旧设置映射到思源宋体
       // v2：新增 focusMode / measure / indent，旧数据用默认值补齐（防止字段缺失为 undefined）
       // v3：新增 singlesPerScreen（行测练习每组题数），旧数据用默认值补齐
       // v4：移除「版面宽度」（narrow 收窄）选项，历史字段一并清掉
+      // v5：新增 wrongPageSize（行测错题本每页题数），旧数据用默认值补齐
       migrate: (persisted) => {
         const p = persisted as { settings?: Record<string, unknown> }
         if (p.settings?.fontFamily === 'heiti') {

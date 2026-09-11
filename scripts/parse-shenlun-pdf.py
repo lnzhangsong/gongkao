@@ -23,7 +23,7 @@ DEFAULT_MD_DIR = "/Users/tomcat/Documents/docs/【01】国考真题资料_AI解�
 DEFAULT_OUT = os.path.join(ROOT, "data", "shenlun")
 
 CN = "一二三四五六七八九十"
-YEARS = range(2000, 2024)
+YEARS = range(2000, 2026)
 
 
 # ---------- 元数据（年份/级别取 md frontmatter；正文一律用 PDF） ----------
@@ -94,8 +94,8 @@ def clean_pages(pages, title_key):
             if not l:
                 kept.append("")
                 continue
-            if re.fullmatch(r"[-—\s]*\d{1,3}[-—\s]*", l):
-                continue  # 页码（含 "- 5 -"）
+            if re.fullmatch(r"[-—\s]*\d{1,3}[-—\s]*", l) or re.fullmatch(r"\d{1,3}\s*/\s*\d{1,3}", l):
+                continue  # 页码（含 "- 5 -" / "1 / 14"）
             if i > 0 and key and re.sub(r"\s+", "", l) == key:
                 continue
             kept.append(l)
@@ -167,7 +167,7 @@ def find_regions(lines):
     req = next((i for i in range(start, limit) if REQ_LOOSE_RE.match(lines[i]) or ("作答要求" in lines[i] and len(lines[i]) <= 12)), None)
     if req is None:
         # 2023 等：无「作答要求」标题，题目以「问题一」直接跟在材料后
-        req = next((i for i in range(start, limit) if re.match(r"^\s*问题[一二三四五]\s*$", lines[i])), None)
+        req = next((i for i in range(start, limit) if re.match(r"^\s*(?:【\s*)?问题[一二三四五]\s*[】]?\s*$", lines[i])), None)
     q_from = req + 1 if req is not None else start
     ans = next((i for i in range(q_from, n) if i >= 5 and is_answer_head(lines[i])), None)
     mat_body = lines[mat:req] if req is not None else lines[mat : ans if ans is not None else n]
@@ -177,6 +177,27 @@ def find_regions(lines):
 
 
 # ---------- 材料切分 ----------
+
+def num_to_int(s):
+    """中文/阿拉伯数字序号 → int（一→1，十一→11，A 返回 None）。"""
+    s = str(s)
+    if s.isdigit():
+        return int(s)
+    if s in CN:
+        return CN.index(s) + 1
+    m = re.fullmatch(rf"([{CN}])?十([{CN}])?", s)
+    if m:
+        tens = CN.index(m.group(1)) + 1 if m.group(1) else 1
+        ones = CN.index(m.group(2)) + 1 if m.group(2) else 0
+        return tens * 10 + ones
+    return None
+
+
+def mat_label(num):
+    """材料标签统一为阿拉伯数字（材料一 / 材料1 → 材料1；材料A 保留）。"""
+    v = num_to_int(num)
+    return f"材料{v}" if v else f"材料{num}"
+
 
 def split_materials(mat_body):
     # 去掉区段标题行；兼容「二、给定材料材料1」把首个材料头并进标题行的情况
@@ -199,7 +220,7 @@ def split_materials(mat_body):
             if re.fullmatch(r"[A-Z]", str(num)) and pending:
                 label = f"{pending}-{num}"
             else:
-                label = "材料" + str(num)
+                label = mat_label(num)
             blocks.append({"label": label, "lines": content})
             if not re.fullmatch(r"[A-Z]", str(num)):
                 pending = label if not reflow(content).strip() else None
@@ -233,8 +254,8 @@ def split_materials(mat_body):
 # ---------- 题目切分 ----------
 
 SCHEMES = [
-    ("问题行", re.compile(rf"^\s*问题\s*([{CN}1-9])\s*[:：]")),
-    ("问题", re.compile(rf"^\s*问题\s*([{CN}1-9])\s*$")),
+    ("问题行", re.compile(rf"^\s*(?:【\s*)?问题\s*([{CN}1-9])\s*[】]?\s*[:：]")),
+    ("问题", re.compile(rf"^\s*(?:【\s*)?问题\s*([{CN}1-9])\s*[】]?\s*$")),
     ("括号", re.compile(rf"^\s*[（(]\s*([{CN}]|1?\d)\s*[）)]")),
     ("汉序", re.compile(rf"^\s*([{CN}])\s*[、.]")),
     ("数序", re.compile(r"^\s*(\d{1,2})\s*[、.．]")),
@@ -384,7 +405,7 @@ ANS_LINE_START = re.compile(r"^\s*(?:【\s*)?(?:参考答案|答案提示|参考
 
 ANS_SCHEMES = [
     ("问", re.compile(rf"^\s*第\s*([{CN}1-9])\s*[问题題]")),
-    ("问题", re.compile(rf"^\s*(?:【\s*)?问题\s*([{CN}1-9])")),
+    ("问题", re.compile(rf"^\s*(?:【\s*)?(?:问题|题目)\s*([{CN}1-9])")),
     ("括号", re.compile(rf"^\s*[（(]\s*([{CN}]|1?\d)\s*[）)]")),
     ("汉序", re.compile(rf"^\s*([{CN}])\s*[、.．]")),
     ("数序", re.compile(r"^\s*(\d{1,2})\s*[、.．]")),

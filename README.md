@@ -34,7 +34,7 @@ pnpm preview       # 预览生产构建
 | `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记、申论拆解） | `design/pages/reading.html` |
 | `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
 | `/settings` | 设置（账号资料与云同步、字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html` |
-| `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析 | 2000–2023：`scripts/parse-shenlun-pdf.py`（PDF→JSON）+ `scripts/import-shenlun.mjs`（入库）；2024/2025 为人工校对版，由 `scripts/import-exams.mjs` 维护 |
+| `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析 | 2000–2025 统一由 `scripts/parse-shenlun-pdf.py`（PDF→`data/shenlun/*.json`）+ `scripts/import-shenlun.mjs`（入库）维护 |
 | `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时） | `docs/行测做题模块设计方案.md` |
 | `/practice/wrong` | 行测错题本（接入复习队列，到期重做） | 同上 X3 |
 | `/terms` | 申论规范词库（1070+ 词，按主题检索） | `scripts/import-guifanci.mjs` 入库 |

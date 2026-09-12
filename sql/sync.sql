@@ -127,11 +127,14 @@ begin
   end loop;
 end $$;
 
--- ---------- v3：产品埋点 — 已废弃 ----------
+-- ---------- v3：产品埋点 — 已废弃（删表） ----------
 -- 曾自建 app_events 表承载 pageview 与功能事件；现改由 PostHog 云承载
 -- （前端 src/lib/analytics.ts，见 docs/产品埋点设计方案.md），故整表下线。
--- 保留这段 drop 是为了让已建过表的环境重跑本文件即清理干净——顺带移除原先
--- 「任何人可 insert」的宽松策略（匿名上报不再需要，留着等于开一个公开写入口）。
+-- 表本身带着一条 `for insert with check (true)` 的宽松策略，配合公开的 anon key
+-- 等于一个对外的公开写入口，必须真的执行掉这段才会关闭。
+-- drop table 会连带删掉该表的索引与全部 RLS 策略（无外部依赖，不需要 cascade）。
+-- 注意：这是给「已经建过表」的环境做清理用的一次性 DDL——只改代码不会动线上库，
+--       需到 Supabase 控制台 → SQL Editor 手动重跑本文件。
 drop table if exists public.app_events;
 
 -- ---------- v4：LWW 时间戳改由服务端赋值 ----------

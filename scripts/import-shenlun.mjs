@@ -54,8 +54,11 @@ if (DRY) process.exit(0)
 
 fs.mkdirSync(path.dirname(DB), { recursive: true })
 const db = new DatabaseSync(DB)
+/* 必须用 DELETE（回滚日志）而非 WAL：本库随函数打包部署，而 Vercel 的函数目录是只读的。
+ * WAL 库即使以 readOnly 打开也要创建 -wal/-shm 旁路文件，只读盘上直接 SQLITE_CANTOPEN，
+ * 线上四个 /api/* 全挂。原先是 WAL，故这里改回 DELETE 并见文件末尾的断言。 */
 db.exec(`
-  PRAGMA journal_mode = WAL;
+  PRAGMA journal_mode = DELETE;
   CREATE TABLE IF NOT EXISTS papers (
     id TEXT PRIMARY KEY,
     year INTEGER NOT NULL,
@@ -160,3 +163,9 @@ console.log(`papers: ${before} → ${after}`)
 console.log('年份分布:', byYear.map((r) => `${r.year}:${r.c}`).join(' '))
 const guarded = db.prepare('SELECT id FROM papers WHERE year IN (2024,2025) ORDER BY id').all()
 console.log('受保护卷:', guarded.map((r) => r.id).join(', '))
+
+/* 部署约束断言：导入结束后库必须处于 DELETE 模式（见文件开头注释），
+ * 否则提交上去的 articles.db 会让生产 API 全线 CANTOPEN。 */
+const journalMode = db.prepare('PRAGMA journal_mode').get().journal_mode
+if (journalMode !== 'delete') throw new Error(`导入后 journal_mode=${journalMode}，应为 delete`)
+db.close()

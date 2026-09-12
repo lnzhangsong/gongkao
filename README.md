@@ -140,6 +140,11 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
   - `GET /api/articles?id=p0001` → 单篇全文（阅读页按需）
 - 本地开发：`node scripts/api-server.mjs` 提供同路由 API（Vite dev 已配置 `/api` 代理）
 - Word 导入功能已移除（不再解析 docx）
+- **部署约束（重要）**：`data/articles.db` 必须处于**回滚日志（DELETE）模式，绝不能是 WAL**。
+  Vercel 的函数目录只读，而 WAL 库即使以 `readOnly: true` 打开也要创建 `-wal` / `-shm` 旁路文件，
+  只读盘上直接 `SQLITE_CANTOPEN` —— 线上表现为 `/api/*` 全部报 `unable to open database file`。
+  历史上正是导入脚本里的 `PRAGMA journal_mode = WAL` 把 WAL 标志写进文件头、随库一起提交造成的。
+  现在两个导入脚本都显式设 `DELETE` 并在结束时断言，`src/lib/dbArtifact.test.ts` 另读文件头做守卫。
 
 ## 端到端冒烟测试
 

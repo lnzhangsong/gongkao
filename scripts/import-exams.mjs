@@ -482,8 +482,12 @@ if (DRY) {
 // ---------- 入库 ----------
 fs.mkdirSync(path.dirname(DB), { recursive: true })
 const db = new DatabaseSync(DB)
+/* 必须用 DELETE（回滚日志）而非 WAL：本库随函数打包部署，而 Vercel 的函数目录是只读的。
+ * WAL 库即使以 readOnly 打开也要创建 -wal/-shm 旁路文件，只读盘上直接 SQLITE_CANTOPEN。
+ * 注：本脚本已被 PDF 管线（parse-shenlun-pdf.py + import-shenlun.mjs）取代，
+ * 仅保留其安全默认值，避免任何一次历史回跑把库改回 WAL。 */
 db.exec(`
-  PRAGMA journal_mode = WAL;
+  PRAGMA journal_mode = DELETE;
   DELETE FROM questions;
   DELETE FROM materials;
   DELETE FROM papers;
@@ -570,3 +574,9 @@ for (const { paper, materials, questions } of deduped) {
 }
 
 console.log(JSON.stringify({ ...report, db: DB }, null, 2))
+
+/* 部署约束断言：导入结束后库必须处于 DELETE 模式，否则提交上去的 articles.db
+ * 会让生产 API 全线 CANTOPEN（详见 scripts/import-shenlun.mjs 开头注释）。 */
+const journalMode = db.prepare('PRAGMA journal_mode').get().journal_mode
+if (journalMode !== 'delete') throw new Error(`导入后 journal_mode=${journalMode}，应为 delete`)
+db.close()

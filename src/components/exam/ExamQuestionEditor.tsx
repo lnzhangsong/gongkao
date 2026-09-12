@@ -50,9 +50,10 @@ export function ExamQuestionEditor({
       </div>
       <div className="exam-q-fields">
         <span className="exam-edit-field">
-          <label>字数</label>
+          <label htmlFor={`exam-q-word-${q.idx}`}>字数</label>
           <input
             type="number"
+            id={`exam-q-word-${q.idx}`}
             className="exam-select exam-num-input"
             min={0}
             value={q.wordLimit ?? ''}
@@ -63,9 +64,10 @@ export function ExamQuestionEditor({
           />
         </span>
         <span className="exam-edit-field">
-          <label>分值</label>
+          <label htmlFor={`exam-q-points-${q.idx}`}>分值</label>
           <input
             type="number"
+            id={`exam-q-points-${q.idx}`}
             className="exam-select exam-num-input"
             min={0}
             value={q.points ?? ''}

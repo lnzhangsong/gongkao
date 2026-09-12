@@ -102,7 +102,19 @@ export function ParaGist({
     )
   }
   return (
-    <div className="para-gist" onClick={onToggle} title="点击编辑本段大意">
+    <div
+      className="para-gist"
+      role="button"
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
+      title="点击编辑本段大意"
+    >
       <span className="para-gist-tag">大意</span>
       <span className="para-gist-text">{entry!.summary}</span>
     </div>

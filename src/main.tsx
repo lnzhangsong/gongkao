@@ -2,6 +2,17 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { initAnalytics } from './lib/analytics'
+
+/* 界面拉丁字体（DM Sans / DM Mono）：@fontsource 自托管，随构建产出到 dist/assets，
+ * 不再从 cdn.jsdelivr.net 拉 7 个远程 CSS——面向国内用户，该域不稳定且会拖慢首屏。
+ * 只引入实际用到的字重（font-weight: 800 全站未使用，故不下发）。 */
+import '@fontsource/dm-sans/400.css'
+import '@fontsource/dm-sans/500.css'
+import '@fontsource/dm-sans/600.css'
+import '@fontsource/dm-sans/700.css'
+import '@fontsource/dm-mono/400.css'
+import '@fontsource/dm-mono/500.css'
+
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/home.css'

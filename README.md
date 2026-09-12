@@ -9,6 +9,7 @@ vp install         # 安装依赖（vp 统一封装，包管理器仍是 pnpm）
 vp dev             # 开发服务器 http://localhost:5173（API 另起：vp run dev:api，或 vp run dev:all 一键双起）
 vp test run        # 单元测试（watch：vp test）
 vp check           # 格式化 + lint + 类型检查
+vp run gate        # push 前门禁：check + test + build（pre-push 钩子自动跑的就是它）
 vp run build       # 类型检查 + 生产构建（输出 dist/）
 vp preview         # 预览生产构建
 ```
@@ -21,10 +22,10 @@ vp preview         # 预览生产构建
 - **React Router 7** —— 页面路由（含 `/practice` 行测线、`/login`），前进后退，刷新保持；`/account` 保留为旧链接重定向
 - **Zustand 5**（`persist` 中间件）—— 状态管理；数据本地优先，localStorage（轻量）+ IndexedDB（文章、学习事件、行测作答）
 - **Supabase**（可选）—— Auth 登录 + Postgres 云同步；未配置环境变量时自动降级为纯本地。SDK 约 55KB gzip，按需动态加载（登录态另存轻量 `authStatus` store），**不进首屏 bundle**
-- **PostHog**（可选）—— 产品埋点（pageview + 白名单功能事件）；SDK 约 20KB gzip，空闲时动态加载，不上报 PII。未配置 `VITE_POSTHOG_KEY` 时整体静默禁用
+- **PostHog**（可选）—— 产品埋点（pageview + 白名单功能事件）；走官方 **slim 构建**（约 47KB gzip，完整构建约 92KB，用不到 session recording / surveys / feature flags），空闲时动态加载，不上报 PII。未配置 `VITE_POSTHOG_KEY` 时整体静默禁用
 - **Lucide React** —— 工具栏/操作图标
 - **CSS Variables** —— 令牌系统与五套主题（paper/blue/violet/night/graphite，未引入 Tailwind；2026-09 起按 Paper OS 收敛：圆角 10/16 两档、7×8 硬阴影、1180 版心，见 `design/design/DESIGN.md`）
-- 字体：DM Mono / DM Sans / Noto Sans SC / Noto Serif SC / Ma Shan Zheng / LXGW WenKai（Google Fonts）
+- 字体：**界面拉丁字体（DM Sans / DM Mono）与装饰标题字体（马善政楷书）、阅读字体（仓耳今楷 / 霞鹜文楷）均自托管**（`public/fonts` + @fontsource，随构建产出，不依赖外部 CDN）；思源宋体 / 思源黑体字库过大（单字族 30MB+），保留 jsDelivr CDN 按需注入并回退系统字体栈
 
 ## 页面路由
 
@@ -159,6 +160,16 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 
 > 尚未覆盖：真实 Supabase 的登录 / 退出与 RLS、触发器实际行为（需真实项目或测试账号）。
 > 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，8 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化），随 `vp test run` 一起跑，不触网。
+
+## 代码质量与本地门禁
+
+- **push 前门禁（本地）**：`.vite-hooks/pre-push` 是项目自有钩子（Vite+ 机制：`core.hooksPath=.vite-hooks/_`，由 `pnpm install` 的 `prepare: vp config` 自动接好），push 时自动跑 `vp run gate`——即 `vp check`（格式 / lint / 类型）→ `vp test run`（24 文件 / 217 项）→ `vp run build`，任一失败即中断 push。手动预跑：`vp run gate`；临时跳过：`git push --no-verify`。
+- **commit 前**：`vp staged` 对暂存文件跑 `vp check --fix`（规则见 `vite.config.ts` 的 `staged`）。
+- **Node 版本**由 `.nvmrc` + `package.json` 的 `engines` 固定（`node:sqlite` 需 ≥22.5）。
+- **lint 覆盖 jsx-a11y**：语义/标签关联/aria 等真实可达性问题纳入门禁；自定义 dialog/listbox 与模态 autofocus 两条纯风格规则关闭（见 `vite.config.ts` 注释）。
+- **API 端点有集成测试**：`api/*.test.ts` 直接调用 Vercel Function 的 `GET`，读真实 `articles.db`（含搜索走 FTS5 与本地 `api-server` 行为一致的断言）。
+- **安全响应头 / CSP**：`vercel.json` 注入 CSP、`X-Content-Type-Options`、`Referrer-Policy`、HSTS 等；`/assets`、`/fonts` 带一年不可变缓存。
+- **线上搜索走 FTS5**：`api/articles.ts` 与本地 `scripts/api-server.mjs` 同用 `articles_fts` trigram 索引（≥3 字符），短词回退 LIKE——两处逻辑需同步修改（注释已标注）。
 
 ## 账号体系与云同步（Supabase 全托管：Auth + Postgres）
 

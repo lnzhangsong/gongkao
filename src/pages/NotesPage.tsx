@@ -523,7 +523,7 @@ export function NotesPage() {
                       }
                     }}
                   >
-                    <span className="note-check" onClick={(e) => e.stopPropagation()}>
+                    <span className="note-check" role="presentation" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={checked.has(r.key)} onChange={() => toggleChecked(r.key)} />
                     </span>
                     <span className="note-no">{String(i + 1).padStart(2, '0')}</span>
@@ -556,7 +556,9 @@ export function NotesPage() {
         </section>
 
         {/* 移动端：详情收进底部抽屉，需要先点列表行打开；桌面端此遮罩不渲染交互层 */}
-        {mobileDetailOpen && <div className="note-detail-backdrop" onClick={() => setMobileDetailOpen(false)} />}
+        {mobileDetailOpen && (
+          <div className="note-detail-backdrop" role="presentation" onClick={() => setMobileDetailOpen(false)} />
+        )}
 
         <aside className={`note-detail${mobileDetailOpen ? ' mobile-open' : ''}`}>
           {selectedRow ? (

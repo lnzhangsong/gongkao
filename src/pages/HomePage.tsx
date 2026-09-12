@@ -191,6 +191,7 @@ export function HomePage() {
               <article
                 className="main-card"
                 style={{ cursor: 'pointer' }}
+                role="presentation"
                 onClick={() => open(continueList[0].article)}
                 {...hoverWarm(() => warm(continueList[0].article))}
               >
@@ -216,6 +217,7 @@ export function HomePage() {
               <article
                 className="main-card"
                 style={{ cursor: 'pointer' }}
+                role="presentation"
                 onClick={() => open(entry.article)}
                 {...hoverWarm(() => warm(entry.article))}
               >

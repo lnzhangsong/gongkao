@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# push 前本地门禁：格式 / Lint / 类型检查 → 单测 → 生产构建（等价于原 CI 三步）。
+#
+# 机制：core.hooksPath=.vite-hooks/_，_/pre-push 分发到本文件（见 .vite-hooks/_/h），
+# 由 `vp config`（package.json prepare）在安装后接好，无需手动装钩子。
+#
+# 临时跳过：git push --no-verify
+# 手动预跑：vp run gate
+#
+# 命令只在 package.json 的 gate 脚本里维护一份，避免与本文件漂移。
+vp run gate

@@ -172,7 +172,7 @@ export function XingceWrongPage() {
           />
           {items !== null && items.length > 0 && (
             <span className="practice-pager-group">
-              <label className="practice-pager-size" title="每页题目数">
+              <span className="practice-pager-size" title="每页题目数">
                 每页
                 <MenuSelect
                   value={String(pageSize)}
@@ -184,7 +184,7 @@ export function XingceWrongPage() {
                   ariaLabel="每页题目数"
                   compact
                 />
-              </label>
+              </span>
               {totalPages > 1 && (
                 <>
                   <button className="practice-nav-btn" disabled={safePage === 0} onClick={() => goPage(safePage - 1)}>

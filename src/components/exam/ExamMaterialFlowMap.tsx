@@ -75,14 +75,14 @@ export function ExamMaterialFlowModal({
     })
 
   return createPortal(
-    <div className="exam-modal-mask" onClick={onClose}>
-      <div
-        className="exam-modal exam-flow-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${label}行文思路`}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div
+      className="exam-modal-mask"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="exam-modal exam-flow-modal" role="dialog" aria-modal="true" aria-label={`${label}行文思路`}>
         <header className="exam-flow-head">
           <h3>
             {label} · 行文思路{' '}

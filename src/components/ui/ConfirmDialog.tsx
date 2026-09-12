@@ -34,14 +34,15 @@ export function ConfirmHost() {
 
   if (!current) return null
   return (
-    <div className="exam-modal-mask" onClick={() => clear(false)}>
-      <div
-        className="exam-modal"
-        role="alertdialog"
-        aria-modal="true"
-        aria-describedby="confirm-dialog-msg"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div
+      className="exam-modal-mask"
+      role="presentation"
+      onClick={(e) => {
+        /* 只有点在遮罩本身（而非内容区）才关闭：省掉内层 stopPropagation 处理器 */
+        if (e.target === e.currentTarget) clear(false)
+      }}
+    >
+      <div className="exam-modal" role="alertdialog" aria-modal="true" aria-describedby="confirm-dialog-msg">
         <p className="exam-modal-msg" id="confirm-dialog-msg">
           {current.message}
         </p>

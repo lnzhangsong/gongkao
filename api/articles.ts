@@ -28,10 +28,35 @@ function openDb(): DatabaseSync {
   return db
 }
 
-/** 列表 meta 查询（不含正文，轻量）；kw 非空时全文搜索（标题/摘要/正文） */
+/**
+ * 列表 meta 查询（不含正文，轻量）；kw 非空时全文搜索（标题/摘要/正文）。
+ * ≥3 字符走 FTS5 trigram 索引（中文子串匹配，见 scripts/migrate-fts.mjs）；
+ * 短词 trigram 无法命中，回退 LIKE/instr 全扫。
+ *
+ * ⚠️ 必须与 scripts/api-server.mjs 的 queryMetaList 保持一致——本地开发与线上
+ * 若走不同分支，同一关键词会得到不同结果（此前线上只有 LIKE，FTS5 索引形同虚设）。
+ * 本文件需自包含（见文件头），故逻辑是复制的而非 import 的，改一处务必改两处。
+ */
 function queryMetaList(kw?: string): ArticleMeta[] {
   const d = openDb()
   if (kw) {
+    if (kw.length >= 3) {
+      // trigram MATCH：kw 作为整体短语（转义内部双引号）= 精确子串匹配
+      const phrase = `"${kw.replace(/"/g, '""')}"`
+      try {
+        return d
+          .prepare(
+            `SELECT a.id, a.title, a.summary, a.source, a.topic, a.date, a.read_time, a.featured, a.pullquote, a.finish_note
+             FROM articles a JOIN articles_fts f ON a.rowid = f.rowid
+             WHERE articles_fts MATCH ?
+             ORDER BY a.date DESC, a.id`,
+          )
+          .all(phrase)
+          .map(mapMetaRow)
+      } catch {
+        /* 旧库没有 articles_fts（未跑 migrate-fts.mjs）：回退下面的 LIKE 全扫，功能不中断 */
+      }
+    }
     const like = `%${kw}%`
     // instr(content_json, kw)：正文检索（content_json 为 JSON 文本，中文原样存储）
     return d

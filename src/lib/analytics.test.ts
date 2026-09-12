@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
  * 3. identify 只传 user id，不夹带邮箱/昵称
  *
  * posthog-js 用 vi.hoisted 桩替：工厂在模块图求值前就被引用，普通 const 会撞 TDZ。
+ * mock 路径必须与 analytics.ts 的实际 import 一致（slim 子路径），否则桩不生效、
+ * 用例会去真的加载 SDK。
  */
 const mocks = vi.hoisted(() => ({
   init: vi.fn(),
@@ -19,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   reset: vi.fn(),
 }))
 
-vi.mock('posthog-js', () => ({ default: mocks }))
+vi.mock('posthog-js/dist/module.slim', () => ({ default: mocks }))
 
 /** 埋点内部是动态 import + Promise 链，只刷微任务不够：模块加载要真的过一轮事件循环 */
 async function flush(): Promise<void> {

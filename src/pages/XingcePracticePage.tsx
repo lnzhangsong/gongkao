@@ -342,7 +342,7 @@ export function XingcePracticePage() {
             <button className="practice-nav-btn" disabled={pos >= groups.length - 1} onClick={() => go(pos + 1)}>
               下一组 →
             </button>
-            <label className="practice-groupsize" title="每组题目数">
+            <span className="practice-groupsize" title="每组题目数">
               每组
               <MenuSelect
                 value={String(singlesPerScreen)}
@@ -351,7 +351,7 @@ export function XingcePracticePage() {
                 ariaLabel="每组题目数"
                 compact
               />
-            </label>
+            </span>
             <button
               className={`practice-sheet-toggle${sheetOpen ? ' is-open' : ''}`}
               onClick={() => setSheetOpen((o) => !o)}

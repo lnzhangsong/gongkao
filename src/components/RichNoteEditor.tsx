@@ -145,6 +145,7 @@ export function RichNoteEditor({ initialHtml, onChange, placeholder, autoFocus }
         className="rich-note-input"
         contentEditable
         role="textbox"
+        aria-label={placeholder}
         aria-multiline="true"
         data-placeholder={placeholder}
         onInput={emit}

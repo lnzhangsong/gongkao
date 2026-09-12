@@ -70,7 +70,7 @@ export function ExamAnalysisDrawer({
 
   return createPortal(
     <>
-      {isMobile && <div className="shenlun-backdrop" onClick={onClose} />}
+      {isMobile && <div className="shenlun-backdrop" role="presentation" onClick={onClose} />}
       <aside
         className="shenlun-panel exam-draw"
         role="dialog"

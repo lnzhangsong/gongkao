@@ -170,7 +170,9 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 
 1. 创建 [Supabase](https://supabase.com) 项目，拿到 Project URL 与 anon key；如需免邮箱确认，在 Auth → Providers → Email 关闭 "Confirm email"
 2. Supabase 控制台 → SQL Editor → 依次粘贴执行 `sql/profiles.sql`（profiles 表 + RLS + 注册建行触发器）与 `sql/sync.sql`（同步表 + RLS + 时间戳触发器；幂等，可重复执行）
-   - 已建过库的：重跑 `sql/sync.sql` 即可补上 v4 时间戳触发器（不跑也能用，只是退回客户端时间戳）
+   - **已建过库的必须重跑 `sql/sync.sql`**：一是补上 v4 时间戳触发器（不跑也能用，只是退回客户端时间戳），
+     二是**删除已废弃的 `app_events` 埋点表**——该表带一条「任何人可 insert」的宽松策略，
+     配合公开的 anon key 等于一个对外公开写入口，只改代码不会关掉它，必须执行 DDL
 3. 配置环境变量（参考 `.env.example`）：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`
 4. Supabase Auth → URL Configuration 里把站点域名（本地 `http://localhost:5173` 与线上域名）加入 Redirect URLs，魔法链接与邮箱确认链接才能回跳
 

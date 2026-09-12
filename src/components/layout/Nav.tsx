@@ -83,7 +83,7 @@ export function Nav() {
 
       {menuOpen && (
         <>
-          <div className="nav-mobile-backdrop" onClick={() => setMenuOpen(false)} />
+          <div className="nav-mobile-backdrop" role="presentation" onClick={() => setMenuOpen(false)} />
           <div className="nav-mobile-panel" ref={panelRef} role="dialog" aria-label="站点导航">
             {LINKS.map((l) => (
               <NavLink

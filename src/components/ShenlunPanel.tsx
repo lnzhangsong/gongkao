@@ -205,7 +205,7 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
 
   return (
     <>
-      <div className="shenlun-backdrop" onClick={handleClose} />
+      <div className="shenlun-backdrop" role="presentation" onClick={handleClose} />
       <aside className="shenlun-panel" role="dialog" aria-label="申论拆解">
         <header className="shenlun-head">
           <div>
@@ -491,9 +491,20 @@ export function ShenlunPanel({ article, onClose, scrollToPara, scrollToAnnotatio
           <section className="shenlun-sec">
             <span className="shenlun-label">学习心得</span>
             {noteDraft === null ? (
-              <p className="shenlun-note" onClick={() => setNoteDraft(study?.reviewNote ?? '')}>
+              <div
+                className="shenlun-note"
+                role="button"
+                tabIndex={0}
+                onClick={() => setNoteDraft(study?.reviewNote ?? '')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setNoteDraft(study?.reviewNote ?? '')
+                  }
+                }}
+              >
                 {study?.reviewNote || '写下你的复盘与启发…'}
-              </p>
+              </div>
             ) : (
               <>
                 <textarea

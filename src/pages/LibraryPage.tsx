@@ -289,8 +289,9 @@ export function LibraryPage() {
         <section className="featured">
           <article
             className={`featured-main${articles[0] ? '' : ' is-loading'}`}
+            role="presentation"
+            aria-busy={!articles[0]}
             onClick={() => articles[0] && open(articles[0])}
-            aria-disabled={!articles[0]}
           >
             <span className="tag">TODAY'S FEATURED　/　{articles[0]?.source ?? '…'}</span>
             <h2>{articles[0]?.title ?? '正在加载…'}</h2>
@@ -317,9 +318,9 @@ export function LibraryPage() {
               <span> / {articles.length}</span>
             </span>
             <div className="collection-foot">
-              <label>
+              <span className="collection-foot-label">
                 已完成 <Ticker value={annualPct} duration={800} />%
-              </label>
+              </span>
               <button className="text-btn" onClick={() => setParam('status', 'done')}>
                 查看年编　↗
               </button>

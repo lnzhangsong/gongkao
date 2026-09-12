@@ -25,8 +25,14 @@ export function ReviewModal({ queue, onClose }: { queue: Annotation[]; onClose: 
 
   if (!ann) {
     return (
-      <div className="review-backdrop" onClick={onClose}>
-        <div className="review-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="复习完成">
+      <div
+        className="review-backdrop"
+        role="presentation"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose()
+        }}
+      >
+        <div className="review-modal" role="dialog" aria-label="复习完成">
           <button className="review-close" onClick={onClose} aria-label="关闭">
             <X size={16} />
           </button>
@@ -54,8 +60,14 @@ export function ReviewModal({ queue, onClose }: { queue: Annotation[]; onClose: 
   }
 
   return (
-    <div className="review-backdrop" onClick={onClose}>
-      <div className="review-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="复习翻转卡">
+    <div
+      className="review-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="review-modal" role="dialog" aria-label="复习翻转卡">
         <button className="review-close" onClick={onClose} aria-label="关闭">
           <X size={16} />
         </button>

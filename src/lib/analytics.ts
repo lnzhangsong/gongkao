@@ -4,13 +4,15 @@
  * 原则：**不采集任何个人身份信息**（不传邮箱/昵称/正文/笔记内容），埋点失败绝不影响主功能。
  * - 白名单事件：只埋文档 §三 列出的动作；autocapture 关闭（全量 DOM 采集噪声大且可能把正文带出去）
  * - 未配置 VITE_POSTHOG_KEY 时整个模块静默失效：本地开发与 CI 不需要真实 key，也不会报错
- * - 懒加载：posthog-js（完整构建约 278KB / gzip 92KB）独立成 chunk，不进首屏；
- *   由 initAnalytics() 在空闲时异步拉取。若日后嫌大，可换官方 slim 构建（约腰斩，
- *   但走的是无 exports 声明的子路径，且需重新验证 history pageview 采集）
+ * - 懒加载：posthog-js 独立成 chunk，不进首屏；由 initAnalytics() 在空闲时异步拉取。
+ *   走官方 **slim 构建**（`dist/module.slim`，约 49KB gzip，完整构建约 92KB）：
+ *   slim 不含 session recording / surveys / toolbar / feature flags 等我们本就关闭的能力。
+ *   本项目已显式关掉 autocapture、session recording、exceptions，只用 capture/identify/reset
+ *   与 history pageview——这些 slim 全部保留。若日后要开 session recording 或特性开关，
+ *   需改回完整构建。
  * - 反代：api_host 默认 `/ingest`（vercel.json rewrite；本地由 vite dev proxy 转发到
  *   us.i.posthog.com）——走自身域名既避开广告插件的拦截规则，也免去国内直连的跨境延迟
  */
-import type { PostHog } from 'posthog-js'
 
 /** 项目 API Key（phc_…）。缺失即视为「未接入」，所有导出函数变为空操作 */
 const KEY = import.meta.env.VITE_POSTHOG_KEY
@@ -22,12 +24,20 @@ const UI_HOST = 'https://us.posthog.com'
 /** 是否已接入埋点（未配置 key 时为 false，UI 可据此隐藏调试入口） */
 export const analyticsEnabled = Boolean(KEY)
 
-let clientPromise: Promise<PostHog> | null = null
+/**
+ * 懒加载 slim 构建并取 default。类型直接由该子路径推导：slim 的 d.ts 把 default
+ * 声明成两个 PostHog 声明的联合，用 ReturnType 承接可避免手写类型断言去跨越
+ * posthog 内部的两套声明（`import type { PostHog } from 'posthog-js'` 会因联合
+ * 不可赋值而报 TS2322）。
+ */
+const loadPostHog = () => import('posthog-js/dist/module.slim').then((m) => m.default)
+
+let clientPromise: ReturnType<typeof loadPostHog> | null = null
 
 /** 复用同一个动态 import 与同一次 init：多次上报不会重复初始化 SDK */
-function loadClient(): Promise<PostHog> | null {
+function loadClient(): ReturnType<typeof loadPostHog> | null {
   if (!KEY) return null
-  clientPromise ??= import('posthog-js').then(({ default: posthog }) => {
+  clientPromise ??= loadPostHog().then((posthog) => {
     posthog.init(KEY, {
       api_host: HOST,
       ui_host: UI_HOST,

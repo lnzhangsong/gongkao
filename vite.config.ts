@@ -6,7 +6,7 @@ export default defineConfig({
     '*': 'vp check --fix',
   },
   lint: {
-    plugins: ['oxc', 'typescript', 'unicorn', 'react'],
+    plugins: ['oxc', 'typescript', 'unicorn', 'react', 'jsx-a11y'],
     categories: {
       correctness: 'warn',
     },
@@ -67,6 +67,12 @@ export default defineConfig({
           'typescript/triple-slash-reference': 'error',
           'react/rules-of-hooks': 'error',
           'react/exhaustive-deps': 'warn',
+          /* jsx-a11y：保留语义/标签/aria 等真实可达性问题，关掉两条与本项目刻意设计冲突的规则：
+           * - prefer-tag-over-role：自定义 dialog/listbox/combobox 是有意为之（原生 <dialog> 无法
+           *   承载现有动效与受控逻辑），改为原生标签是大重构且非收益项
+           * - no-autofocus：模态与搜索框自动聚焦是刻意 UX，且均已配合 Escape/焦点管理 */
+          'jsx-a11y/prefer-tag-over-role': 'off',
+          'jsx-a11y/no-autofocus': 'off',
           'react/only-export-components': [
             'warn',
             {
@@ -185,6 +191,9 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 3000,
+    // 单位 KB（压缩后未 gzip 的 chunk 体积）。此前设 3000 等于关闭告警——
+    // 当前最大 chunk 约 280KB（PostHog 的懒加载包），留 800 作为回归护栏：
+    // 主包/懒加载包明显膨胀时会重新告警，而不是被静默吞掉。
+    chunkSizeWarningLimit: 800,
   },
 })

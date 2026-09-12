@@ -535,12 +535,17 @@ export default function ExamPreviewPage() {
               {editing && (
                 <div className="exam-edit-bar">
                   <span className="exam-edit-field">
-                    <label>年份</label>
-                    <YearInput value={draft.year} onCommit={(n) => patchDraft((d) => void (d.year = n))} />
+                    <label htmlFor="exam-edit-year">年份</label>
+                    <YearInput
+                      id="exam-edit-year"
+                      value={draft.year}
+                      onCommit={(n) => patchDraft((d) => void (d.year = n))}
+                    />
                   </span>
                   <span className="exam-edit-field">
-                    <label>级别</label>
+                    <label htmlFor="exam-edit-level">级别</label>
                     <select
+                      id="exam-edit-level"
                       className="exam-select"
                       value={draft.level}
                       onChange={(e) => patchDraft((d) => void (d.level = e.target.value))}
@@ -683,6 +688,10 @@ export default function ExamPreviewPage() {
                       <h3
                         className={`exam-mat-label exam-mat-toggle${collapsed.has(m.idx) ? ' collapsed' : ''}`}
                         id={`exam-mat-${m.idx}`}
+                        aria-expanded={!collapsed.has(m.idx)}
+                        /* eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- 材料折叠标题：
+                           本身就是 disclosure 触发器，且内部已嵌「AI 梳理」按钮；改成原生 button 会形成按钮嵌套，
+                           并丢失 h3 标题语义与 id 锚点。改写需连同布局重构，收益不抵风险。 */
                         role="button"
                         tabIndex={0}
                         onClick={() => toggleCollapsed(m.idx)}

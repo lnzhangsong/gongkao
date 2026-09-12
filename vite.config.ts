@@ -153,6 +153,14 @@ export default defineConfig({
     ignorePatterns: ['node_modules', 'dist', '.npm-cache', '.vercel', 'design', '*.md'],
   },
   plugins: lazyPlugins(() => [react()]),
+  test: {
+    // 测试环境一律禁用埋点：.env 里配了真实 VITE_POSTHOG_KEY 时，测试会真的初始化 SDK
+    // 并往 PostHog 发合成事件——既污染分析数据，也拖慢用例（还会刷「已初始化」告警）。
+    // 需要验证埋点自身行为的用例用 vi.stubEnv 临时打开（见 src/lib/analytics.test.ts）。
+    env: {
+      VITE_POSTHOG_KEY: '',
+    },
+  },
   server: {
     port: 5173,
     // 开发时把 /api 转发到本地 API server（node:sqlite）

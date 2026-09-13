@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  createExam,
   deleteExam,
   fetchExam,
   fetchExamList,
@@ -12,7 +11,6 @@ import {
 } from '../lib/api'
 import { alertDialog, confirmDialog } from '../components/ui/confirm'
 import { ApiLoading } from '../components/ui/ApiLoading'
-import { useHoverPrefetch } from '../lib/hoverPrefetch'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
 import { useCycleTheme } from '../hooks/useCycleTheme'
 import { loadFontFamily } from '../lib/fonts'
@@ -20,30 +18,25 @@ import { useFocusMode } from '../lib/useFocusMode'
 import { ReaderToolsPanel } from '../components/reading/ReaderToolsPanel'
 import { ExamQuestionEditor } from '../components/exam/ExamQuestionEditor'
 import { ExamAnalysisDrawer } from '../components/exam/ExamAnalysisDrawer'
-import { draftMaterialMarks } from '../lib/aiExamTrace'
-import { useAiStore, isAiConfigured } from '../stores/aiStore'
 import { ExamQuestionsDrawer } from '../components/exam/ExamQuestionsDrawer'
+import { ExamMaterialEditor } from '../components/exam/ExamMaterialEditor'
+import { ExamEditBar } from '../components/exam/ExamEditBar'
+import { ExamListView } from '../components/exam/ExamListView'
 import { MarkedParagraph } from '../components/exam/ExamMarkedParagraph'
 import { ExamMaterialFlowModal } from '../components/exam/ExamMaterialFlowMap'
-import { YearInput } from '../components/exam/YearInput'
-import { findQuoteInMaterial, type MarkRange } from '../lib/examMarks'
-import { useExamStudyStore, type MaterialMark } from '../stores/examStudyStore'
-import {
-  joinParagraphs,
-  reflowParagraphs,
-  reflowInline,
-  questionMaterials,
-  levelClass,
-  levelMark,
-} from '../lib/examText'
+import { useExamMarks } from '../hooks/useExamMarks'
+import { joinParagraphs, questionMaterials, reflowInline, reflowParagraphs } from '../lib/examText'
+import { useExamStudyStore } from '../stores/examStudyStore'
 import '../styles/exam-preview.css'
 import { useLocalWrite } from '../hooks/useLocalWrite'
+import { useAiStore, isAiConfigured } from '../stores/aiStore'
 
 /**
  * 申论真题（/exams）：列表 + 详情
  * 详情正文直接复用阅读页排版（article-head / article-body / 阅读设置变量），
  * 题目与参考答案在正文语言之上做专门设计（mono 题头 + 答题纸式答案面板）。
- * 文本工具（重排/题干抽取/材料关联）在 lib/examText.ts。
+ * 文本工具（重排/题干抽取/材料关联）在 lib/examText.ts；
+ * 列表视图 / 编辑条 / 材料编辑器 / 行文思路生成分别拆分在 components/exam 与 hooks/useExamMarks。
  */
 
 export default function ExamPreviewPage() {
@@ -54,33 +47,12 @@ export default function ExamPreviewPage() {
   const [listError, setListError] = useState(false)
   const [detailError, setDetailError] = useState(false)
   const [draft, setDraft] = useState<ExamDetail | null>(null)
-  const [creatingBusy, setCreatingBusy] = useState(false)
   const [editing, setEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   /* 增删改只有本地 api-server 提供（生产只读），按能力探测显隐（与 TermsPage 同款） */
   const canManage = useLocalWrite()
-  const [creating, setCreating] = useState(false)
-  const [newForm, setNewForm] = useState({ year: String(new Date().getFullYear() + 1), level: '地市级', title: '' })
-  /* 年份输入的临时字符串：清空重输时数字不再跳变，失焦时校验回写 */
-  const [yearDraft, setYearDraft] = useState(newForm.year)
-  const submitCreate = async () => {
-    if (creatingBusy) return
-    const year = parseInt(newForm.year, 10)
-    const title = newForm.title.trim() || `${year}年国家公务员考试《申论》题（${newForm.level}）`
-    setCreatingBusy(true)
-    try {
-      const { id } = await createExam({ year, level: newForm.level, title })
-      setCreating(false)
-      open(id)
-      setEditing(true)
-    } catch (e) {
-      void alertDialog(e instanceof Error ? e.message : String(e))
-    } finally {
-      setCreatingBusy(false)
-    }
-  }
 
   /* 折叠的材料（阅读态点击材料标签收起/展开） */
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
@@ -160,10 +132,6 @@ export default function ExamPreviewPage() {
   useEffect(() => {
     if (inList) window.scrollTo({ top: listScrollRef.current })
   }, [inList])
-
-  /** 悬停预取详情：试卷正文较大，点进去时多半已在会话缓存（120ms 防飞掠） */
-  const warmExam = (id: string) => void fetchExam(id).catch(() => {})
-  const hoverWarm = useHoverPrefetch()
 
   const open = (id: string) => {
     listScrollRef.current = window.scrollY
@@ -265,9 +233,7 @@ export default function ExamPreviewPage() {
     return map
   }, [draft])
 
-  /* 原文标注：把全卷各题圈出的重要句聚合到材料原文上。
-     「行文思路」开关打开时高亮 + 每句下方内联展示 思路卡（顺材料读，不用开抽屉）；
-     引句做空白不敏感匹配（AI 返回的 quote 可能与正文空白有差异），匹配不到的跳过 */
+  /* 原文标注：把全卷各题圈出的重要句聚合到材料原文上（生成逻辑拆分至 useExamMarks） */
   const [inlineMarks, setInlineMarks] = useState(() => {
     try {
       return localStorage.getItem('readbook:exam-inline-marks') === '1'
@@ -284,131 +250,19 @@ export default function ExamPreviewPage() {
       }
       return !v
     })
-
-  /* 一键生成全卷行文思路：跳过已有标注的题，逐题生成并直接入库（新增性写入，不覆盖手填） */
-  const setMarks = useExamStudyStore((st) => st.setMarks)
-  const removeMaterialMarks = useExamStudyStore((st) => st.removeMaterialMarks)
   const aiConfigured = useAiStore((st) => isAiConfigured(st.settings))
-  const allMarks = useExamStudyStore((s) => s.marks)
-  /* 该材料在任意层级（题目级/材料级）有标注 → 按钮显示「重新生成」 */
-  const matHasMarks = useMemo(() => {
-    const set = new Set<number>()
-    if (!draft) return set
-    for (const rec of Object.values(allMarks)) {
-      if (rec.paperId !== draft.id) continue
-      for (const m of rec.marks ?? []) set.add(m.matIdx)
-    }
-    return set
-  }, [draft, allMarks])
-  const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
-  const [genError, setGenError] = useState('')
-  const [matGenIdx, setMatGenIdx] = useState<number | null>(null)
-  /* 材料行文思路导图：弹窗展示该材料标注串成的脉络链，记录材料 idx */
-  const [flowModalIdx, setFlowModalIdx] = useState<number | null>(null)
-  /* 各材料的标注按原文出现顺序排好（导图节点顺序 = 材料推进顺序） */
-  const flowByMat = useMemo(() => {
-    const tmp = new Map<number, { mark: MaterialMark; order: number }[]>()
-    const map = new Map<number, MaterialMark[]>()
-    if (!draft) return map
-    for (const record of Object.values(allMarks)) {
-      if (record.paperId !== draft.id) continue
-      for (const mark of record.marks ?? []) {
-        const mat = draft.materials.find((x) => x.idx === mark.matIdx)
-        if (!mat) continue
-        const hit = findQuoteInMaterial(joinParagraphs(mat.content), mark.quote)
-        const list = tmp.get(mark.matIdx) ?? []
-        list.push({ mark, order: hit ? hit.paraIndex * 1e6 + hit.start : Number.MAX_SAFE_INTEGER })
-        tmp.set(mark.matIdx, list)
-      }
-    }
-    for (const [k, list] of tmp)
-      map.set(
-        k,
-        list.sort((a, b) => a.order - b.order).map((x) => x.mark),
-      )
-    return map
-  }, [draft, allMarks])
-  /** 单则材料生成：忽略具体题目，逐句梳理本则行文脉络；存 qIdx = -材料idx（材料级，不入任何题的解析） */
-  const generateMaterialMarks = async (m: { idx: number; label: string; content: string }) => {
-    if (!draft || matGenIdx != null) return
-    if (!aiConfigured) {
-      void alertDialog('尚未配置 AI 服务：请到 设置 → AI 服务 填入接口地址与 API Key')
-      return
-    }
-    setMatGenIdx(m.idx)
-    try {
-      /* 重新生成语义：先清掉该材料所有层级（题目级 + 材料级）的旧标注 */
-      removeMaterialMarks(draft.id, m.idx)
-      const stems = draft.questions.map((q) => `${q.idx}.${q.stem.replace(/\s+/g, '').slice(0, 50)}`).join('；')
-      const marks = await draftMaterialMarks({
-        question: {
-          idx: m.idx,
-          type: null,
-          stem: `通读本则材料，逐句梳理它的行文脉络与关键信息。全卷题目如下（use 里可说明该句服务于哪道题）：${stems}`,
-          requirement: '',
-          answer: null,
-        },
-        materials: [m],
-      })
-      setMarks(draft.id, -m.idx, marks, 'ai')
-    } catch (err) {
-      void alertDialog(err instanceof Error ? err.message : String(err))
-    } finally {
-      setMatGenIdx(null)
-    }
-  }
-
-  const generateAllMarks = async () => {
-    if (!draft || genProgress) return
-    if (!aiConfigured) {
-      void alertDialog('尚未配置 AI 服务：请到 设置 → AI 服务 填入接口地址与 API Key')
-      return
-    }
-    setGenError('')
-    const qs = draft.questions.filter((q) => {
-      const rec = allMarks[`${draft.id}#${q.idx}`]
-      return !rec?.marks?.length
-    })
-    if (!qs.length) {
-      setGenProgress(null)
-      return
-    }
-    setGenProgress({ done: 0, total: qs.length })
-    let failed = 0
-    for (let i = 0; i < qs.length; i++) {
-      const q = qs[i]
-      try {
-        const marks = await draftMaterialMarks({
-          question: { idx: q.idx, type: q.type, stem: q.stem, requirement: q.requirement, answer: q.answer },
-          materials: draft.materials,
-        })
-        setMarks(draft.id, q.idx, marks, 'ai')
-      } catch {
-        failed++
-      }
-      setGenProgress({ done: i + 1, total: qs.length })
-    }
-    setGenProgress(null)
-    if (failed) setGenError(`${failed} 题生成失败，可再点一次重试（已有标注的题会跳过）`)
-  }
-  const markRangesByMat = useMemo(() => {
-    const map = new Map<number, MarkRange[]>()
-    /* 开关关闭 = 完全不渲染（干净原文）；打开 = 高亮 + 句末挂注 */
-    if (!draft || !inlineMarks) return map
-    for (const record of Object.values(allMarks)) {
-      if (record.paperId !== draft.id) continue
-      for (const mark of record.marks ?? []) {
-        const mat = draft.materials.find((x) => x.idx === mark.matIdx)
-        if (!mat) continue
-        const hit = findQuoteInMaterial(joinParagraphs(mat.content), mark.quote)
-        if (!hit) continue
-        const list = map.get(mark.matIdx) ?? []
-        list.push({ mark, ...hit })
-        map.set(mark.matIdx, list)
-      }
-    }
-    return map
-  }, [draft, allMarks, inlineMarks])
+  const {
+    matHasMarks,
+    genProgress,
+    genError,
+    matGenIdx,
+    flowModalIdx,
+    setFlowModalIdx,
+    flowByMat,
+    markRangesByMat,
+    generateMaterialMarks,
+    generateAllMarks,
+  } = useExamMarks(draft, inlineMarks, aiConfigured)
 
   const reflowAll = () =>
     patchDraft((d) => {
@@ -451,15 +305,6 @@ export default function ExamPreviewPage() {
       setSaving(false)
     }
   }
-
-  const grouped = useMemo(() => {
-    const g = new Map<number, ExamPaperMeta[]>()
-    for (const p of papers ?? []) {
-      if (!g.has(p.year)) g.set(p.year, [])
-      g.get(p.year)!.push(p)
-    }
-    return [...g.entries()].sort((a, b) => b[0] - a[0])
-  }, [papers])
 
   // ---------- 详情：加载中（spinner 等接口，内容就绪后整体淡入） ----------
   if (!draft && loadingDetail) {
@@ -536,76 +381,40 @@ export default function ExamPreviewPage() {
                 )}
               </div>
               {editing && (
-                <div className="exam-edit-bar">
-                  <span className="exam-edit-field">
-                    <label htmlFor="exam-edit-year">年份</label>
-                    <YearInput
-                      id="exam-edit-year"
-                      value={draft.year}
-                      onCommit={(n) => patchDraft((d) => void (d.year = n))}
-                    />
-                  </span>
-                  <span className="exam-edit-field">
-                    <label htmlFor="exam-edit-level">级别</label>
-                    <select
-                      id="exam-edit-level"
-                      className="exam-select"
-                      value={draft.level}
-                      onChange={(e) => patchDraft((d) => void (d.level = e.target.value))}
-                    >
-                      {[...new Set([draft.level, '副省级', '地市级', '行政执法'])].map((lv) => (
-                        <option key={lv} value={lv}>
-                          {lv}
-                        </option>
-                      ))}
-                    </select>
-                  </span>
-                  {savedAt ? <span className="exam-saved">已保存 {savedAt}</span> : null}
-                  {dirty ? <span className="exam-warn">未保存</span> : null}
-                  <span className="exam-edit-actions">
-                    <button className="ghost" onClick={reflowAll}>
-                      一键重排换行
-                    </button>
-                    <button className="ghost exam-btn-primary" onClick={save} disabled={saving || !dirty}>
-                      {saving ? '保存中…' : '保存'}
-                    </button>
-                    <button
-                      className="ghost"
-                      onClick={async () => {
-                        if (
-                          dirty &&
-                          !(await confirmDialog('有未保存修改，退出编辑将丢失这些修改，确定退出？', { danger: true }))
-                        )
-                          return
-                        setEditing(false)
-                      }}
-                    >
-                      退出编辑
-                    </button>
-                    <button
-                      className="text-btn exam-del-btn"
-                      onClick={async () => {
-                        if (
-                          !(await confirmDialog(
-                            `确定删除整张试卷「${draft.title}」？其材料与题目会一并删除，且不可恢复。`,
-                            { danger: true },
-                          ))
-                        )
-                          return
-                        try {
-                          await deleteExam(draft.id)
-                          removeForPaper(draft.id)
-                          backToList()
-                          setPapers((prev) => prev?.filter((p) => p.id !== draft.id) ?? prev)
-                        } catch (e) {
-                          void alertDialog(e instanceof Error ? e.message : String(e))
-                        }
-                      }}
-                    >
-                      删除试卷
-                    </button>
-                  </span>
-                </div>
+                <ExamEditBar
+                  draft={draft}
+                  dirty={dirty}
+                  saving={saving}
+                  savedAt={savedAt}
+                  patchDraft={patchDraft}
+                  onReflowAll={reflowAll}
+                  onSave={() => void save()}
+                  onExit={async () => {
+                    if (
+                      dirty &&
+                      !(await confirmDialog('有未保存修改，退出编辑将丢失这些修改，确定退出？', { danger: true }))
+                    )
+                      return
+                    setEditing(false)
+                  }}
+                  onDelete={async () => {
+                    if (
+                      !(await confirmDialog(
+                        `确定删除整张试卷「${draft.title}」？其材料与题目会一并删除，且不可恢复。`,
+                        { danger: true },
+                      ))
+                    )
+                      return
+                    try {
+                      await deleteExam(draft.id)
+                      removeForPaper(draft.id)
+                      backToList()
+                      setPapers((prev) => prev?.filter((p) => p.id !== draft.id) ?? prev)
+                    } catch (e) {
+                      void alertDialog(e instanceof Error ? e.message : String(e))
+                    }
+                  }}
+                />
               )}
             </header>
 
@@ -637,122 +446,69 @@ export default function ExamPreviewPage() {
               className={`article-body${settings.focusMode ? ' focus-mode' : ''}${settings.indent ? '' : ' no-indent'}`}
               style={readerVars}
             >
-              {editing
-                ? draft.materials.map((m) => (
-                    <Fragment key={m.idx}>
-                      <h3 className="exam-mat-label">
-                        <input
-                          className="exam-mat-label-input"
-                          value={m.label}
-                          onChange={(e) =>
-                            patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.label = e.target.value))
-                          }
-                          aria-label="材料标题"
-                        />
-                        <span className="exam-move-group">
-                          <button
-                            className="exam-move-btn"
-                            title="上移"
-                            disabled={m.idx === 1}
-                            onClick={() => moveItem('materials', m.idx, -1)}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            className="exam-move-btn"
-                            title="下移"
-                            disabled={m.idx === draft.materials.length}
-                            onClick={() => moveItem('materials', m.idx, 1)}
-                          >
-                            ↓
-                          </button>
-                        </span>
-                        <button
-                          className="text-btn exam-del-btn"
-                          onClick={() =>
-                            patchDraft((d) => void (d.materials = d.materials.filter((x) => x.idx !== m.idx)))
-                          }
-                        >
-                          删除此段
-                        </button>
-                      </h3>
-                      <textarea
-                        className="exam-ta"
-                        rows={Math.min(20, Math.max(4, Math.ceil(m.content.length / 40)))}
-                        value={m.content}
-                        onChange={(e) =>
-                          patchDraft((d) => void (d.materials.find((x) => x.idx === m.idx)!.content = e.target.value))
+              {editing ? (
+                <ExamMaterialEditor materials={draft.materials} patchDraft={patchDraft} moveItem={moveItem} />
+              ) : (
+                draft.materials.map((m) => (
+                  <Fragment key={m.idx}>
+                    <h3
+                      className={`exam-mat-label exam-mat-toggle${collapsed.has(m.idx) ? ' collapsed' : ''}`}
+                      id={`exam-mat-${m.idx}`}
+                      aria-expanded={!collapsed.has(m.idx)}
+                      /* eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- 材料折叠标题：
+                         本身就是 disclosure 触发器，且内部已嵌「AI 梳理」按钮；改成原生 button 会形成按钮嵌套，
+                         并丢失 h3 标题语义与 id 锚点。改写需连同布局重构，收益不抵风险。 */
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleCollapsed(m.idx)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          toggleCollapsed(m.idx)
                         }
-                      />
-                    </Fragment>
-                  ))
-                : draft.materials.map((m) => (
-                    <Fragment key={m.idx}>
-                      <h3
-                        className={`exam-mat-label exam-mat-toggle${collapsed.has(m.idx) ? ' collapsed' : ''}`}
-                        id={`exam-mat-${m.idx}`}
-                        aria-expanded={!collapsed.has(m.idx)}
-                        /* eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- 材料折叠标题：
-                           本身就是 disclosure 触发器，且内部已嵌「AI 梳理」按钮；改成原生 button 会形成按钮嵌套，
-                           并丢失 h3 标题语义与 id 锚点。改写需连同布局重构，收益不抵风险。 */
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => toggleCollapsed(m.idx)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            toggleCollapsed(m.idx)
-                          }
+                      }}
+                    >
+                      <span>{m.label}</span>
+                      <span className="exam-mat-meta">
+                        {m.content.length} 字　{collapsed.has(m.idx) ? '▸' : '▾'}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-btn exam-mat-gen"
+                        disabled={matGenIdx != null}
+                        title="AI 逐句梳理本则材料的行文脉络（标注显示在正文中）"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void generateMaterialMarks(m)
                         }}
                       >
-                        <span>{m.label}</span>
-                        <span className="exam-mat-meta">
-                          {m.content.length} 字　{collapsed.has(m.idx) ? '▸' : '▾'}
-                        </span>
-                        {!editing && (
-                          <>
-                            <button
-                              type="button"
-                              className="text-btn exam-mat-gen"
-                              disabled={matGenIdx != null}
-                              title="AI 逐句梳理本则材料的行文脉络（标注显示在正文中）"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                void generateMaterialMarks(m)
-                              }}
-                            >
-                              {matGenIdx === m.idx
-                                ? '生成中…'
-                                : matHasMarks.has(m.idx)
-                                  ? '重新生成思路 ✦'
-                                  : '生成思路 ✦'}
-                            </button>
-                            {matHasMarks.has(m.idx) && (
-                              <button
-                                type="button"
-                                className="text-btn exam-mat-gen"
-                                title="本则材料行文脉络导图：标注按原文顺序串成节点链"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setFlowModalIdx(m.idx)
-                                }}
-                              >
-                                导图
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </h3>
-                      {!collapsed.has(m.idx) &&
-                        joinParagraphs(m.content).map((p, i) => (
-                          <MarkedParagraph
-                            key={i}
-                            text={p}
-                            ranges={(markRangesByMat.get(m.idx) ?? []).filter((r) => r.paraIndex === i)}
-                          />
-                        ))}
-                    </Fragment>
-                  ))}
+                        {matGenIdx === m.idx ? '生成中…' : matHasMarks.has(m.idx) ? '重新生成思路 ✦' : '生成思路 ✦'}
+                      </button>
+                      {matHasMarks.has(m.idx) && (
+                        <button
+                          type="button"
+                          className="text-btn exam-mat-gen"
+                          title="本则材料行文脉络导图：标注按原文顺序串成节点链"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setFlowModalIdx(m.idx)
+                          }}
+                        >
+                          导图
+                        </button>
+                      )}
+                    </h3>
+                    {!collapsed.has(m.idx) &&
+                      joinParagraphs(m.content).map((p, i) => (
+                        <MarkedParagraph
+                          key={i}
+                          text={p}
+                          ranges={(markRangesByMat.get(m.idx) ?? []).filter((r) => r.paraIndex === i)}
+                        />
+                      ))}
+                  </Fragment>
+                ))
+              )}
             </div>
 
             <section className="exam-questions" id="exam-qs-anchor" style={readerVars}>
@@ -897,121 +653,19 @@ export default function ExamPreviewPage() {
 
   // ---------- 列表 ----------
   return (
-    <div className="exam-page">
-      <header className="subpage-header exam-hero">
-        <div>
-          <div className="eyebrow">GUOKAO SHENLUN　/　2000–2026</div>
-          <h1>
-            把真题，
-            <br />
-            <span>读成素材。</span>
-          </h1>
-        </div>
-        <div className="exam-hero-side">
-          <p className="subpage-copy">历年国考申论真题与参考答案，按年份、层级整理，和人民日报时评对照着读。</p>
-          {creating ? (
-            <div className="exam-new-form">
-              <input
-                className="exam-new-input"
-                type="number"
-                value={yearDraft}
-                onChange={(e) => setYearDraft(e.target.value)}
-                onBlur={() => {
-                  const n = parseInt(yearDraft, 10)
-                  if (n >= 2000 && n <= 2100) setNewForm((f) => ({ ...f, year: String(n) }))
-                  else setYearDraft(newForm.year)
-                }}
-                aria-label="年份"
-              />
-
-              <select
-                className="exam-new-select"
-                value={newForm.level}
-                onChange={(e) => setNewForm((f) => ({ ...f, level: e.target.value }))}
-                aria-label="层级"
-              >
-                {['副省级', '地市级', '行政执法', '未分级'].map((l) => (
-                  <option key={l}>{l}</option>
-                ))}
-              </select>
-              <input
-                className="exam-new-input exam-new-title"
-                placeholder="试卷标题"
-                value={newForm.title}
-                onChange={(e) => setNewForm((f) => ({ ...f, title: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void submitCreate()
-                }}
-              />
-              <button className="ghost" disabled={creatingBusy} onClick={submitCreate}>
-                {creatingBusy ? '创建中…' : '创建'}
-              </button>
-              <button className="text-btn muted" onClick={() => setCreating(false)}>
-                取消
-              </button>
-            </div>
-          ) : canManage ? (
-            <button className="ghost" onClick={() => setCreating(true)}>
-              ＋ 新增试卷
-            </button>
-          ) : null}
-        </div>
-      </header>
-      {listError && (
-        <div className="empty-state">
-          <strong>试卷列表暂时无法加载</strong>
-          本地 API 服务可能没有启动，服务恢复后可重试。
-          <div style={{ marginTop: 12 }}>
-            <button className="ghost" onClick={reloadList}>
-              重试
-            </button>
-          </div>
-        </div>
-      )}
-      {papers === null && !listError && <ApiLoading label="正在加载试卷列表…" />}
-      {papers !== null && papers.length === 0 && !listError && (
-        <div className="empty-state">
-          <strong>还没有试卷</strong>
-          点右上角「新增试卷」创建第一份真题
-        </div>
-      )}
-      {papers !== null && papers.length > 0 && !listError && (
-        <div className="fade-in">
-          {grouped.map(([year, list]) => (
-            <section key={year}>
-              <div className="content-head exam-year-head">
-                <h2>{year}</h2>
-                <span>{list.length} 卷</span>
-              </div>
-              <div className="exam-grid">
-                {list.map((p) => (
-                  <button
-                    key={p.id}
-                    className={`exam-card${levelClass(p.level)}`}
-                    title={`${p.level} · ${p.title}`}
-                    onClick={() => open(p.id)}
-                    {...hoverWarm(() => warmExam(p.id))}
-                  >
-                    <small>{p.hasAnswer ? '有答案' : '无答案'}</small>
-                    <h4>{p.title}</h4>
-                    <span className="exam-card-meta">
-                      {p.materialCount} 材料 · {p.questionCount} 题
-                    </span>
-                    <span className="exam-card-mark" aria-hidden>
-                      {levelMark(p.level)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
-    </div>
+    <ExamListView
+      papers={papers}
+      listError={listError}
+      canManage={canManage}
+      onOpen={open}
+      onCreated={(id) => {
+        open(id)
+        setEditing(true)
+      }}
+      onReload={reloadList}
+    />
   )
 }
-
-/** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
 
 /** 详情草稿浅拷贝：对象外壳克隆，字符串共享（进入编辑前确保与响应对象脱引用） */
 function cloneDraft(d: ExamDetail): ExamDetail {

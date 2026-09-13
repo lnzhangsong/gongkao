@@ -523,8 +523,13 @@ export function useAnnotationPopover(
     saveEditNote,
     deleteAnnKind,
     viewAnnNote,
-    annPopoverHas,
-    annPopoverFirst,
+    /** 派生的原始值：供子组件渲染期直接使用——把 annPopoverHas/First 这类函数作为 prop 传入
+        子组件并在渲染期调用，会让 React Compiler 以「可能读 ref」为由跳过子组件优化 */
+    annHasHighlight: annPopoverHas('highlight'),
+    annHasUnderline: annPopoverHas('underline'),
+    annHasNote: annPopoverHas('note'),
+    annFirstHighlight: annPopoverFirst('highlight'),
+    annFirstUnderline: annPopoverFirst('underline'),
     switchAnnColor,
     switchAnnUnderlineStyle,
     addKindToAnn,

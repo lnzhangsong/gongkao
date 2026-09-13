@@ -9,12 +9,13 @@ import type { ArticleStudy, StudyStatus } from '../stores/shenlunStore'
  * 用户手动设置过的状态视为「钉住」（pinned），推导不再升降，直到解除钉住。
  */
 
-/** 核心观点 / 分论点 / 段意 / 骨架任一有实质内容 */
+/** 核心观点 / 分论点 / 段意 / 骨架任一有实质内容。
+    字段做可选链防御：importStudy 不校验导入数据，旧持久化记录可能缺字段 */
 export function hasStudyContent(study: ArticleStudy | undefined): boolean {
   if (!study) return false
-  if (study.coreThesis.trim()) return true
-  if (study.subTheses.some((t) => t.trim())) return true
-  if (study.paragraphSummaries?.some((p) => p.summary.trim())) return true
+  if ((study.coreThesis ?? '').trim()) return true
+  if ((study.subTheses ?? []).some((t) => (t ?? '').trim())) return true
+  if (study.paragraphSummaries?.some((p) => (p.summary ?? '').trim())) return true
   const sk = study.skeleton
   if (sk?.opening?.trim() || sk?.closing?.trim()) return true
   if (sk?.bodyLayers?.some((t) => t.trim()) || sk?.transitions?.some((t) => t.trim())) return true

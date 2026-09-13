@@ -7,6 +7,8 @@ dist
 .env*
 !.env.example
 
+# 数据库是**构建产物**：data/ 下的可读源由 vp run db:rebuild（或 build / test 自动触发）生成它
+data/articles.db
 # SQLite WAL 临时文件
 data/*.db-shm
 data/*.db-wal

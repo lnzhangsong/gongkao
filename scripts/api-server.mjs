@@ -17,6 +17,7 @@
  *   （行测图片由前端 import.meta.glob 从 data/xingce-img/ 打进构建产物，无此路由）
  */
 import { createServer } from 'node:http'
+import { execFileSync } from 'node:child_process'
 import { DatabaseSync } from 'node:sqlite'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
@@ -35,6 +36,11 @@ for (const f of ['.env.local', '.env']) {
     /* 文件不存在：只用现有环境变量 */
   }
 }
+
+/* data/articles.db 是构建产物、未进 git：缺失时先从 data/ 下的源重建。
+   放在 server 里而不是各自脚本里，是为了让「直接 node scripts/api-server.mjs」
+   （e2e-smoke.mjs 就是这么拉起的）也拿到同样的保证。ensure-db 幂等，库在则只是 existsSync。 */
+execFileSync(process.execPath, [path.join(PROJECT_ROOT, 'scripts', 'ensure-db.mjs')], { stdio: 'inherit' })
 
 let _db = null
 

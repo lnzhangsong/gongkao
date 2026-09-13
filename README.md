@@ -135,7 +135,7 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 
 ### 文章数据（SQLite → API）
 
-- 数据源：`data/articles.db`（SQLite，517 篇），随部署打包
+- 数据源：`data/articles.db`（SQLite，517 篇）——**构建产物，由 `data/` 下的可读源在构建期生成，不提交**
 - 运行时读取：Vercel Function `/api/articles`（node:sqlite 只读）→ 前端按需拉取
   - `GET /api/articles` → meta 列表（不含正文，供首页/文库/搜索）
   - `GET /api/articles?id=p0001` → 单篇全文（阅读页按需）
@@ -168,11 +168,14 @@ node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现�
   上游在**仓库外**（年编 docx 在 `/Users/nif/…`，规范词合集 md 同样），此前 DB 是唯一副本。
 - `src/lib/dbSource.test.ts` 守卫「源 ↔ 库」逐字段一致；`DB_REBUILD_CHECK=1 vp test run`
   再验证「从源重建的库与现库逐表逐列一致」（`created_at` 是入库时间戳，不参与比对）。
-- **`data/articles.db` 目前仍提交进 git**（它是运行时的单文件产物）。彻底移出还差一步：
-  构建前跑 `db:rebuild` 并让 Vercel 的 `includeFiles` 指向生成物；在那之前库与其历史先留着。
-- 注意：`vp run db:rebuild` 直接改写 `data/articles.db`，重建后 git 会显示这个二进制「已修改」
-  （逻辑一致但字节不同——`created_at` 时间戳与页面布局）。只想比对请用
-  `node scripts/rebuild-db.mjs --db /tmp/x.db`。
+- **`data/articles.db` 不再提交进 git**（`.gitignore` 忽略）——它是构建产物，仓库里进 git 的是
+  `data/` 下的可读源。clone 下来后 `scripts/ensure-db.mjs` 会在库缺失时自动重建：
+  `vp run build` / `vp run test run` / `pnpm dev:api` / `pnpm dev:all` 都会触发，也可手动
+  `vp run db:rebuild`。Vercel 侧由 `vercel.json` 的 `buildCommand: pnpm build` 保证在打包
+  Functions（`includeFiles: data/articles.db`）之前库已生成。
+- 注意：`vp run db:rebuild` 直接改写 `data/articles.db`（逻辑与源一致，字节因 `created_at`
+  与页面布局不同）。只想比对请用 `node scripts/rebuild-db.mjs --db /tmp/x.db`。
+- git 历史里仍留着旧的 DB 快照（23 版、未压缩 360MB）；要回收需重写历史，属独立动作（未做）。
 
 ## 端到端冒烟测试
 

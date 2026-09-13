@@ -17,6 +17,7 @@
     "test": "vp test run",
     "test:watch": "vp test",
     "test:e2e": "node scripts/e2e.mjs",
+    "db:rebuild": "node scripts/rebuild-db.mjs",
     "gate": "vp check && vp test run && vp run build",
     "lint": "vp lint .",
     "lint:fix": "vp lint . --fix",

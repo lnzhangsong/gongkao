@@ -3,14 +3,17 @@
  * trigram 分词支持中文子串匹配（默认 unicode61 对中文整段成词，无法检索）。
  * 查询端：api-server.mjs queryMetaList —— 关键词 ≥3 字符走 FTS，短词回退 LIKE/instr。
  *
- * 用法：node scripts/migrate-fts.mjs   （幂等，可重复执行）
+ * 用法：node scripts/migrate-fts.mjs [--db data/articles.db]   （幂等，可重复执行）
  */
 import { DatabaseSync } from 'node:sqlite'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const db = new DatabaseSync(path.join(ROOT, 'data', 'articles.db'))
+const DB = process.argv.includes('--db')
+  ? path.resolve(process.argv[process.argv.indexOf('--db') + 1])
+  : path.join(ROOT, 'data', 'articles.db')
+const db = new DatabaseSync(DB)
 
 db.exec(`
   CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(

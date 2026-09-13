@@ -147,6 +147,33 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
   历史上正是导入脚本里的 `PRAGMA journal_mode = WAL` 把 WAL 标志写进文件头、随库一起提交造成的。
   现在两个导入脚本都显式设 `DELETE` 并在结束时断言，`src/lib/dbArtifact.test.ts` 另读文件头做守卫。
 
+### 数据库的可读源与重建（`data/` 是源，`articles.db` 是产物）
+
+`articles.db` 里的每一行都可由仓库内的可读源推导出来：
+
+```bash
+vp run db:rebuild                             # = node scripts/rebuild-db.mjs，重建 data/articles.db
+node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现库比对）
+```
+
+| 源 | 表 |
+|---|---|
+| `data/shenlun/*.json` | `papers` / `materials` / `questions` |
+| `data/xingce/*.json` | `xg_papers` / `xg_questions` |
+| `data/articles/{id}.json`（517 篇，每篇一个文件） | `articles` |
+| `data/guifan-terms.json`（3039 条，保留 id 空洞） | `guifan_terms` |
+| 派生（`migrate-fts.mjs`） | `articles_fts`（trigram FTS5） |
+
+- 后两份源是 2026-09-13 用 `scripts/migrate-db-to-source.mjs` 从库里反导出来的：它们的原始
+  上游在**仓库外**（年编 docx 在 `/Users/nif/…`，规范词合集 md 同样），此前 DB 是唯一副本。
+- `src/lib/dbSource.test.ts` 守卫「源 ↔ 库」逐字段一致；`DB_REBUILD_CHECK=1 vp test run`
+  再验证「从源重建的库与现库逐表逐列一致」（`created_at` 是入库时间戳，不参与比对）。
+- **`data/articles.db` 目前仍提交进 git**（它是运行时的单文件产物）。彻底移出还差一步：
+  构建前跑 `db:rebuild` 并让 Vercel 的 `includeFiles` 指向生成物；在那之前库与其历史先留着。
+- 注意：`vp run db:rebuild` 直接改写 `data/articles.db`，重建后 git 会显示这个二进制「已修改」
+  （逻辑一致但字节不同——`created_at` 时间戳与页面布局）。只想比对请用
+  `node scripts/rebuild-db.mjs --db /tmp/x.db`。
+
 ## 端到端冒烟测试
 
 `scripts/e2e.mjs` 一键入口：清理端口 → 拉起 `vp dev` → 运行 `scripts/e2e-smoke.mjs`（用本机 Microsoft Edge 无头模式跑通核心链路，脚本结束打印实际断言项数）：
@@ -163,7 +190,7 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 
 ## 代码质量与本地门禁
 
-- **push 前门禁（本地）**：`.vite-hooks/pre-push` 是项目自有钩子（Vite+ 机制：`core.hooksPath=.vite-hooks/_`，由 `pnpm install` 的 `prepare: vp config` 自动接好），push 时自动跑 `vp run gate`——即 `vp check`（格式 / lint / 类型）→ `vp test run`（24 文件 / 217 项）→ `vp run build`，任一失败即中断 push。手动预跑：`vp run gate`；临时跳过：`git push --no-verify`。
+- **push 前门禁（本地）**：`.vite-hooks/pre-push` 是项目自有钩子（Vite+ 机制：`core.hooksPath=.vite-hooks/_`，由 `pnpm install` 的 `prepare: vp config` 自动接好），push 时自动跑 `vp run gate`——即 `vp check`（格式 / lint / 类型）→ `vp test run`（32 文件 / 270 项，另有 1 项 `DB_REBUILD_CHECK` 可选项默认跳过）→ `vp run build`，任一失败即中断 push。手动预跑：`vp run gate`；临时跳过：`git push --no-verify`。
 - **commit 前**：`vp staged` 对暂存文件跑 `vp check --fix`（规则见 `vite.config.ts` 的 `staged`）。
 - **Node 版本**由 `.nvmrc` + `package.json` 的 `engines` 固定（`node:sqlite` 需 ≥22.5）。
 - **lint 覆盖 jsx-a11y**：语义/标签关联/aria 等真实可达性问题纳入门禁；自定义 dialog/listbox 与模态 autofocus 两条纯风格规则关闭（见 `vite.config.ts` 注释）。

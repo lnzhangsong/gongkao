@@ -19,6 +19,13 @@
 > - **本地 server 全部 GET 改为直调 `api/*.ts` handler**（Node 24 原生剥离 TS 类型），删六处双份查询逻辑——本地/生产形状漂移从结构上消除；`api/api-server.test.ts` parity 测试对全部端点断言「本地 HTTP ≡ 直调 handler」。
 > - 安全/稳定性顺手修：`/api/ai` SSRF（生产环境 baseUrl 解析后校验 IP + `redirect: 'manual'`）、写接口默认绑回环（`API_HOST` 可开）、请求体 2MB 上限（超限 413；此前超限会把进程打挂）、`/api/ai` 转发的 `root is not defined` 崩溃。
 
+**2026-09-13 数据库「源 ↔ 产物」分离**：查清 `data/articles.db` 的可复现性——`articles`（517 篇）与 `guifan_terms`（3039 条）的原始上游都在**仓库外**（年编 docx 在 `/Users/nif/…`；年编管线 `scripts/articles-pipeline.mjs` 已在 5a9afc3 删除），DB 一度是唯一副本。本轮把这两张表反导成仓库内可读源，并补上重建链：
+> - 新增 `scripts/migrate-db-to-source.mjs`（一次性反导）→ `data/articles/{id}.json`（517 个）、`data/guifan-terms.json`（保留 id 空洞，否则前端 `term-seen` 事件的 id 对不上）。
+> - 新增 `scripts/import-articles.mjs`；`import-guifanci.mjs` 支持 JSON 源并把默认源改回仓库内；`migrate-fts.mjs` 支持 `--db`。
+> - 新增 `scripts/rebuild-db.mjs`（`vp run db:rebuild`）：删旧库 → 申论 → 行测 → 文章 → 规范词 → FTS；相对路径目标库必须落在仓库内。
+> - 新增 `src/lib/dbSource.test.ts` 守卫「源 ↔ 库」逐字段一致；`DB_REBUILD_CHECK=1` 再验证重建等价性。实测重建库与现库**逐表逐列一致**，唯一差异是 `papers`/`xg_papers` 的 `created_at` 入库时间戳（两者都不被 API/前端读取）。
+> - 收益：改数据从「16MB 二进制变更」变成可 diff、可 review 的文本源（517 篇 JSON 合计 2.1MB），且任何人 clone 后可一条命令重建。**`articles.db` 暂仍提交进 git**，彻底移出还差「构建前生成 + Vercel includeFiles 指向生成物」这一步。
+
 ---
 
 ## 一、产品定位（三句话）

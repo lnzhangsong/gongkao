@@ -49,6 +49,7 @@
 > - 收益：改数据从「16MB 二进制变更」变成可 diff、可 review 的文本源（517 篇 JSON 合计 2.1MB），且任何人 clone 后可一条命令重建。
 > - **`data/articles.db` 已移出 git**（2026-09-13 第二批）：改为构建产物，`scripts/ensure-db.mjs` 在缺失或**不完整**（单独跑某个 importer 会建出「只有一张表的半个库」）时自动重建，接入 `build` / `api-server` 启动 / vitest `globalSetup`；`vercel.json` 显式 `buildCommand: pnpm build`，保证打包 Functions 的 `includeFiles` 之前库已生成。已实测「删库 → `vp run gate`」可从零重建（32 文件 / 270 项全绿）。
 > - **git 历史瘦身已完成**（2026-09-13 第三批）：先实测定位，历史体积的大头并非 `articles.db`（它从未入库），而是行测 2026 三套卷内嵌 base64 的旧版本——`data/xingce/guokao-xingce-2026-*.json` 共 26 个 blob、约 110MB 未压缩；另有已停止跟踪的 `data/exams.db`（6.5MB）与 `src/data/articlesParsed.ts`（2MB）。用 `git-filter-repo --invert-paths` 重写全历史清除这三类，再把图片外置版的当前 JSON 重新入库。重写后 **tip 树与重写前逐字节一致**（`git ls-tree -r` 比对零差异），`vp run gate` 全绿，`.git` **62MB → 13MB**。代价：所有 commit SHA 变化，远端需 force-push，其他克隆须重新 clone 或 hard reset。
+>   - **第二批（同日）**：2022 三套卷同样残留 base64 旧版本（3 个 blob，约 4.7MB 未压缩），再跑一次 `git-filter-repo` 清除并重纳入当前版本；tip 树仍逐字节一致，`.git` **13MB → 10MB**。此后历史里最大的 blob 是 `design/design-spec.jpeg`（2.3MB），无冗余大对象。
 >   - GitHub 侧旧对象不会立即消失（仍可按已知 SHA 访问、直到服务端 GC）；如需彻底清除要另行联系 GitHub Support 触发仓库 GC。
 > - **本地写接口写穿到源**（同批）：`scripts/lib/export-source.mjs` 收口「库 → 源」映射（逐字节保真），api-server 的规范词增删改、试卷新建/编辑/删除在写库后即时回写 `data/guifan-terms.json` / `data/shenlun/{id}.json`——此前 UI 改完要记得手工 `migrate-db-to-source`，忘了就被下次重建丢掉。`migrate-db-to-source.mjs` 扩为三种源的全量写回 + `--check` 只校验；`src/lib/dbSource.test.ts` 相应加了「逐字节 `--check`」与「半个库自愈」两条守卫。
 

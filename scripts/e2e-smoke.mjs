@@ -1,5 +1,8 @@
-/* 端到端冒烟测试：用本机 Edge 无头浏览器验证路由、渲染、标注、删除与持久化
- * 依赖：本地 API server（node:sqlite 提供 /api），由本脚本自动拉起 */
+/* 端到端冒烟测试：无头浏览器验证路由、渲染、标注、删除与持久化
+ * 依赖：本地 API server（node:sqlite 提供 /api），由本脚本自动拉起
+ * 浏览器：本地 macOS 走系统 Edge（免下载）；其他平台走 playwright 自带 Chromium
+ *   （CI 需先跑 `npx playwright@<playwright-core 同版本> install --with-deps chromium`）。
+ *   E2E_CHANNEL 可显式指定 channel（置空则强制用自带浏览器）。 */
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 
@@ -15,8 +18,10 @@ await new Promise((r) => setTimeout(r, 1200))
 const results = []
 const errors = []
 
+/* 空字符串 = 显式要求用自带 Chromium（CI 走这条） */
+const browserChannel = process.env.E2E_CHANNEL ?? (process.platform === 'darwin' ? 'msedge' : '')
 const browser = await chromium.launch({
-  channel: 'msedge',
+  ...(browserChannel ? { channel: browserChannel } : {}),
   headless: true,
   args: ['--no-sandbox', '--disable-gpu'],
 })
@@ -923,9 +928,11 @@ if (xgCards > 0) {
     await q.locator('.practice-opt:not([disabled])').first().click()
     await page.locator('.practice-nav-btn.is-primary').click()
     await page.waitForTimeout(400)
-    const verdict = q.locator('.practice-verdict')
-    check('提交本组后出判定', (await verdict.count()) > 0)
-    check('判分结果显示对错', /回答(正确|错误)/.test(await verdict.first().innerText()))
+    /* 判定 UI（b22180e 起）：正确项加 .right，选错时所选项加 .wrong；
+       旧的 .practice-verdict 文案已移除，该元素现在只用于「该题暂无答案」提示 */
+    check('提交本组后出判定', (await q.locator('.practice-opt.right').count()) > 0)
+    const pickedCls = (await q.locator('.practice-opt.picked').first().getAttribute('class')) ?? ''
+    check('判分结果显示对错', /\b(right|wrong)\b/.test(pickedCls), pickedCls.trim())
 
     /* 刷新后作答仍在（xingceStore → IndexedDB 持久化）。
        答题卡浮层默认收起，需先展开才能看到题号格的对错标记 */
@@ -955,14 +962,15 @@ if (xgCards > 0) {
     check('键盘 ← 翻回上一屏', (await page.locator(headSel).first().innerText()) === headBefore)
 
     /* 连按选项键：依次落到本组每道未判分的题（上限 10 题/屏，两个 abcde 周期足够） */
-    const verdictsBefore = await page.locator('.practice-verdict').count()
+    const judgedBefore = await page.locator('.practice-opt[disabled]').count()
     for (let i = 0; i < 20; i++) await page.keyboard.press('abcde'[i % 5])
     await page.waitForTimeout(200)
     check('键盘连按可顺序作答', (await page.locator('.practice-opt.picked').count()) > 0)
 
     await page.keyboard.press('Enter')
     await page.waitForTimeout(400)
-    check('键盘 Enter 提交本组', (await page.locator('.practice-verdict').count()) > verdictsBefore)
+    /* 判分后选项被 disable；不再用 .practice-verdict（它只表示「无答案」提示，不受提交影响） */
+    check('键盘 Enter 提交本组', (await page.locator('.practice-opt[disabled]').count()) > judgedBefore)
     check('整组判分小结出现', (await page.locator('.practice-summary').count()) > 0)
   }
 

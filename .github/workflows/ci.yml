@@ -1,0 +1,75 @@
+# 质量门禁 CI：所有 push/PR 强制跑，与本地 `.vite-hooks/pre-push` 同一套 gate。
+# 本地钩子可 --no-verify 跳过、clone 后未必装好——这里是不可绕过的兜底。
+#
+# e2e（pnpm test:e2e，145 项）也进 CI：本地 macOS 用系统 Edge 免下载，
+# Linux runner 用 playwright 自带的 Chromium（按 playwright-core 版本动态安装）。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 全部 job 只读仓库内容，不需要任何写权限
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: 前端门禁（check + test + build）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # 版本读 package.json 的 packageManager
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # gate = vp check（格式/lint/类型）+ vp test run + vp run build（tsc --noEmit + vp build）
+      - name: Gate
+        run: pnpm run gate
+
+  python:
+    name: Python 管线测试（行测解析）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # 仅 xingce_common 顶层 import pymupdf；测试本体只用 stdlib。
+      # 钉版本避免上游破坏性发版把 CI 弄红（与本地 1.28.2 一致）
+      - name: Install pymupdf
+        run: python -m pip install pymupdf==1.28.2
+      # 与 package.json 的 test:py 同源，加 -v 便于定位失败
+      - name: Unit tests
+        run: python -m unittest discover -s scripts/tests -v
+
+  e2e:
+    name: 端到端冒烟（Playwright）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # 用与 playwright-core 完全相同的版本装 Chromium，避免 browser revision 不匹配
+      - name: Install Chromium
+        run: >-
+          npx --yes playwright@$(node -p "require('playwright-core/package.json').version")
+          install --with-deps chromium
+      - name: E2E smoke
+        run: pnpm run test:e2e

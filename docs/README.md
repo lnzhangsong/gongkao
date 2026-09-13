@@ -21,6 +21,13 @@
 > - ⑦ `chunkSizeWarningLimit` 3000 → 800（原值等于关闭体积告警）。
 > - ⑧ **新增 59 项测试**（158 → 217）：`api/*.test.ts` 端点集成测试 22 项（读真实 DB，含 FTS 一致性）、`annotationStore` 11、`articleStore` 12、`shenlunStore` 14。
 > - ⑨ **启用 jsx-a11y lint**：75 条告警清零（关掉 `prefer-tag-over-role`/`no-autofocus` 两条刻意模式规则，其余模态遮罩、卡片、标签关联、contentEditable aria 等逐项修复）。
+
+**2026-09-13 CI 落地**：新增 `.github/workflows/ci.yml`，此前质量保障全部压在本地 pre-push 钩子上（`--no-verify` 可跳过、clone 后未必装好），线上零测试兜底。三个 job 全部只读权限（`permissions: contents: read`）+ 显式超时：
+> - ① **前端门禁**：`pnpm run gate` = check + test + build（Node 24 + `pnpm install --frozen-lockfile`）。
+> - ② **Python 管线测试**：`unittest discover -s scripts/tests`（行测解析 21 项），`pymupdf` 钉 1.28.2。
+> - ③ **端到端冒烟**：`pnpm run test:e2e`（145 项）。Linux runner 无 Edge，改按 `playwright-core` 版本动态装自带 Chromium；本地 macOS 仍走系统 Edge（`scripts/e2e-smoke.mjs` 按平台选择）。
+>
+> 顺带修复一处**长期红着的 e2e**：`b22180e`（2026-09-11「错题本」）把行测判分从 `.practice-verdict` 文案改成选项红/绿框（`.practice-opt.right/.wrong`）+ 吸顶小结 `.practice-summary`，但 e2e 的 3 处断言仍等旧元素，首次失败即抛未捕获 `TimeoutError`，导致整个脚本当时崩掉、后续约 100 项断言从未执行——此前「e2e 全绿」的自述自 09-11 起已不成立。现已按新判定 UI 重写这 3 处断言，全量 145 项通过。
 **2026-09-13 写路径决策**：规范词/试卷的增删改**仅保留本地 api-server，生产永久只读**（决策文档《规范词与试卷写路径决策.md》）——Supabase 写路径方案评估后不采纳（需新表 + RLS + 云同步语义，成本远超功能权重）。配套落地：
 > - `GET /api/capabilities` 能力探测：`api-server.mjs` 按请求方回答 `write`（设了 `WRITE_TOKEN` 时无令牌即 `false`），前端 `useLocalWrite()` 收口判定，**不按构建模式判断**（`vp preview` 生产构建挂本地 server 时写入口正确可见）；探测只缓存明确的 HTTP 答复，网络失败不落缓存、可重试（`dev:all` 下浏览器先于 api-server 就绪不会把写入口永久锁死）。
 > - 三处写入口按探测显隐：`ReadingPage` 划词「存规范词」、`ExamPreviewPage` 编辑/新增/删除、`TermsPage` 增删改——生产不再渲染点了必失败的按钮（此前 `import.meta.env.DEV` 自判只盖了 1/3，阅读页主路径的「存规范词」漏网）。

@@ -46,6 +46,16 @@ LEAK_RE = re.compile(
 )
 
 
+def safe_paper_dir(img_dir: Path, paper_id: str) -> Path:
+    """paper_id 来自 JSON，可能被写坏成绝对路径或含 ..：rmtree 前强制校验仍落在 img_dir 内，
+    否则 ignore_errors=True 会安静地删到仓库外。"""
+    root = img_dir.resolve()
+    d = (img_dir / paper_id).resolve()
+    if d == root or root not in d.parents:
+        raise ValueError(f"paper_id 越界：{paper_id!r} → {d}")
+    return d
+
+
 def cut_leak(s: str, nxt: int | None = None) -> str:
     """截断粘进来的泄漏文本；nxt=紧邻下一题号时连「N.」开头一起切（小数不切、紧跟年份要切）。"""
     pat = LEAK_RE
@@ -446,7 +456,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, img_dir: Path = DEF
         return
 
     # 图由本脚本直接落盘：先清空该卷图目录，避免旧序号文件残留被前端读成重复图
-    shutil.rmtree(img_dir / paper["id"], ignore_errors=True)
+    shutil.rmtree(safe_paper_dir(img_dir, paper["id"]), ignore_errors=True)
 
     doc = pymupdf.open(str(paper_pdf))
     wm = clean_watermark(doc)

@@ -37,6 +37,7 @@ import {
   levelMark,
 } from '../lib/examText'
 import '../styles/exam-preview.css'
+import { useLocalWrite } from '../hooks/useLocalWrite'
 
 /**
  * 申论真题（/exams）：列表 + 详情
@@ -58,6 +59,8 @@ export default function ExamPreviewPage() {
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
+  /* 增删改只有本地 api-server 提供（生产只读），按能力探测显隐（与 TermsPage 同款） */
+  const canManage = useLocalWrite()
   const [creating, setCreating] = useState(false)
   const [newForm, setNewForm] = useState({ year: String(new Date().getFullYear() + 1), level: '地市级', title: '' })
   /* 年份输入的临时字符串：清空重输时数字不再跳变，失焦时校验回写 */
@@ -526,7 +529,7 @@ export default function ExamPreviewPage() {
                 <span>题目　{draft.questions.length}</span>
                 <span>答案　{answered ? `${answered}/${draft.questions.length}` : '无'}</span>
                 {draft.warnings ? <span className="exam-warn">⚠ {draft.warnings}</span> : null}
-                {!editing && (
+                {canManage && !editing && (
                   <button className="text-btn exam-edit-btn" onClick={() => setEditing(true)}>
                     编辑
                   </button>
@@ -947,11 +950,11 @@ export default function ExamPreviewPage() {
                 取消
               </button>
             </div>
-          ) : (
+          ) : canManage ? (
             <button className="ghost" onClick={() => setCreating(true)}>
               ＋ 新增试卷
             </button>
-          )}
+          ) : null}
         </div>
       </header>
       {listError && (

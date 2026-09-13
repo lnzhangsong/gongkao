@@ -25,8 +25,10 @@ function openDb(): DatabaseSync {
 }
 
 export function GET(request: Request): Response {
-  let list = (openDb().prepare('SELECT theme, term, example FROM guifan_terms ORDER BY id').all() as any[]).map(
-    (r) => ({ theme: r.theme, term: r.term, example: r.example }),
+  // id 必须带出：前端 TermsPage 以 t.id 作为编辑态/删除/key/见过标记的标识，
+  // 缺了会让所有卡片共享 undefined 键（历史上漏过，靠 api-server parity 测试锁住）
+  let list = (openDb().prepare('SELECT id, theme, term, example FROM guifan_terms ORDER BY id').all() as any[]).map(
+    (r) => ({ id: r.id, theme: r.theme, term: r.term, example: r.example }),
   )
   const url = new URL(request.url)
   const theme = url.searchParams.get('theme')

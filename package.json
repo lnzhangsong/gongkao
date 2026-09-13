@@ -6,7 +6,7 @@
   "description": "读本 READBOOK — 每日人民日报精读与申论素材阅读应用",
   "packageManager": "pnpm@12.3.4",
   "engines": {
-    "node": ">=22.5"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "vp dev",

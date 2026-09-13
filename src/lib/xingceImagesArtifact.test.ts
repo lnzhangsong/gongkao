@@ -39,8 +39,18 @@ function collectRefs(papers: Paper[]): Ref[] {
         expect(Array.isArray(value), `${paper.id} 题${q.idx} 的 ${field} 必须是引用数组（不是 base64 字符串）`).toBe(
           true,
         )
-        for (const it of value as { file?: string }[]) {
+        for (const it of value as { file?: string; w?: unknown; h?: unknown }[]) {
           expect(typeof it?.file, `${paper.id} 题${q.idx} 的 ${field} 条目缺 file`).toBe('string')
+          // 尺寸供 <img> 预留布局，必须是正整数（0/负数/小数都会把布局算崩）
+          for (const dim of ['w', 'h'] as const) {
+            const v = it?.[dim]
+            if (v !== undefined) {
+              expect(
+                typeof v === 'number' && Number.isInteger(v) && v > 0,
+                `${paper.id} 题${q.idx} 的 ${field} 条目 ${dim}=${JSON.stringify(v) ?? 'undefined'} 必须是正整数`,
+              ).toBe(true)
+            }
+          }
           out.push({ paperId: paper.id, idx: q.idx, file: it.file as string })
         }
       }
@@ -89,12 +99,25 @@ describe('data/xingce-img 作为图片资产', () => {
   it('data/xingce-img 下没有未被引用的孤儿图片', () => {
     const referenced = new Set(refs.map((r) => `${r.paperId}/${r.file}`))
     const orphans: string[] = []
-    for (const dir of readdirSync(IMG_DIR)) {
-      const full = path.join(IMG_DIR, dir)
+    for (const dir of readdirSync(IMG_DIR, { withFileTypes: true })) {
+      // macOS 的 Finder 点一下就会生成 .DS_Store，跳过散落文件而非 ENOTDIR 崩掉
+      if (!dir.isDirectory()) continue
+      const full = path.join(IMG_DIR, dir.name)
       for (const f of readdirSync(full)) {
-        if (!referenced.has(`${dir}/${f}`)) orphans.push(`${dir}/${f}`)
+        if (!referenced.has(`${dir.name}/${f}`)) orphans.push(`${dir.name}/${f}`)
       }
     }
     expect(orphans).toEqual([])
+  })
+
+  it('同一题的引用不重复（历史上出现过图片重复渲染）', () => {
+    const seen = new Set<string>()
+    const dupes: string[] = []
+    for (const r of refs) {
+      const key = `${r.paperId}/${r.idx}/${r.file}`
+      if (seen.has(key)) dupes.push(key)
+      seen.add(key)
+    }
+    expect(dupes).toEqual([])
   })
 })

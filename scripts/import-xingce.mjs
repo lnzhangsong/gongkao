@@ -324,17 +324,20 @@ function main() {
   }
 
   /* 反向检查：data/xingce-img/ 下有文件却没被任何引用指向（多是只跑了文本解析、
-     没重跑裁图脚本；图会照常显示，但已经是「数据里没有的图」）。 */
+     没重跑裁图脚本；图会照常显示，但已经是「数据里没有的图」）。
+     遍历**所有已知卷**的目录而非只遍历有引用的卷——某卷 JSON 的 image 字段被文本
+     解析清空后它不在 referencedFiles 里，但图目录还留着旧文件，这正是要抓的情况。 */
   const orphanImages = []
-  const knownPapers = new Set(papers.map((p) => p.paper.id))
-  for (const [paperId, refs] of referencedFiles) {
+  const papersById = new Map(papers.map((p) => [p.paper.id, p]))
+  for (const paperId of new Set([...referencedFiles.keys(), ...papersById.keys()])) {
     const dir = path.join(IMG_DIR, paperId)
     if (!fs.existsSync(dir)) continue
+    const refs = referencedFiles.get(paperId) ?? new Set()
     for (const f of fs.readdirSync(dir)) if (!refs.has(f)) orphanImages.push(`${paperId}/${f}`)
   }
   for (const d of fs.existsSync(IMG_DIR) ? fs.readdirSync(IMG_DIR) : []) {
     const p = path.join(IMG_DIR, d)
-    if (fs.statSync(p).isDirectory() && !knownPapers.has(d)) orphanImages.push(`${d}/（整个目录无对应 JSON）`)
+    if (fs.statSync(p).isDirectory() && !papersById.has(d)) orphanImages.push(`${d}/（整个目录无对应 JSON）`)
   }
   if (orphanImages.length) {
     console.error(

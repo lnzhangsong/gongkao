@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addTerm, deleteTerm, fetchTerms, updateTerm, type GuiFanTerm } from '../lib/api'
+import { useLocalWrite } from '../hooks/useLocalWrite'
 import { toast } from '../components/ui/toastStore'
 import { alertDialog } from '../components/ui/confirm'
 import { Pagination } from '../components/ui/Pagination'
@@ -24,6 +25,9 @@ const orderedThemes = (terms: GuiFanTerm[]) => {
 }
 
 export default function TermsPage() {
+  /* 规范词增删改只有本地 api-server 提供（生产只读），按能力探测显隐——
+     此前生产可见且因缺 id 全部串键 */
+  const canManage = useLocalWrite()
   const [terms, setTerms] = useState<GuiFanTerm[] | null>(null)
   /** 列表拉取失败（服务不可用）：显示错误态 + 重试，而不是误导性的「没有匹配」 */
   const [loadError, setLoadError] = useState(false)
@@ -208,7 +212,7 @@ export default function TermsPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          {adding ? (
+          {canManage && adding ? (
             <div className="terms-new-form">
               <input
                 className="exam-new-input"
@@ -239,11 +243,11 @@ export default function TermsPage() {
                 取消
               </button>
             </div>
-          ) : (
+          ) : canManage ? (
             <button className="ghost" onClick={() => setAdding(true)}>
               ＋ 新增规范词
             </button>
-          )}
+          ) : null}
         </div>
       </header>
 
@@ -360,14 +364,16 @@ export default function TermsPage() {
                       )}
                     </h4>
                     {t.example ? <p className="terms-example">{t.example}</p> : null}
-                    <span className="terms-card-tools">
-                      <button className="text-btn terms-del-btn" title="修改此词" onClick={() => startEdit(t)}>
-                        编辑
-                      </button>
-                      <button className="text-btn terms-del-btn" title="删除此词" onClick={() => void remove(t)}>
-                        删除
-                      </button>
-                    </span>
+                    {canManage ? (
+                      <span className="terms-card-tools">
+                        <button className="text-btn terms-del-btn" title="修改此词" onClick={() => startEdit(t)}>
+                          编辑
+                        </button>
+                        <button className="text-btn terms-del-btn" title="删除此词" onClick={() => void remove(t)}>
+                          删除
+                        </button>
+                      </span>
+                    ) : null}
                   </article>
                 ),
               )}

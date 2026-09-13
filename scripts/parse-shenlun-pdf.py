@@ -84,8 +84,22 @@ def extract_pages(pdf_path):
     return pages
 
 
+# 推广/来源水印行：PDF 来源站点夹带的广告，必须整行丢弃。
+# 只匹配高精度特征（站点名、引流话术、来源署名、裸联系方式），
+# 不用「扫码关注 / 公众号」这类泛化短语——申论材料常讨论政务新媒体，误删正文比漏删广告更糟。
+NOISE_RE = re.compile(
+    r"Seeyee"
+    r"|获取持续更新"
+    r"|考公\s*[-—]\s*考研\s*[-—]\s*四六级"
+    r"|(?:TB|淘宝)\s*[:：]\s*关注"
+    r"|^来源\s*[:：].{0,40}整理\s*[:：]"
+    r"|^整理\s*[:：].{0,20}(?:微信|QQ|公众号)\s*[:：]"
+    r"|^(?:微信|QQ|公众号)\s*[:：]\s*[A-Za-z0-9_\-]{5,}\s*$"
+)
+
+
 def clean_pages(pages, title_key):
-    """去页码、跨页重复页眉；收敛空行。"""
+    """去页码、跨页重复页眉、推广水印；收敛空行。"""
     key = re.sub(r"\s+", "", title_key or "")
     out = []
     for i, lines in enumerate(pages):
@@ -94,8 +108,14 @@ def clean_pages(pages, title_key):
             if not l:
                 kept.append("")
                 continue
-            if re.fullmatch(r"[-—\s]*\d{1,3}[-—\s]*", l) or re.fullmatch(r"\d{1,3}\s*/\s*\d{1,3}", l):
-                continue  # 页码（含 "- 5 -" / "1 / 14"）
+            if (
+                re.fullmatch(r"[-—\s]*\d{1,3}[-—\s]*", l)
+                or re.fullmatch(r"\d{1,3}\s*/\s*\d{1,3}", l)
+                or re.fullmatch(r"第\s*\d{1,3}\s*页\s*[，,]\s*共\s*\d{1,3}\s*页", l)
+            ):
+                continue  # 页码（含 "- 5 -" / "1 / 14" / "第1页，共10页"）
+            if NOISE_RE.search(l):
+                continue  # 推广/来源水印
             if i > 0 and key and re.sub(r"\s+", "", l) == key:
                 continue
             kept.append(l)

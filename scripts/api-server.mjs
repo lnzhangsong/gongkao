@@ -7,12 +7,9 @@
  * 反过来由这里 import 它们没有打包问题，且从根上消除两侧逻辑漂移。
  * 仅本地才有的写接口（试卷/规范词增删改，生产走 Supabase）仍在本文件实现。
  *
- * 路由（GET 全部转发 api/*.ts；写接口仅本地提供，生产只读或走 Supabase）：
- *   GET /api/articles         → api/articles.ts
- *   GET /api/terms            → api/terms.ts
- *   GET /api/exams            → api/exams.ts（?id= 详情在 handler 内）
- *   GET /api/xingce           → api/xingce.ts
- *   POST /api/ai              → api/ai.ts
+ * 路由（GET 全部转发 api/data.ts 合并入口 / api/ai.ts；写接口仅本地提供）：
+ *   GET /api/{articles,terms,exams,xingce} → api/data.ts（按 pathname 分发）
+ *   POST /api/ai                           → api/ai.ts
  *   POST/PATCH/DELETE terms·exams  本地写接口（在本文件实现）
  *   （行测图片由前端 import.meta.glob 从 data/xingce-img/ 打进构建产物，无此路由）
  */
@@ -49,11 +46,8 @@ execFileSync(process.execPath, [path.join(PROJECT_ROOT, 'scripts', 'ensure-db.mj
 
 let _db = null
 
-const articlesApi = await import('../api/articles.ts')
+const dataApi = await import('../api/data.ts')
 const aiApi = await import('../api/ai.ts')
-const termsApi = await import('../api/terms.ts')
-const examsApi = await import('../api/exams.ts')
-const xingceApi = await import('../api/xingce.ts')
 
 // ---------- 写接口鉴权 ----------
 // 默认仅本机可用；若设置 WRITE_TOKEN 环境变量，则写请求必须带匹配的 x-write-token 头
@@ -84,7 +78,7 @@ function syncSource(label, fn) {
   }
 }
 
-// —— 申论真题写接口专用本地 DB 句柄（GET 已转发 api/exams.ts，生产只读）——
+// —— 申论真题写接口专用本地 DB 句柄（GET 已转发 api/data.ts，生产只读）——
 function openExamDb(opts) {
   const readOnly = !opts?.write
   if (_db && _dbReadOnly === readOnly) return _db
@@ -193,14 +187,14 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/articles' && req.method === 'GET') {
-    // 转发 api/articles.ts GET（单篇 ?id= / 列表筛选都在 handler 内）
-    void respond(noStore(articlesApi.GET(new Request(`${internalBase}${req.url}`))))
+    // 转发 api/data.ts GET（按 pathname 分发；单篇 ?id= / 列表筛选都在 handler 内）
+    void respond(noStore(dataApi.GET(new Request(`${internalBase}${req.url}`))))
     return
   }
 
   if (url.pathname === '/api/terms' && req.method === 'GET') {
-    // 转发 api/terms.ts GET（theme / q 过滤在 handler 内）
-    void respond(noStore(termsApi.GET(new Request(`${internalBase}${req.url}`))))
+    // 转发 api/data.ts GET（theme / q 过滤在 handler 内）
+    void respond(noStore(dataApi.GET(new Request(`${internalBase}${req.url}`))))
     return
   }
 
@@ -293,14 +287,14 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/exams' && req.method === 'GET') {
-    // 转发 api/exams.ts GET（?id= 详情、year/level 过滤都在 handler 内）
-    void respond(noStore(examsApi.GET(new Request(`${internalBase}${req.url}`))))
+    // 转发 api/data.ts GET（?id= 详情、year/level 过滤都在 handler 内）
+    void respond(noStore(dataApi.GET(new Request(`${internalBase}${req.url}`))))
     return
   }
   // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
   if (url.pathname === '/api/xingce' && req.method === 'GET') {
-    // 转发 api/xingce.ts GET（?id= 详情在 handler 内）
-    void respond(noStore(xingceApi.GET(new Request(`${internalBase}${req.url}`))))
+    // 转发 api/data.ts GET（?id= 详情在 handler 内）
+    void respond(noStore(dataApi.GET(new Request(`${internalBase}${req.url}`))))
     return
   }
   if (url.pathname === '/api/exams' && req.method === 'POST') {

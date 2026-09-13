@@ -205,7 +205,7 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 - **lint 覆盖 jsx-a11y**：语义/标签关联/aria 等真实可达性问题纳入门禁；自定义 dialog/listbox 与模态 autofocus 两条纯风格规则关闭（见 `vite.config.ts` 注释）。
 - **API 端点有集成测试**：`api/*.test.ts` 直接调用 Vercel Function 的 `GET`，读真实 `articles.db`（含搜索走 FTS5 与本地 `api-server` 行为一致的断言）。
 - **安全响应头 / CSP**：`vercel.json` 注入 CSP、`X-Content-Type-Options`、`Referrer-Policy`、HSTS 等；`/assets`、`/fonts` 带一年不可变缓存。
-- **线上搜索走 FTS5**：`api/articles.ts` 与本地 `scripts/api-server.mjs` 同用 `articles_fts` trigram 索引（≥3 字符），短词回退 LIKE——两处逻辑需同步修改（注释已标注）。
+- **线上搜索走 FTS5**：`api/data.ts` 用 `articles_fts` trigram 索引（≥3 字符），短词回退 LIKE；本地 `scripts/api-server.mjs` 直调同一 handler，已无双实现需要同步。
 
 ## 账号体系与云同步（Supabase 全托管：Auth + Postgres）
 

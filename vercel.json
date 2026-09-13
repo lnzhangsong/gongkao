@@ -1,16 +1,7 @@
 {
   "buildCommand": "pnpm build",
   "functions": {
-    "api/articles.ts": {
-      "includeFiles": "data/articles.db"
-    },
-    "api/exams.ts": {
-      "includeFiles": "data/articles.db"
-    },
-    "api/xingce.ts": {
-      "includeFiles": "data/articles.db"
-    },
-    "api/terms.ts": {
+    "api/data.ts": {
       "includeFiles": "data/articles.db"
     }
   },
@@ -39,6 +30,22 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/articles",
+      "destination": "/api/data"
+    },
+    {
+      "source": "/api/terms",
+      "destination": "/api/data"
+    },
+    {
+      "source": "/api/exams",
+      "destination": "/api/data"
+    },
+    {
+      "source": "/api/xingce",
+      "destination": "/api/data"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"

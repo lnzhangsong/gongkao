@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS xg_questions (
 );
 CREATE INDEX IF NOT EXISTS idx_xg_questions_group ON xg_questions(paper_id, group_id);`)
 
-  /* 早先版本的 ensureTables 漏建了 group_image（INSERT 与 api/xingce.ts 都在用它；
+  /* 早先版本的 ensureTables 漏建了 group_image（INSERT 与 api/data.ts 都在用它；
      仓库里的 data/articles.db 当时是另外 ALTER 补的，所以一直没暴露——但空库重建会
      「no column named group_image」全量入库失败）。CREATE TABLE IF NOT EXISTS 不会给
      已存在的表补列，这里幂等补齐。 */

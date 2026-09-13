@@ -182,7 +182,7 @@ export function fetchExam(id: string): Promise<ExamDetail> {
   return cachedGet(url, () => request<ExamDetail>(url))
 }
 
-/** —— 行测真题（docs/行测做题模块设计方案.md X1；api/xingce.ts 同构）—— */
+/** —— 行测真题（docs/行测做题模块设计方案.md X1；api/data.ts 同构）—— */
 
 export interface XingcePaperMeta {
   id: string

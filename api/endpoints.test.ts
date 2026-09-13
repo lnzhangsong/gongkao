@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { GET as getExams } from './exams'
-import { GET as getTerms } from './terms'
-import { GET as getXingce } from './xingce'
+// /api/exams、/api/terms、/api/xingce 三个路径现在都分发到同一个 handler（api/data.ts），
+// 故只 import 一次；「按 pathname 分发」本身就是这些用例在验的东西。
+import { GET as apiGET } from './data'
 
 /**
  * /api/exams、/api/terms、/api/xingce 端点冒烟测试。
@@ -19,7 +19,7 @@ async function body<T>(res: Response): Promise<T> {
 describe('/api/exams（申论真题）', () => {
   it('列表返回 papers，total 一致', async () => {
     const data = await body<{ papers: { id: string; year: number; questionCount: number }[]; total: number }>(
-      get(getExams, '/api/exams'),
+      get(apiGET, '/api/exams'),
     )
     expect(data.total).toBe(data.papers.length)
     expect(data.total).toBeGreaterThan(0)
@@ -28,9 +28,9 @@ describe('/api/exams（申论真题）', () => {
   })
 
   it('按 id 返回材料与题目', async () => {
-    const list = await body<{ papers: { id: string }[] }>(get(getExams, '/api/exams'))
+    const list = await body<{ papers: { id: string }[] }>(get(apiGET, '/api/exams'))
     const id = list.papers[0].id
-    const res = get(getExams, '/api/exams', `?id=${encodeURIComponent(id)}`)
+    const res = get(apiGET, '/api/exams', `?id=${encodeURIComponent(id)}`)
     expect(res.status).toBe(200)
     const detail = await body<{ id: string; materials: unknown[]; questions: unknown[] }>(res)
     expect(detail.id).toBe(id)
@@ -39,13 +39,13 @@ describe('/api/exams（申论真题）', () => {
   })
 
   it('未知 id 返回 404', async () => {
-    expect(get(getExams, '/api/exams', '?id=__none__').status).toBe(404)
+    expect(get(apiGET, '/api/exams', '?id=__none__').status).toBe(404)
   })
 
   it('year 过滤只返回该年份', async () => {
-    const all = await body<{ papers: { year: number }[] }>(get(getExams, '/api/exams'))
+    const all = await body<{ papers: { year: number }[] }>(get(apiGET, '/api/exams'))
     const year = all.papers[0].year
-    const data = await body<{ papers: { year: number }[] }>(get(getExams, '/api/exams', `?year=${year}`))
+    const data = await body<{ papers: { year: number }[] }>(get(apiGET, '/api/exams', `?year=${year}`))
     expect(data.papers.length).toBeGreaterThan(0)
     expect(data.papers.every((p) => p.year === year)).toBe(true)
   })
@@ -54,7 +54,7 @@ describe('/api/exams（申论真题）', () => {
 describe('/api/terms（规范词）', () => {
   it('返回全量词条，total 一致且字段齐全', async () => {
     const data = await body<{ terms: { theme: string; term: string; example: string }[]; total: number }>(
-      get(getTerms, '/api/terms'),
+      get(apiGET, '/api/terms'),
     )
     expect(data.total).toBe(data.terms.length)
     expect(data.total).toBeGreaterThan(0)
@@ -65,20 +65,20 @@ describe('/api/terms（规范词）', () => {
   })
 
   it('q 做词面/例句包含匹配', async () => {
-    const all = await body<{ terms: { term: string }[] }>(get(getTerms, '/api/terms'))
+    const all = await body<{ terms: { term: string }[] }>(get(apiGET, '/api/terms'))
     const kw = all.terms[0].term.slice(0, 2)
     const data = await body<{ terms: { term: string; example: string }[] }>(
-      get(getTerms, '/api/terms', `?q=${encodeURIComponent(kw)}`),
+      get(apiGET, '/api/terms', `?q=${encodeURIComponent(kw)}`),
     )
     expect(data.terms.length).toBeGreaterThan(0)
     expect(data.terms.every((t) => t.term.includes(kw) || t.example.includes(kw))).toBe(true)
   })
 
   it('theme 过滤只返回该主题', async () => {
-    const all = await body<{ terms: { theme: string }[] }>(get(getTerms, '/api/terms'))
+    const all = await body<{ terms: { theme: string }[] }>(get(apiGET, '/api/terms'))
     const theme = all.terms[0].theme
     const data = await body<{ terms: { theme: string }[] }>(
-      get(getTerms, '/api/terms', `?theme=${encodeURIComponent(theme)}`),
+      get(apiGET, '/api/terms', `?theme=${encodeURIComponent(theme)}`),
     )
     expect(data.terms.length).toBeGreaterThan(0)
     expect(data.terms.every((t) => t.theme === theme)).toBe(true)
@@ -87,15 +87,15 @@ describe('/api/terms（规范词）', () => {
 
 describe('/api/xingce（行测真题）', () => {
   it('列表返回 3 套卷', async () => {
-    const data = await body<{ papers: { id: string }[]; total: number }>(get(getXingce, '/api/xingce'))
+    const data = await body<{ papers: { id: string }[]; total: number }>(get(apiGET, '/api/xingce'))
     expect(data.total).toBe(data.papers.length)
     expect(data.total).toBeGreaterThan(0)
   })
 
   it('按 id 返回题目（含选项/答案字段形态）', async () => {
-    const list = await body<{ papers: { id: string }[] }>(get(getXingce, '/api/xingce'))
+    const list = await body<{ papers: { id: string }[] }>(get(apiGET, '/api/xingce'))
     const id = list.papers[0].id
-    const res = get(getXingce, '/api/xingce', `?id=${encodeURIComponent(id)}`)
+    const res = get(apiGET, '/api/xingce', `?id=${encodeURIComponent(id)}`)
     expect(res.status).toBe(200)
     const detail = await body<{ id: string; questions: { idx: number; options: unknown[] }[] }>(res)
     expect(detail.id).toBe(id)
@@ -104,6 +104,6 @@ describe('/api/xingce（行测真题）', () => {
   })
 
   it('未知 id 返回 404', async () => {
-    expect(get(getXingce, '/api/xingce', '?id=__none__').status).toBe(404)
+    expect(get(apiGET, '/api/xingce', '?id=__none__').status).toBe(404)
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { GET } from './articles'
+import { GET } from './data'
 
 /**
  * /api/articles 端点测试（Vercel Function 本体，node:sqlite 只读真实库）。

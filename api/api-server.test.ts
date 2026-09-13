@@ -2,16 +2,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { GET as articlesGET } from './articles'
-import { GET as examsGET } from './exams'
-import { GET as termsGET } from './terms'
-import { GET as xingceGET } from './xingce'
+import { GET as dataGET } from './data'
 import { POST as aiPOST } from './ai'
 
 /**
- * 本地 api-server 与 api/*.ts handler 的 parity 测试。
- * api-server 已改为直接 import api/*.ts 的 GET/POST（消除两侧漂移），这里锁住
- * 转发层本身：同一输入下，HTTP 出来的状态码与 body 必须和直调 handler 一致。
+ * 本地 api-server 转发层测试。
+ * api-server 已改为直接 import api/data.ts 的 GET（消除两侧漂移），所以「HTTP ≡ 直调 handler」
+ * 在结构上必然成立——这里锁的是转发层本身（端口/方法/查询串/请求体是否原样传递），
+ * 已不可能再发现 handler 行为漂移；handler 自身行为由 api/articles.test.ts、api/endpoints.test.ts 覆盖。
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -57,10 +55,10 @@ afterAll(async () => {
   await Promise.race([exited, new Promise((r) => setTimeout(r, 3000))])
 })
 
-describe('api-server ↔ api/*.ts parity（全部 GET 端点）', () => {
+describe('api-server 转发层（HTTP ≡ 直调 handler；两侧同一实现，只验转发）', () => {
   it('GET /api/articles 与直调 handler 输出一致', async () => {
     const viaHttp = await (await fetch(`${BASE}/api/articles`)).json()
-    const direct = await articlesGET(new Request(`${BASE}/api/articles`)).json()
+    const direct = await dataGET(new Request(`${BASE}/api/articles`)).json()
     expect(viaHttp).toEqual(direct)
   })
 
@@ -68,14 +66,14 @@ describe('api-server ↔ api/*.ts parity（全部 GET 端点）', () => {
     const list = await (await fetch(`${BASE}/api/articles?limit=1`)).json()
     const id = list.articles[0].id
     const viaHttp = await (await fetch(`${BASE}/api/articles?id=${id}`)).json()
-    const direct = await articlesGET(new Request(`${BASE}/api/articles?id=${id}`)).json()
+    const direct = await dataGET(new Request(`${BASE}/api/articles?id=${id}`)).json()
     expect(viaHttp).toEqual(direct)
     expect(viaHttp).toHaveProperty('content')
   })
 
   it('GET /api/terms 与直调 handler 输出一致，且每条带 id（前端以此为标识；历史上生产漏 id 导致编辑态/key/见过标记全部串键）', async () => {
     const viaHttp = await (await fetch(`${BASE}/api/terms`)).json()
-    const direct = await termsGET(new Request(`${BASE}/api/terms`)).json()
+    const direct = await dataGET(new Request(`${BASE}/api/terms`)).json()
     expect(viaHttp).toEqual(direct)
     expect(direct.terms.length).toBeGreaterThan(0)
     for (const t of direct.terms) expect(typeof t.id).toBe('number')
@@ -83,18 +81,18 @@ describe('api-server ↔ api/*.ts parity（全部 GET 端点）', () => {
 
   it('GET /api/exams 与直调 handler 一致（列表 + ?id= 详情）', async () => {
     const viaList = await (await fetch(`${BASE}/api/exams`)).json()
-    const directList = await examsGET(new Request(`${BASE}/api/exams`)).json()
+    const directList = await dataGET(new Request(`${BASE}/api/exams`)).json()
     expect(viaList).toEqual(directList)
     const id = directList.papers[0].id
     const viaDetail = await (await fetch(`${BASE}/api/exams?id=${encodeURIComponent(id)}`)).json()
-    const directDetail = await examsGET(new Request(`${BASE}/api/exams?id=${encodeURIComponent(id)}`)).json()
+    const directDetail = await dataGET(new Request(`${BASE}/api/exams?id=${encodeURIComponent(id)}`)).json()
     expect(viaDetail).toEqual(directDetail)
     expect(directDetail).toHaveProperty('questions')
   })
 
   it('GET /api/xingce 与直调 handler 一致（列表）', async () => {
     const viaHttp = await (await fetch(`${BASE}/api/xingce`)).json()
-    const direct = await xingceGET(new Request(`${BASE}/api/xingce`)).json()
+    const direct = await dataGET(new Request(`${BASE}/api/xingce`)).json()
     expect(viaHttp).toEqual(direct)
   })
 

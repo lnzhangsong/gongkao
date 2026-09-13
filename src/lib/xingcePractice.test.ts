@@ -185,4 +185,11 @@ describe('splitConditionLines（材料条件句拆行）', () => {
     expect(splitConditionLines('从(2)号开始，到(4)号结束')).toEqual(['从(2)号开始，到(4)号结束'])
     expect(splitConditionLines('')).toEqual([''])
   })
+
+  it('行内并列（编号之间只剩连接词）不拆', () => {
+    expect(splitConditionLines('该多面体可以由①、②和③三个多面体组合而成，以下哪项能填入问号处？')).toEqual([
+      '该多面体可以由①、②和③三个多面体组合而成，以下哪项能填入问号处？',
+    ])
+    expect(splitConditionLines('由(1)、(2)与(3)构成')).toEqual(['由(1)、(2)与(3)构成'])
+  })
 })

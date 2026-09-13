@@ -9,6 +9,7 @@ import { useMountedAt } from '../lib/useMountedAt'
 import { formatDuration, groupScore, optionCols, showTextStem } from '../lib/xingcePractice'
 import { levelMark } from '../lib/examText'
 import { CondLines, GroupStemText, DataUrls } from '../components/exam/GroupStemText'
+import { MathText } from '../components/exam/MathText'
 import { xingceGroupImage, xingceQuestionImage } from '../data/xingceImages'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import '../styles/exam-preview.css'
@@ -546,7 +547,7 @@ export function XingcePracticePage() {
                         onClick={() => setPicked((s) => ({ ...s, [q.idx]: o.key }))}
                       >
                         <span className="practice-opt-key">{o.key}</span>
-                        {imgQ ? '' : o.text}
+                        {imgQ ? '' : <MathText text={o.text} />}
                       </button>
                     )
                   })}

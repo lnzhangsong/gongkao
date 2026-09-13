@@ -4,6 +4,7 @@ import { useXingceStore } from '../stores/xingceStore'
 import { fetchXingce, type XingceQuestion } from '../lib/api'
 import { optionCols, showTextStem } from '../lib/xingcePractice'
 import { CondLines, DataUrls } from '../components/exam/GroupStemText'
+import { MathText } from '../components/exam/MathText'
 import { xingceGroupImage, xingceQuestionImage } from '../data/xingceImages'
 import { MenuSelect } from '../components/ui/MenuSelect'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
@@ -253,7 +254,7 @@ export function XingceWrongPage() {
                         disabled
                       >
                         <span className="practice-opt-key">{o.key}</span>
-                        {imgQ ? '' : o.text}
+                        {imgQ ? '' : <MathText text={o.text} />}
                       </button>
                     ))}
                   </div>

@@ -601,3 +601,36 @@
     display: none;
   }
 }
+
+/* ============================================================
+   公式渲染（KaTeX，见 components/exam/MathText.tsx）
+   数据里公式写作 $...$（行内）/ $$...$$（独立成行）
+   ============================================================ */
+.math-inline .katex {
+  font-size: 1.05em;
+}
+
+.math-block {
+  display: block;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.math-block .katex {
+  font-size: 1.15em;
+}
+
+/* KaTeX 还在按需加载时：先原样显示 LaTeX 源码，不留空白 */
+.math-pending {
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+
+/* 选项钮里的分数/根式别撑破按钮 */
+.practice-opt .katex {
+  font-size: 1em;
+}
+
+.practice-opt .katex-display {
+  margin: 0;
+}

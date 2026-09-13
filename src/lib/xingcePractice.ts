@@ -101,12 +101,21 @@ function condMarkNum(s: string): number | null {
 /**
  * 题组材料里的「已知：(1)…；(2)…；(3)…」拆成每行一条，逻辑题逐条列条件更好读。
  * 只在编号自 1 起恰好连续且 ≥2 个时拆；普通括号数字（如「(3) 支队伍」孤例）不拆。
+ * 行内罗列不拆：编号之间只剩连接词/标点（「…可以由①、②和③三个多面体组合而成」），
+ * 换行会把一句话切断。
  */
+const INLINE_ONLY_RE = /^[\s、,，.．和或及与]+$/
+
 export function splitConditionLines(text: string): string[] {
   const marks = [...text.matchAll(COND_MARK_RE)]
-    .map((m) => ({ i: m.index ?? 0, n: condMarkNum(m[0].replace(/[（(]/, '').replace(/[)）]/, '')) }))
+    .map((m) => ({ i: m.index ?? 0, len: m[0].length, n: condMarkNum(m[0].replace(/[（(]/, '').replace(/[)）]/, '')) }))
     .filter((m) => m.n != null)
   if (marks.length < 2 || marks.some((m, j) => m.n !== j + 1)) return [text]
+  // 相邻编号之间没有正文，只是「①、②和③」这种行内并列 → 保持原样
+  for (let j = 0; j < marks.length - 1; j++) {
+    const body = text.slice(marks[j].i + marks[j].len, marks[j + 1].i)
+    if (INLINE_ONLY_RE.test(body)) return [text]
+  }
   const lines: string[] = []
   for (let j = 0; j < marks.length; j++) {
     lines.push(text.slice(marks[j].i, marks[j + 1]?.i ?? text.length).trim())

@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
-"""行测真题图表 → PNG（data URL）回填 JSON
+"""行测真题图表 → WebP 落盘 + JSON 写引用（2026 卷专用管线）
 
 思路：不再 OCR（2026-09-08 用户裁定识别质量不达刷题标准），改为从「试卷」PDF 把
-资料分析材料图表、图形推理题整块裁成 PNG，base64 存进 JSON：
-- 题组材料 → questions[].groupImage（JSON 数组字符串，跨页材料为多张）
+资料分析材料图表、图形推理题整块裁成图，**直接落盘** data/xingce-img/{paper_id}/，
+JSON 里只写轻量引用（不再内嵌 base64，见 docs/行测做题模块设计方案.md §4.1）：
+- 题组材料 → questions[].groupImage = [{file, w, h}]
 - 被丢的图形推理/图片选项题 → 恢复整题：image + stem + answer/explanation（解析 PDF 补）
 
-用法：python3 scripts/xingce-images.py <试卷目录> <解析目录> <json目录>
+用法：python3 scripts/xingce-images.py <试卷目录> <解析目录> <json目录> [--img-dir data/xingce-img]
       加 --answers-only 只回填答案（解析 PDF 文字解析行 + 黄色高亮标记），不动图片
 定位策略：行级 bbox 文本 → 题号候选链（严格递增，跳过卷首「注意事项 1.」类伪题号）
 """
-import base64
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
 import pymupdf
+
+ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_IMG_DIR = ROOT / "data" / "xingce-img"
 
 GROUP_RE = re.compile(r"^(?:[一二三四五六七八九十]+、\s*)?根据(?:以下资料|所给材料|所给的材料|下述材料)，?回答?\s*(\d+)\s*[-—–~至]\s*(\d+)\s*题")
 ZILIAO_RE = re.compile(r"资料分析")
@@ -188,18 +192,16 @@ def png_to_webp(png: bytes, quality: int) -> tuple[bytes, str, int, int]:
         return png, "png", 0, 0
 
 
-def to_image_json(items: list[dict]) -> str:
-    """[{b, ext, w, h}] → JSON 数组字符串 [{u: dataURL, w, h}]，w/h 供前端预留布局"""
-    return json.dumps(
-        [
-            {
-                "u": f"data:image/{it['ext']};base64," + base64.b64encode(it["b"]).decode(),
-                "w": it["w"],
-                "h": it["h"],
-            }
-            for it in items
-        ]
-    )
+def write_image_files(img_dir: Path, paper_id: str, items: list[dict], kind: str, key: int) -> list[dict]:
+    """裁片落盘为 {kind}{key}_{i}.{ext}，返回 JSON 里的轻量引用 [{file, w, h}]。"""
+    refs = []
+    target = img_dir / paper_id
+    for i, it in enumerate(items):
+        name = f"{kind}{key}_{i}.{it['ext']}"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / name).write_bytes(it["b"])
+        refs.append({"file": name, "w": it["w"], "h": it["h"]})
+    return refs
 
 
 def clean_watermark(doc):
@@ -417,7 +419,7 @@ def split_stem_options(raw, nxt: int | None = None):
     return stem0.strip(), []
 
 
-def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool = False):
+def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, img_dir: Path = DEFAULT_IMG_DIR, answers_only: bool = False):
     paper = json.loads(json_path.read_text())
     existing = {q["idx"] for q in paper["questions"]}
     max_q = max(existing)
@@ -442,6 +444,9 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool 
         json_path.write_text(json.dumps(paper, ensure_ascii=False, indent=2) + "\n")
         print(f"✓ {json_path.name}（仅答案）：回填 {filled} 题")
         return
+
+    # 图由本脚本直接落盘：先清空该卷图目录，避免旧序号文件残留被前端读成重复图
+    shutil.rmtree(img_dir / paper["id"], ignore_errors=True)
 
     doc = pymupdf.open(str(paper_pdf))
     wm = clean_watermark(doc)
@@ -512,7 +517,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool 
             continue
         pngs = crop_pngs(doc, hdr, (chain[first_q][0], chain[first_q][1].y0 - 2))
         if pngs:
-            img_by_group[gid] = to_image_json(pngs)
+            img_by_group[gid] = write_image_files(img_dir, paper["id"], pngs, "g", gid)
             print(f"  组{gid}（{members[0]}-{members[-1]}）材料截图 {len(pngs)} 张")
 
     # 2) 图片形态题：JSON 里缺号的恢复；已有 image 的重裁一遍
@@ -593,7 +598,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool 
             stem = old["stem"] if old else f"第{n}题（见配图）"
         if old:
             old["stem"] = stem
-            old["image"] = to_image_json(pngs)
+            old["image"] = write_image_files(img_dir, paper["id"], pngs, "q", n)
             recropped += 1
             print(f"  题{n} {'重裁' if had_img else '补图'}：题干 {len(stem)} 字，截图 {len(pngs)} 张")
             continue
@@ -609,7 +614,7 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool 
             "options": opts or [{"key": k, "text": ""} for k in "ABCD"],
             "answer": ans,
             "explanation": expl,
-            "image": to_image_json(pngs),
+            "image": write_image_files(img_dir, paper["id"], pngs, "q", n),
         })
         print(f"  题{n} 恢复：{section}{gid or ''} 截图 {len(pngs)} 张，答案 {ans or '缺'}")
 
@@ -655,16 +660,28 @@ def process(json_path: Path, paper_pdf: Path, ans_pdf: Path, answers_only: bool 
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    paper_dir, ans_dir, json_dir = (Path(a) for a in args)
-    answers_only = "--answers-only" in sys.argv
+    argv = sys.argv[1:]
+    answers_only = "--answers-only" in argv
+    img_dir = DEFAULT_IMG_DIR
+    positional = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--answers-only":
+            i += 1
+        elif argv[i] == "--img-dir":
+            img_dir = Path(argv[i + 1])
+            i += 2
+        else:
+            positional.append(argv[i])
+            i += 1
+    paper_dir, ans_dir, json_dir = (Path(a) for a in positional)
     level_kw = {"副省级": "副省级", "地市级": "地市", "行政执法": "行政执法"}
     for jp in sorted(json_dir.glob("*.json")):
         level = next(k for k in level_kw if k in jp.name)
         paper_pdf = next(paper_dir.glob(f"*{level_kw[level]}*.pdf"))
         ans_pdf = next(ans_dir.glob(f"*{level_kw[level]}*.pdf"))
         print(f"→ {jp.name} ← {paper_pdf.name}")
-        process(jp, paper_pdf, ans_pdf, answers_only=answers_only)
+        process(jp, paper_pdf, ans_pdf, img_dir, answers_only=answers_only)
 
 
 main()

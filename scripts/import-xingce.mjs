@@ -169,15 +169,19 @@ function main() {
   const imageDims = {}
   const missingImages = []
   const legacyImages = []
-  function collectImageDims(paperId, value) {
+  const referencedFiles = new Map() // paperId → Set(文件名)
+  function collectImageRefs(paperId, value) {
     if (!value) return
     if (typeof value === 'string') {
       legacyImages.push(paperId)
       return
     }
     if (!Array.isArray(value)) return
+    const refs = referencedFiles.get(paperId) ?? new Set()
+    referencedFiles.set(paperId, refs)
     for (const it of value) {
       if (!it?.file) continue
+      refs.add(it.file)
       const key = `${paperId}/${String(it.file).replace(/\.(webp|png)$/, '')}`
       if (it.w > 0 && it.h > 0) imageDims[key] = { w: it.w, h: it.h }
       if (!fs.existsSync(path.join(IMG_DIR, paperId, it.file))) missingImages.push(key)
@@ -192,9 +196,17 @@ function main() {
   const db = DRY ? null : new DatabaseSync(DB)
   if (db) ensureTables(db)
 
+  /* 先统一读盘并收集图片引用：dry 模式也要做，才能校验「引用 ↔ 文件」一致 */
+  const papers = files.map((file) => ({ file, paper: JSON.parse(fs.readFileSync(path.join(SRC, file), 'utf8')) }))
+  for (const { paper } of papers) {
+    for (const q of paper.questions) {
+      collectImageRefs(paper.id, q.groupImage)
+      collectImageRefs(paper.id, q.image)
+    }
+  }
+
   let ok = 0
-  for (const file of files) {
-    const paper = JSON.parse(fs.readFileSync(path.join(SRC, file), 'utf8'))
+  for (const { file, paper } of papers) {
     const { errs, warns } = validate(paper, file)
     if (errs.length) {
       console.error(`✗ ${file}：\n  - ${errs.join('\n  - ')}`)
@@ -233,10 +245,6 @@ function main() {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       for (const q of paper.questions) {
-        /* 图片字节在 data/xingce-img/，这里只登记尺寸；db 不存图片路径
-           （前端按「卷号+题号/组号」从构建产物取图） */
-        collectImageDims(paper.id, q.groupImage)
-        collectImageDims(paper.id, q.image)
         // 解析/选项重排：PDF 视觉换行的句中断行并回一句。题干与材料不重排——
         // 它们的换行是导入时就有意拼接/分条的结构（当前数据均为零换行）
         const options = q.options.map((o) => ({ ...o, text: reflowText(o.text ?? '') }))
@@ -274,7 +282,26 @@ function main() {
   }
   if (missingImages.length) {
     console.error(
-      `✗ 以下图片在 data/xingce-img/ 下不存在（引用与文件不一致）：${missingImages.slice(0, 10).join('、')}`,
+      `✗ 以下图片被 JSON 引用但 data/xingce-img/ 下不存在（引用与文件不一致）：${missingImages.slice(0, 10).join('、')}`,
+    )
+  }
+
+  /* 反向检查：data/xingce-img/ 下有文件却没被任何引用指向（多是只跑了文本解析、
+     没重跑裁图脚本；图会照常显示，但已经是「数据里没有的图」）。 */
+  const orphanImages = []
+  const knownPapers = new Set(papers.map((p) => p.paper.id))
+  for (const [paperId, refs] of referencedFiles) {
+    const dir = path.join(IMG_DIR, paperId)
+    if (!fs.existsSync(dir)) continue
+    for (const f of fs.readdirSync(dir)) if (!refs.has(f)) orphanImages.push(`${paperId}/${f}`)
+  }
+  for (const d of fs.existsSync(IMG_DIR) ? fs.readdirSync(IMG_DIR) : []) {
+    const p = path.join(IMG_DIR, d)
+    if (fs.statSync(p).isDirectory() && !knownPapers.has(d)) orphanImages.push(`${d}/（整个目录无对应 JSON）`)
+  }
+  if (orphanImages.length) {
+    console.error(
+      `✗ data/xingce-img/ 下有未被 JSON 引用的孤儿图片（通常是只跑了文本解析没重跑裁图）：${orphanImages.slice(0, 10).join('、')}`,
     )
   }
 

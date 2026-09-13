@@ -3,6 +3,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { Highlighter, StickyNote, Underline as UnderlineIcon, BookPlus } from 'lucide-react'
 import { useArticleStore } from '../stores/articleStore'
 import { useReaderStore, fontFamilyCss } from '../stores/readerStore'
+import { useLocalWrite } from '../hooks/useLocalWrite'
 import { addTerm } from '../lib/api'
 import { alertDialog } from '../components/ui/confirm'
 import { useAnnotationStore } from '../stores/annotationStore'
@@ -291,6 +292,9 @@ export function ReadingPage() {
     addKindToAnn,
     noteParaIndex,
   } = useAnnotationPopover(articleId, article, starts, bodyRef)
+  /* 划词存规范词依赖本地 api-server 的写接口（生产只读），按能力探测决定是否渲染按钮，
+     而不是点了再弹错误对话框（主阅读路径上的功能，不能裸奔失败） */
+  const canSaveTerm = useLocalWrite()
   /* 划词存入规范词库（成功后按钮短暂变 ✓） */
   const [termSaved, setTermSaved] = useState<'idle' | 'ok' | 'dup' | 'busy'>('idle')
   const saveSelectionAsTerm = async () => {
@@ -865,21 +869,23 @@ export function ReadingPage() {
                   ))}
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  if (termSaved === 'idle') void saveSelectionAsTerm()
-                }}
-                title="把选中词存入规范词库"
-              >
-                <BookPlus size={12} />
-                {termSaved === 'ok'
-                  ? '已入词库'
-                  : termSaved === 'dup'
-                    ? '已在词库'
-                    : termSaved === 'busy'
-                      ? '存入中…'
-                      : '存规范词'}
-              </button>
+              {canSaveTerm && (
+                <button
+                  onClick={() => {
+                    if (termSaved === 'idle') void saveSelectionAsTerm()
+                  }}
+                  title="把选中词存入规范词库"
+                >
+                  <BookPlus size={12} />
+                  {termSaved === 'ok'
+                    ? '已入词库'
+                    : termSaved === 'dup'
+                      ? '已在词库'
+                      : termSaved === 'busy'
+                        ? '存入中…'
+                        : '存规范词'}
+                </button>
+              )}
             </div>
 
             {/* 标注管理（点击高亮/划线后出现） */}

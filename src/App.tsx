@@ -131,7 +131,7 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/new" element={<AdminEditPage />} />
-              {/* 申论真题预览（临时路由，未入导航）；详情走子路由，浏览器后退可回列表 */}
+              {/* 申论真题预览（导航栏 EXAMS 入口）；详情走子路由，浏览器后退可回列表 */}
               <Route path="/exams" element={<ExamPreviewPage />} />
               <Route path="/exams/:examId" element={<ExamPreviewPage />} />
               {/* 练习（行测刷题，docs/行测做题模块设计方案.md）；「练习」入口为伞形，申论练习 P5 后置挂同入口 */}

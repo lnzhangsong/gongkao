@@ -33,9 +33,8 @@ function openDb(): DatabaseSync {
  * ≥3 字符走 FTS5 trigram 索引（中文子串匹配，见 scripts/migrate-fts.mjs）；
  * 短词 trigram 无法命中，回退 LIKE/instr 全扫。
  *
- * ⚠️ 必须与 scripts/api-server.mjs 的 queryMetaList 保持一致——本地开发与线上
- * 若走不同分支，同一关键词会得到不同结果（此前线上只有 LIKE，FTS5 索引形同虚设）。
- * 本文件需自包含（见文件头），故逻辑是复制的而非 import 的，改一处务必改两处。
+ * 查询逻辑仍需在本文件内自包含（见文件头），但本地 scripts/api-server.mjs 已改为
+ * 直接 import 本文件的 GET——两侧不会漂移，无需人工同步。
  */
 function queryMetaList(kw?: string): ArticleMeta[] {
   const d = openDb()

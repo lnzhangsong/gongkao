@@ -24,8 +24,10 @@ const HOST = import.meta.env.VITE_POSTHOG_HOST || '/ingest'
 /** PostHog 应用域名，仅用于 Toolbar / 分享链接回跳，与数据上报无关 */
 const UI_HOST = 'https://us.posthog.com'
 
-/** 显式放开本地来源上报（默认关闭；只在调试埋点本身时临时置 1） */
-const ALLOW_LOCAL = Boolean(import.meta.env.VITE_POSTHOG_ALLOW_LOCAL)
+/** 显式放开本地来源上报（默认关闭；只在调试埋点本身时临时置 1）。
+ *  必须判 === '1'：环境变量是字符串，Boolean('0')/Boolean('false') 都是 true，
+ *  用户写 =0 想关反而会把它打开。 */
+const ALLOW_LOCAL = import.meta.env.VITE_POSTHOG_ALLOW_LOCAL === '1'
 
 /**
  * 本地来源判定：localhost、整个 127.0.0.0/8 回环、IPv6 的 ::1（浏览器里写作 `[::1]`）、
@@ -37,7 +39,9 @@ function isLocalHost(): boolean {
   return typeof window !== 'undefined' && LOCAL_HOST_RE.test(window.location.hostname)
 }
 
-/** 是否已接入埋点：未配置 key，或来自本地来源（且未显式放开）时为 false，UI 据此隐藏调试入口 */
+/** 是否已接入埋点：未配置 key，或来自本地来源（且未显式放开）时为 false，UI 据此隐藏调试入口
+ *  ⚠️ 这里、loadClient()、initAnalytics() 是三份并行的同构判定（KEY × 本地来源 × ALLOW_LOCAL），
+ *  拆成共享函数会让 bundler 无法常量折叠掉 SDK——为体积刻意复制。改判定逻辑必须三处同步。 */
 export const analyticsEnabled = Boolean(KEY) && (ALLOW_LOCAL || !isLocalHost())
 
 /**

@@ -210,4 +210,13 @@ describe('analytics（本地来源）', () => {
 
     expect(mocks.init).toHaveBeenCalledTimes(1)
   })
+
+  it("VITE_POSTHOG_ALLOW_LOCAL=0 / false 不放开（Boolean('0') 曾为 true 的回归）", async () => {
+    for (const v of ['0', 'false', '']) {
+      vi.stubEnv('VITE_POSTHOG_ALLOW_LOCAL', v)
+      setLocation('http://localhost:5173/')
+      const { analyticsEnabled } = await loadAnalytics()
+      expect(analyticsEnabled, `ALLOW_LOCAL=${v}`).toBe(false)
+    }
+  })
 })

@@ -48,6 +48,16 @@ LEVEL_KW = {"副省级": ["副省级", "省级"], "地市级": ["地市级", "�
 
 # ---------- PDF 行索引 / 题号链 ----------
 
+def safe_paper_dir(img_dir: Path, paper_id: str) -> Path:
+    """paper_id 来自 JSON，可能被写坏成绝对路径或含 ..：rmtree 前强制校验仍落在 img_dir 内，
+    否则 ignore_errors=True 会安静地删到仓库外。"""
+    root = img_dir.resolve()
+    d = (img_dir / paper_id).resolve()
+    if d == root or root not in d.parents:
+        raise ValueError(f"paper_id 越界：{paper_id!r} → {d}")
+    return d
+
+
 def page_lines(page):
     out = []
     for b in page.get_text("dict")["blocks"]:
@@ -268,7 +278,7 @@ def process(json_path: Path, pdf_path: Path, img_dir: Path, dry: bool) -> None:
         q["image"] = None
         q["groupImage"] = None
     if not dry:
-        shutil.rmtree(img_dir / paper_id, ignore_errors=True)
+        shutil.rmtree(safe_paper_dir(img_dir, paper_id), ignore_errors=True)
 
     def qpos(n):
         return chain.get(n)

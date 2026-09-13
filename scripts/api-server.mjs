@@ -227,7 +227,10 @@ const json = (data, status = 200, extra = {}) =>
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'public, s-maxage=3600, max-age=300',
+      /* 本地 API 不缓存：数据（真题入库、图片重裁）随时在变，max-age 会让普通刷新
+         拿到最多 5 分钟的旧响应，表现为「改了数据页面没变」。（线上走 Vercel Function，
+         缓存策略由各 api/*.ts 自己声明。） */
+      'cache-control': 'no-store',
       ...extra,
     },
   })

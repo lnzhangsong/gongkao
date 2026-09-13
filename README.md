@@ -37,7 +37,7 @@ vp preview         # 预览生产构建
 | `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
 | `/settings` | 设置（账号资料与云同步、字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html` |
 | `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析 | 2000–2025 统一由 `scripts/parse-shenlun-pdf.py`（PDF→`data/shenlun/*.json`）+ `scripts/import-shenlun.mjs`（入库）维护 |
-| `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时） | `docs/行测做题模块设计方案.md` |
+| `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时） | 2026 卷由 `scripts/parse-xingce26.py`；2000–2025 卷由 `scripts/parse-xingce-pdf.py`（真题+答案解析双 PDF → `data/xingce/*.json`）+ `scripts/import-xingce.mjs`（入库），当前 2022 三卷已接入、其余年份整理进行中；设计与缺口见 `docs/行测做题模块设计方案.md` |
 | `/practice/wrong` | 行测错题本（接入复习队列，到期重做） | 同上 X3 |
 | `/terms` | 申论规范词库（1070+ 词，按主题检索） | `scripts/import-guifanci.mjs` 入库 |
 | `/assist` | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK） | `docs/申论写作AI辅助设计方案.md` |

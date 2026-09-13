@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 import { splitConditionLines } from '../../lib/xingcePractice'
+import { MathText } from './MathText'
 
 /**
  * 行测材料渲染器：把 groupStem 的 OCR 文本渲染成「段落 + 表格」。
  * 约定（xingce-ocr.py 产出）：连续含 " | " 的行是表格行，第一行为表头；
  * 其余行是标题/说明段落。段落里的「(1)…；(2)…」条件句拆成每行一条。
+ * 文本里的 `$...$` 公式交给 MathText 渲染。
  */
 
 /** 条件句分行渲染：题干/解析里的「(1)…；(2)…」枚举每条一行 */
@@ -13,7 +15,7 @@ export function CondLines({ text }: { text: string }) {
     <>
       {splitConditionLines(text).map((seg, i, arr) => (
         <span key={i}>
-          {seg}
+          <MathText text={seg} />
           {i < arr.length - 1 && <br />}
         </span>
       ))}
@@ -40,7 +42,9 @@ export function GroupStemText({ text }: { text: string | null | undefined }) {
         <thead>
           <tr>
             {Array.from({ length: width }, (_, i) => (
-              <th key={i}>{rows[0][i] ?? ''}</th>
+              <th key={i}>
+                <MathText text={rows[0][i] ?? ''} />
+              </th>
             ))}
           </tr>
         </thead>
@@ -48,7 +52,9 @@ export function GroupStemText({ text }: { text: string | null | undefined }) {
           {rows.slice(1).map((r, ri) => (
             <tr key={ri}>
               {Array.from({ length: width }, (_, i) => (
-                <td key={i}>{r[i] ?? ''}</td>
+                <td key={i}>
+                  <MathText text={r[i] ?? ''} />
+                </td>
               ))}
             </tr>
           ))}
@@ -74,7 +80,11 @@ export function GroupStemText({ text }: { text: string | null | undefined }) {
       continue
     }
     for (const seg of splitConditionLines(line)) {
-      out.push(<p key={`p-${out.length}`}>{seg}</p>)
+      out.push(
+        <p key={`p-${out.length}`}>
+          <MathText text={seg} />
+        </p>,
+      )
     }
   }
   flush()

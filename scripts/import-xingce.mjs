@@ -233,6 +233,12 @@ function main() {
         warnings,
       )
       db.prepare('DELETE FROM xg_questions WHERE paper_id = ?').run(paper.id)
+      /* 先清空该卷图目录再重写：JSON 是图的唯一来源，重裁后旧序号文件（如合并前的
+         q4_1）若残留，前端 import.meta.glob 会把它们一并读入，表现为图片重复。
+         仅当解析出的目录确实落在 IMG_DIR 下才删（paper.id 来自数据文件，防路径穿越）。 */
+      const paperImgDir = path.join(IMG_DIR, paper.id)
+      if (path.dirname(paperImgDir) === IMG_DIR) fs.rmSync(paperImgDir, { recursive: true, force: true })
+      else console.error(`✗ ${file}：paper.id 含路径分隔符，跳过图片目录清理：${paper.id}`)
       const ins = db.prepare(
         `INSERT INTO xg_questions (paper_id, idx, section, subtype, group_id, group_stem, group_image, stem, options, answer, explanation, image)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -273,13 +279,16 @@ function main() {
   console.log(`完成：${ok}/${files.length} 个文件`)
 
   // 生成尺寸清单 TS：前端按「卷号/文件名」查 w/h，给 <img> 预留布局防抖动
-  const dimsLines = Object.entries(imageDims)
-    .map(([k, d]) => `  '${k}': { w: ${d.w}, h: ${d.h} },`)
-    .join('\n')
-  fs.writeFileSync(
-    path.join(ROOT, 'src', 'data', 'xingceImageDims.generated.ts'),
-    `/** 由 scripts/import-xingce.mjs 生成：题图/材料图像素尺寸（<img> 预留布局防抖动）。勿手改。 */\nexport const XINGCE_IMAGE_DIMS: Record<string, { w: number; h: number }> = {\n${dimsLines}\n}\n`,
-  )
+  // dry 模式不落盘：否则会把上次全量导入收集到的尺寸清空（图片文件并未重建）
+  if (!DRY) {
+    const dimsLines = Object.entries(imageDims)
+      .map(([k, d]) => `  '${k}': { w: ${d.w}, h: ${d.h} },`)
+      .join('\n')
+    fs.writeFileSync(
+      path.join(ROOT, 'src', 'data', 'xingceImageDims.generated.ts'),
+      `/** 由 scripts/import-xingce.mjs 生成：题图/材料图像素尺寸（<img> 预留布局防抖动）。勿手改。 */\nexport const XINGCE_IMAGE_DIMS: Record<string, { w: number; h: number }> = {\n${dimsLines}\n}\n`,
+    )
+  }
   db?.close()
 }
 

@@ -9,11 +9,12 @@ import { useShenlunStore, type ArticleStudy } from '../stores/shenlunStore'
 import { useExamStudyStore, asMarksRecord, type QuestionTrace, type QuestionMarks } from '../stores/examStudyStore'
 import { useAiAssistStore, type AssistRecord } from '../stores/aiAssistStore'
 import { useXingceStore, asXgAnswer, type XgAnswer } from '../stores/xingceStore'
-import { useAiStore } from '../stores/aiStore'
+import { useAiStore, type AiSettings } from '../stores/aiStore'
 import { useLearningEventStore, type LearningEvent } from '../stores/learningEventStore'
 import { useReaderStore } from '../stores/readerStore'
 import { track } from './analytics'
 import { useThemeStore } from '../stores/themeStore'
+import { encryptSecret, decryptSecret, isSecretEnvelope, type SecretEnvelope } from './secretBox'
 
 /**
  * 数据云同步引擎（Supabase Postgres，按行 LWW，见 sql/sync.sql）：
@@ -22,7 +23,8 @@ import { useThemeStore } from '../stores/themeStore'
  * - updated_at 由数据库 now() 赋值（v4 触发器），避免设备间墙钟偏差误判新旧
  * - meta（每行上次同步时间戳）持久化在 localStorage，登出时随本机数据一起清除
  * - 摘录删除走墓碑（annotations.deleted），其余表行删除不同步（progress/articleStudy 无删除语义）
- * - AI 服务配置（含 API key）随账号同步，受 RLS 保护仅本人可读，换设备免重配
+ * - AI 服务配置随账号同步，但 apiKey 用本机「同步口令」加密后才上行（云端无明文）；
+ *   未设口令则只同步 baseUrl/model，换设备需重填 key
  */
 
 const META_KEY = 'readbook:sync-meta'
@@ -195,12 +197,57 @@ function applyPrefs(data: Record<string, unknown>) {
   }
 }
 
-/** AI 服务配置整包（BYOK，同步后新设备免配置；RLS 限本人可读） */
-function aiConfig(): Record<string, unknown> {
-  return useAiStore.getState().settings as unknown as Record<string, unknown>
+/**
+ * AI 服务配置整包（BYOK）：云端只存 baseUrl/model + **加密后**的 apiKey（apiKeyEnc），
+ * 绝不落明文；密文用本机的「同步口令」在客户端加解密（见 lib/secretBox.ts）。
+ */
+interface AiCloudPayload {
+  baseUrl: string
+  model: string
+  apiKeyEnc?: SecretEnvelope
 }
-function applyAiConfig(data: Record<string, unknown>) {
-  useAiStore.setState((s) => ({ settings: { ...s.settings, ...data } }))
+
+/* 本机生成的密文缓存：key = userId|口令|明文，避免每次同步都重算 PBKDF2，
+   也保证多设备间不会各自回写不同密文而反复互相覆盖。 */
+let aiEncCache: { key: string; env: SecretEnvelope } | null = null
+/* 云上最近一次的密文：本机无口令/未配 key 时原样保留，避免把别的设备存的 key 抹掉 */
+let cloudAiEnc: SecretEnvelope | null = null
+
+async function aiCloudPayload(userId: string): Promise<Record<string, unknown>> {
+  const { settings, syncPassphrase } = useAiStore.getState()
+  const payload: AiCloudPayload = { baseUrl: settings.baseUrl, model: settings.model }
+  if (syncPassphrase && settings.apiKey) {
+    const cacheKey = `${userId}|${syncPassphrase}|${settings.apiKey}`
+    if (!aiEncCache || aiEncCache.key !== cacheKey) {
+      aiEncCache = { key: cacheKey, env: await encryptSecret(settings.apiKey, syncPassphrase) }
+    }
+    payload.apiKeyEnc = aiEncCache.env
+  } else if (cloudAiEnc) {
+    payload.apiKeyEnc = cloudAiEnc
+  }
+  return payload as unknown as Record<string, unknown>
+}
+
+async function applyAiCloud(data: Record<string, unknown>, userId: string): Promise<void> {
+  const { syncPassphrase } = useAiStore.getState()
+  const next: Partial<AiSettings> = {}
+  if (typeof data.baseUrl === 'string') next.baseUrl = data.baseUrl
+  if (typeof data.model === 'string') next.model = data.model
+  if (isSecretEnvelope(data.apiKeyEnc)) {
+    cloudAiEnc = data.apiKeyEnc
+    if (syncPassphrase) {
+      try {
+        const apiKey = await decryptSecret(data.apiKeyEnc, syncPassphrase)
+        next.apiKey = apiKey
+        /* 采纳云上密文：push 时复用同一密文，多设备间不会各自回写新密文而反复覆盖 */
+        aiEncCache = { key: `${userId}|${syncPassphrase}|${apiKey}`, env: data.apiKeyEnc }
+      } catch {
+        /* 口令不符：保留本机 key（下次 push 用本机口令重新加密，云端会更新） */
+      }
+    }
+  }
+  /* 历史遗留的明文 data.apiKey 一律不采纳；下次 push 会用不含明文的 payload 覆盖云端 */
+  if (Object.keys(next).length > 0) useAiStore.setState((s) => ({ settings: { ...s.settings, ...next } }))
 }
 
 /** 行测作答：单键 paperId#qIdx，拉取时校验形状（坏记录拒入，examStudy 事故同款防线） */
@@ -356,11 +403,12 @@ async function pushWhole(
   return true
 }
 
-/** 整包单行表 pull */
+/** 整包单行表 pull。current/apply 允许异步：AI 配置的 payload 要现算加解密 */
 async function pullWhole(
   table: 'user_prefs' | 'user_ai_config',
-  current: () => Record<string, unknown>,
-  apply: (data: Record<string, unknown>) => void,
+  current: () => Record<string, unknown> | Promise<Record<string, unknown>>,
+  apply: (data: Record<string, unknown>, userId: string) => void | Promise<void>,
+  userId: string,
 ): Promise<boolean> {
   if (!supabase) return false
   const { data, error } = await supabase.from(table).select('data, updated_at').maybeSingle()
@@ -368,8 +416,8 @@ async function pullWhole(
   if (!data) return false
   const updatedAt = String(data.updated_at ?? '')
   if (!shouldApply(updatedAt, meta[table]?.me)) return false
-  if (!sameJSON(current(), data.data)) {
-    apply(data.data as Record<string, unknown>)
+  if (!sameJSON(await current(), data.data)) {
+    await apply(data.data as Record<string, unknown>, userId)
     meta[table] = { me: updatedAt }
     snapshot[table] = data.data as Record<string, unknown>
     return true
@@ -390,9 +438,9 @@ async function runSyncInner(): Promise<void> {
     if (!userId) return
     /* 整包类（偏好/AI 配置）先拉后推：登录首轮先吃云上较新的一份，避免本机旧配置盖掉其他设备的新配置 */
     currentTable = 'user_prefs'
-    if (await pullWhole('user_prefs', currentPrefs, applyPrefs)) changedPref = true
+    if (await pullWhole('user_prefs', currentPrefs, applyPrefs, userId)) changedPref = true
     currentTable = 'user_ai_config'
-    if (await pullWhole('user_ai_config', aiConfig, applyAiConfig)) changedPref = true
+    if (await pullWhole('user_ai_config', () => aiCloudPayload(userId), applyAiCloud, userId)) changedPref = true
     /* 行表先 push 后 pull：本地未推送修改先占住本机时间戳，LWW 才不会被旧云行反压。
      * 首轮快照为空 → 登录前匿名期间产生的本地数据也会全部推送 */
     for (const [table, ad] of Object.entries(ADAPTERS)) {
@@ -410,7 +458,7 @@ async function runSyncInner(): Promise<void> {
     currentTable = 'user_prefs'
     if (await pushWhole('user_prefs', currentPrefs(), userId)) changed = true
     currentTable = 'user_ai_config'
-    if (await pushWhole('user_ai_config', aiConfig(), userId)) changed = true
+    if (await pushWhole('user_ai_config', await aiCloudPayload(userId), userId)) changed = true
     saveMeta(meta)
     if (changed) setSync({ lastSyncAt: nowISO() })
     else setSync({ lastSyncAt: useSyncStore.getState().lastSyncAt ?? nowISO() })
@@ -452,7 +500,7 @@ async function runPushInner(): Promise<void> {
       if (await pushTable(table, ad, userId)) snapshot[table] = ad.getRows()
     }
     await pushWhole('user_prefs', currentPrefs(), userId)
-    await pushWhole('user_ai_config', aiConfig(), userId)
+    await pushWhole('user_ai_config', await aiCloudPayload(userId), userId)
     saveMeta(meta)
     setSync({ lastSyncAt: nowISO() })
   } catch (err) {
@@ -502,6 +550,9 @@ export function stopCloudSync(): void {
   }
   while (cleanups.length) cleanups.pop()?.()
   for (const k of Object.keys(meta)) delete meta[k]
+  /* 清掉 AI 密文缓存：否则换账号登录会把上一个账号的密文/缓存推给新账号 */
+  aiEncCache = null
+  cloudAiEnc = null
   try {
     localStorage.removeItem(META_KEY)
   } catch {

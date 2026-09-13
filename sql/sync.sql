@@ -101,9 +101,10 @@ create table if not exists public.article_edits (
   primary key (user_id, article_id)
 );
 
--- 9) AI 服务配置（BYOK：baseUrl / apiKey / model 整包）
---    ⚠️ apiKey 明文存于本表，受 RLS 保护仅本人可读；不需要同步 key 时删掉本表并在
---    src/lib/cloudSync.ts 里移除 user_ai_config 的 push/pull 即可
+-- 9) AI 服务配置（BYOK：baseUrl / model 整包 + 可选的加密 apiKey）
+--    data 形如 { baseUrl, model, apiKeyEnc?: { v, salt, iv, ct } }；apiKeyEnc 由客户端
+--    用本机「同步口令」AES-GCM 加密（src/lib/secretBox.ts），**本表不存明文 apiKey**。
+--    未设口令时不同步 key，只存 baseUrl/model；RLS 保证仅本人可读写。
 create table if not exists public.user_ai_config (
   user_id    uuid primary key references auth.users (id) on delete cascade,
   data       jsonb not null,

@@ -531,10 +531,12 @@ export function SettingsPage() {
   )
 }
 
-/** AI 服务配置（BYOK）：key 只存本地 IndexedDB；「测试」走一次最小补全验证连通性 */
+/** AI 服务配置（BYOK）：key 只存本地 IndexedDB；云同步时用「同步口令」加密后才上行 */
 function AiSection() {
   const settings = useAiStore((s) => s.settings)
   const setAiSettings = useAiStore((s) => s.setAiSettings)
+  const syncPassphrase = useAiStore((s) => s.syncPassphrase)
+  const setSyncPassphrase = useAiStore((s) => s.setSyncPassphrase)
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -565,7 +567,8 @@ function AiSection() {
           <div className="setting-title">AI 功能</div>
           <div className="setting-desc">
             AI 预拆解 / 大意起草：填入你自己的 OpenAI 兼容接口（DeepSeek、GLM、OpenAI 等）。 Key
-            只保存在本机浏览器，请求经服务端纯转发，不留存。
+            只保存在本机浏览器，请求经服务端纯转发，不留存。登录后 Key 会以
+            <strong>同步口令加密</strong>后才上传云端（云端只有密文）；未设口令则 Key 不同步，云端只存接口地址与模型。
           </div>
         </div>
       </div>
@@ -601,6 +604,18 @@ function AiSection() {
               spellCheck={false}
               onChange={(e) => setAiSettings({ model: e.target.value })}
             />
+          </div>
+          <div className="ai-field">
+            <label htmlFor="ai-sync-passphrase">同步口令 SYNC PASSPHRASE</label>
+            <input
+              id="ai-sync-passphrase"
+              type="password"
+              value={syncPassphrase}
+              placeholder="留空则不同步 API Key"
+              autoComplete="new-password"
+              onChange={(e) => setSyncPassphrase(e.target.value)}
+            />
+            <span className="setting-desc">口令只存本机；换设备要填同一个才能解开云端密文。</span>
           </div>
           <button className="ghost" onClick={runTest} disabled={testing}>
             {testing ? '测试中…' : '测试连通'}

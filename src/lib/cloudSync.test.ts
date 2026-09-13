@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { decryptSecret, type SecretEnvelope } from './secretBox'
 
 /**
  * 云同步引擎集成测试（mock Supabase，不触碰真实项目）。
@@ -144,6 +145,7 @@ async function boot(fake: Fake) {
   const { useAnnotationStore } = await import('../stores/annotationStore')
   const { useExamStudyStore } = await import('../stores/examStudyStore')
   const { useXingceStore } = await import('../stores/xingceStore')
+  const { useAiStore } = await import('../stores/aiStore')
   boots.push(cloudSync.stopCloudSync)
   return {
     cloudSync,
@@ -151,6 +153,7 @@ async function boot(fake: Fake) {
     annotation: useAnnotationStore,
     examStudy: useExamStudyStore,
     xingce: useXingceStore,
+    ai: useAiStore,
   }
 }
 
@@ -335,5 +338,76 @@ describe('cloudSync 引擎（mock Supabase）', () => {
     await Promise.all([h.cloudSync.syncNow(), h.cloudSync.syncNow(), h.cloudSync.syncNow()])
 
     expect(fake.stats.maxConcurrent).toBe(1)
+  })
+
+  // ---------- BYOK apiKey：上云前必须加密（sync.sql user_ai_config） ----------
+
+  const aiSettings = (apiKey: string) => ({
+    baseUrl: 'https://api.deepseek.com',
+    apiKey,
+    model: 'deepseek-chat',
+  })
+  const aiPayload = (fake: Fake) => fake.row('user_ai_config', 'me')?.data as Record<string, unknown>
+
+  it('设了口令：云端只有密文，无明文 apiKey，且同口令能解开', async () => {
+    const fake = createFakeSupabase()
+    const h = await boot(fake)
+    h.ai.setState({ settings: aiSettings('sk-plain-secret-value'), syncPassphrase: 'pw-123' })
+
+    h.cloudSync.startCloudSync()
+    await h.cloudSync.syncNow()
+
+    const payload = aiPayload(fake)
+    expect(Object.keys(payload)).not.toContain('apiKey')
+    expect(JSON.stringify(payload)).not.toContain('sk-plain-secret-value')
+    expect(payload.baseUrl).toBe('https://api.deepseek.com')
+    expect(await decryptSecret(payload.apiKeyEnc as SecretEnvelope, 'pw-123')).toBe('sk-plain-secret-value')
+  })
+
+  it('同口令的另一台设备能拉回并解开 key（换设备免重填）', async () => {
+    const fake = createFakeSupabase()
+    const a = await boot(fake)
+    a.ai.setState({ settings: aiSettings('sk-cross-device'), syncPassphrase: 'shared-pw' })
+    a.cloudSync.startCloudSync()
+    await a.cloudSync.syncNow()
+
+    const b = await boot(fake) // 全新引擎/store + 空 localStorage
+    b.ai.setState({ syncPassphrase: 'shared-pw' })
+    b.cloudSync.startCloudSync()
+    await b.cloudSync.syncNow()
+
+    expect(b.ai.getState().settings.apiKey).toBe('sk-cross-device')
+  })
+
+  it('未设口令：key 完全不上云，云端只留 baseUrl/model', async () => {
+    const fake = createFakeSupabase()
+    const h = await boot(fake)
+    h.ai.setState({ settings: aiSettings('sk-should-not-sync') })
+
+    h.cloudSync.startCloudSync()
+    await h.cloudSync.syncNow()
+
+    const payload = aiPayload(fake)
+    expect(JSON.stringify(payload)).not.toContain('sk-should-not-sync')
+    expect('apiKey' in payload).toBe(false)
+    expect('apiKeyEnc' in payload).toBe(false)
+    expect(payload.baseUrl).toBe('https://api.deepseek.com')
+  })
+
+  it('历史遗留的云端明文 apiKey 不被采纳，并会被下一次 push 覆盖清除', async () => {
+    const fake = createFakeSupabase()
+    fake.seed('user_ai_config', 'me', {
+      data: { baseUrl: 'https://old.example', model: 'm', apiKey: 'sk-legacy-plaintext' },
+    })
+    const h = await boot(fake)
+
+    h.cloudSync.startCloudSync()
+    await h.cloudSync.syncNow()
+
+    expect(h.ai.getState().settings.apiKey).toBe('')
+    const payload = aiPayload(fake)
+    expect('apiKey' in payload).toBe(false)
+    expect(JSON.stringify(payload)).not.toContain('sk-legacy-plaintext')
+    expect(payload.baseUrl).toBe('https://old.example')
   })
 })

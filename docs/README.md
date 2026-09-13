@@ -25,9 +25,15 @@
 **2026-09-13 CI 落地**：新增 `.github/workflows/ci.yml`，此前质量保障全部压在本地 pre-push 钩子上（`--no-verify` 可跳过、clone 后未必装好），线上零测试兜底。三个 job 全部只读权限（`permissions: contents: read`）+ 显式超时：
 > - ① **前端门禁**：`pnpm run gate` = check + test + build（Node 24 + `pnpm install --frozen-lockfile`）。
 > - ② **Python 管线测试**：`unittest discover -s scripts/tests`（行测解析 21 项），`pymupdf` 钉 1.28.2。
-> - ③ **端到端冒烟**：`pnpm run test:e2e`（145 项）。Linux runner 无 Edge，改按 `playwright-core` 版本动态装自带 Chromium；本地 macOS 仍走系统 Edge（`scripts/e2e-smoke.mjs` 按平台选择）。
+> - ③ **端到端冒烟**：`pnpm run test:e2e`（146 项）。Linux runner 无 Edge，改按 `playwright-core` 版本动态装自带 Chromium；本地 macOS 仍走系统 Edge（`scripts/e2e-smoke.mjs` 按平台选择）。
 >
-> 顺带修复一处**长期红着的 e2e**：`b22180e`（2026-09-11「错题本」）把行测判分从 `.practice-verdict` 文案改成选项红/绿框（`.practice-opt.right/.wrong`）+ 吸顶小结 `.practice-summary`，但 e2e 的 3 处断言仍等旧元素，首次失败即抛未捕获 `TimeoutError`，导致整个脚本当时崩掉、后续约 100 项断言从未执行——此前「e2e 全绿」的自述自 09-11 起已不成立。现已按新判定 UI 重写这 3 处断言，全量 145 项通过。
+> 顺带修复一处**长期红着的 e2e**：`b22180e`（2026-09-11「错题本」）把行测判分从 `.practice-verdict` 文案改成选项红/绿框（`.practice-opt.right/.wrong`）+ 吸顶小结 `.practice-summary`，但 e2e 的 3 处断言仍等旧元素，首次失败即抛未捕获 `TimeoutError`，导致整个脚本当时崩掉、后续约 100 项断言从未执行——此前「e2e 全绿」的自述自 09-11 起已不成立。现已按新判定 UI 重写这 3 处断言，全量 146 项通过。
+
+**2026-09-13 安全 / 可访问性批次**：三项独立收口。
+> - **BYOK apiKey 端到端加密**：此前 `user_ai_config` 把用户自填的 LLM key **明文**存进 Supabase（`sql/sync.sql` 旧注释自述）。新增 `src/lib/secretBox.ts`（PBKDF2-SHA256 21 万次 + AES-256-GCM，随机 salt/iv），设置页新增「同步口令」；云端只存 `apiKeyEnc` 密文，口令只在本机，未设口令则 key 完全不上云（只同步 baseUrl/model）。噪音控制：本机加密结果做缓存、拉取时采纳云端密文，避免多设备各自回写不同密文互相覆盖。历史遗留的明文行不会被采纳，且会被下一次 push 覆盖清除。测试 +9（`secretBox` 5 项 + `cloudSync` 4 项：密文上行 / 跨设备解密 / 无口令不同步 / 历史明文不采纳）。
+> - **行测对错不再只靠颜色**（WCAG 1.4.1）：正确项加 ✓、错误所选项加 ✗，并补 `.sr-only` 读屏文本（`base.css` 新增通用工具类）；删掉死 CSS `.practice-verdict.is-wrong`。e2e 增一条「对错有非颜色标记」断言。
+> - **CSP 收紧 + 依赖对齐**：`vercel.json` 去掉 `script-src` 的 `'unsafe-inline'`（构建产物无内联脚本；已用真实 CSP 头托管 `dist/` 实测应用正常启动、0 条拦截）；`@types/node` 26.5.0 → 24.13.4，与 `.nvmrc`/运行时 Node 24 对齐（未暴露 Node 26 专有 API）。
+
 **2026-09-13 写路径决策**：规范词/试卷的增删改**仅保留本地 api-server，生产永久只读**（决策文档《规范词与试卷写路径决策.md》）——Supabase 写路径方案评估后不采纳（需新表 + RLS + 云同步语义，成本远超功能权重）。配套落地：
 > - `GET /api/capabilities` 能力探测：`api-server.mjs` 按请求方回答 `write`（设了 `WRITE_TOKEN` 时无令牌即 `false`），前端 `useLocalWrite()` 收口判定，**不按构建模式判断**（`vp preview` 生产构建挂本地 server 时写入口正确可见）；探测只缓存明确的 HTTP 答复，网络失败不落缓存、可重试（`dev:all` 下浏览器先于 api-server 就绪不会把写入口永久锁死）。
 > - 三处写入口按探测显隐：`ReadingPage` 划词「存规范词」、`ExamPreviewPage` 编辑/新增/删除、`TermsPage` 增删改——生产不再渲染点了必失败的按钮（此前 `import.meta.env.DEV` 自判只盖了 1/3，阅读页主路径的「存规范词」漏网）。

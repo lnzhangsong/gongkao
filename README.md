@@ -195,11 +195,11 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 覆盖：路由渲染、搜索写 URL 与刷新保持、滚动进度持久化、高亮 / 下划线 / 笔记全流程、素材标记与申论拆解、摘录搜索与打开原文、主题切换与跨页保持、字号持久化、数据导入合并、**行测刷题（列表 → 答题 → 判分 → 刷新后持久化 → 错题本）**、**登录页与旧 `/account` 深链到 `/settings#account` 的重定向**、导航入口。共 130+ 项断言（脚本结束打印实际项数）。
 
 > 尚未覆盖：真实 Supabase 的登录 / 退出与 RLS、触发器实际行为（需真实项目或测试账号）。
-> 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，8 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化），随 `vp test run` 一起跑，不触网。
+> 云同步**引擎本身**已有 mock Supabase 的集成测试（`src/lib/cloudSync.test.ts`，12 项：push/pull 往返、LWW 应用、墓碑删除、`exam_study` 复合键、坏记录拒入、登出解绑订阅、并发串行化、BYOK apiKey 上云前加密的四种情形），随 `vp test run` 一起跑，不触网。
 
 ## 代码质量与本地门禁
 
-- **push 前门禁（本地）**：`.vite-hooks/pre-push` 是项目自有钩子（Vite+ 机制：`core.hooksPath=.vite-hooks/_`，由 `pnpm install` 的 `prepare: vp config` 自动接好），push 时自动跑 `vp run gate`——即 `vp check`（格式 / lint / 类型）→ `vp test run`（32 文件 / 270 项，另有 1 项 `DB_REBUILD_CHECK` 可选项默认跳过）→ `vp run build`，任一失败即中断 push。手动预跑：`vp run gate`；临时跳过：`git push --no-verify`。
+- **push 前门禁（本地）**：`.vite-hooks/pre-push` 是项目自有钩子（Vite+ 机制：`core.hooksPath=.vite-hooks/_`，由 `pnpm install` 的 `prepare: vp config` 自动接好），push 时自动跑 `vp run gate`——即 `vp check`（格式 / lint / 类型）→ `vp test run`（33 文件 / 281 项，另有 1 项 `DB_REBUILD_CHECK` 可选项默认跳过）→ `vp run build`，任一失败即中断 push。手动预跑：`vp run gate`；临时跳过：`git push --no-verify`。CI（`.github/workflows/ci.yml`）另跑前端门禁 + Python 管线测试 + e2e（146 项）。
 - **commit 前**：`vp staged` 对暂存文件跑 `vp check --fix`（规则见 `vite.config.ts` 的 `staged`）。
 - **Node 版本**由 `.nvmrc` + `package.json` 的 `engines` 固定（`node:sqlite` 需 ≥22.5）。
 - **lint 覆盖 jsx-a11y**：语义/标签关联/aria 等真实可达性问题纳入门禁；自定义 dialog/listbox 与模态 autofocus 两条纯风格规则关闭（见 `vite.config.ts` 注释）。
@@ -213,6 +213,7 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 - 资料：Supabase Postgres 的 `public.profiles` 表（昵称等）；RLS 行级权限保证每人只能读写自己的行，anon key 可公开
 - **云同步**（`sql/sync.sql`）：登录后把本机各 store 数据按行 upsert 到 Postgres，多设备一致。策略为**按行 LWW**（最后写入胜出）：
   - 行表 9 张：`reading_progress` / `annotations`（删除走墓碑）/ `article_study` / `exam_study`（`kind+key` 复合主键）/ `learning_events`（append-only）/ `ai_assists` / `article_edits` / `xg_answers`，另有单行整包 `user_prefs` / `user_ai_config`
+  - **BYOK apiKey 端到端加密**：`user_ai_config` 云端**不存明文** key。设置页「同步口令」派生密钥（PBKDF2-SHA256）+ AES-GCM 加密后只上行密文（`src/lib/secretBox.ts`），口令只存本机；未设口令则 key 不同步，云端只留 baseUrl/model。口令不符时解不开、本机 key 不受影响
   - 编辑触发**只推不拉**（`runPush`，4s 防抖）；登录首轮 / 窗口聚焦 / 手动「立即同步」才跑全量 push+pull（`runSync`）。两者共用一条串行队列，不会并发写 meta
   - `updated_at` 由数据库 `now()` 赋值（`sql/sync.sql` v4 触发器），客户端不拿墙钟当权威，避免设备时钟偏差误判新旧
   - 退出登录：停同步 → 清空本机全部用户数据（含行测作答）与同步时间戳 → 登出；换账号共用浏览器不串数据

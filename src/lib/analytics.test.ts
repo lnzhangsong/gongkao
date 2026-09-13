@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 /**
  * 产品埋点封装测试。
  *
- * 锁住三件容易回归的事：
- * 1. 未配置 key 时**全链路空操作**——本地开发/CI 没有 key，埋点绝不能抛错或偷偷发请求
+ * 锁住四件容易回归的事：
+ * 1. 未配置 key 时**全链路空操作**——CI 没有 key，埋点绝不能抛错或偷偷发请求
  * 2. 配置了 key 时 init 只跑一次，且关键配置不被误改（autocapture 关、pageview 走 history、
  *    匿名优先），这些配置直接决定了「不外传正文」与隐私承诺是否成立
  * 3. identify 只传 user id，不夹带邮箱/昵称
+ * 4. **本地来源不上报**——`vp dev` 会读到 .env 里的真实 key，localhost 上必须静默，
+ *    否则开发时每次点击都会写进生产项目
  *
  * posthog-js 用 vi.hoisted 桩替：工厂在模块图求值前就被引用，普通 const 会撞 TDZ。
  * mock 路径必须与 analytics.ts 的实际 import 一致（slim 子路径），否则桩不生效、
@@ -34,8 +36,20 @@ async function loadAnalytics() {
   return import('./analytics')
 }
 
+/** 非本地来源（断言「已接入」分支时用）；happy-dom 默认 URL 是 localhost，会被本地守卫拦下 */
+const PROD_URL = 'https://app.readbook.example/'
+
+/**
+ * 切 happy-dom 的地址。`window.happyDOM` 是 happy-dom 的运行时 API，
+ * TS 的 lib.dom 里没有这个成员，这里做一次窄化的类型断言。
+ */
+function setLocation(url: string): void {
+  ;(window as unknown as { happyDOM: { setURL: (u: string) => void } }).happyDOM.setURL(url)
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  setLocation(PROD_URL)
   /* 不能让 initAnalytics 真的等浏览器空闲：桩成立即回调，否则用例会挂在超时上 */
   vi.stubGlobal('requestIdleCallback', (cb: () => void) => {
     cb()
@@ -157,5 +171,43 @@ describe('analytics（已配置 key）', () => {
 
     expect(() => track('auth_logout')).not.toThrow()
     await flush()
+  })
+})
+
+describe('analytics（本地来源）', () => {
+  beforeEach(() => {
+    /* 关键前提：key 是真的（模拟仓库根 .env），只有来源是本地 */
+    vi.stubEnv('VITE_POSTHOG_KEY', 'phc_test_key')
+  })
+
+  it.each([
+    ['localhost', 'http://localhost:5173/'],
+    ['127.0.0.1', 'http://127.0.0.1:5173/'],
+    ['127.0.0.2（整个回环段）', 'http://127.0.0.2:5173/'],
+    ['IPv6 ::1', 'http://[::1]:5173/'],
+    ['mDNS *.local', 'http://tomcat.local:5173/'],
+  ])('%s 上即使配了 key 也不上报', async (_name, url) => {
+    setLocation(url)
+    const { analyticsEnabled, initAnalytics, track } = await loadAnalytics()
+
+    expect(analyticsEnabled).toBe(false)
+    initAnalytics()
+    track('pageview')
+    await flush()
+
+    expect(mocks.init).not.toHaveBeenCalled()
+    expect(mocks.capture).not.toHaveBeenCalled()
+  })
+
+  it('VITE_POSTHOG_ALLOW_LOCAL=1 显式放开（仅调试埋点本身时用）', async () => {
+    vi.stubEnv('VITE_POSTHOG_ALLOW_LOCAL', '1')
+    setLocation('http://localhost:5173/')
+    const { analyticsEnabled, initAnalytics } = await loadAnalytics()
+
+    expect(analyticsEnabled).toBe(true)
+    initAnalytics()
+    await flush()
+
+    expect(mocks.init).toHaveBeenCalledTimes(1)
   })
 })

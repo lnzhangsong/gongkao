@@ -1134,3 +1134,18 @@ html.reduced-motion .api-loading-ring {
     inset: -12px;
   }
 }
+
+/* ---------- 仅供屏幕阅读器 ---------- */
+/* 状态不能只靠颜色传达（WCAG 1.4.1）：在视觉线索之外补一段朗读文本。
+   用 absolute + 1px 裁切而非 display:none（后者会被读屏忽略）。 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

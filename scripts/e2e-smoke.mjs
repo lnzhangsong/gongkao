@@ -933,6 +933,8 @@ if (xgCards > 0) {
     check('提交本组后出判定', (await q.locator('.practice-opt.right').count()) > 0)
     const pickedCls = (await q.locator('.practice-opt.picked').first().getAttribute('class')) ?? ''
     check('判分结果显示对错', /\b(right|wrong)\b/.test(pickedCls), pickedCls.trim())
+    /* 对错不能只靠颜色（WCAG 1.4.1）：正确项要有 ✓ 标记 */
+    check('对错有非颜色标记', (await q.locator('.practice-opt.right .practice-opt-mark').count()) > 0)
 
     /* 刷新后作答仍在（xingceStore → IndexedDB 持久化）。
        答题卡浮层默认收起，需先展开才能看到题号格的对错标记 */

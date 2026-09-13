@@ -548,11 +548,21 @@ export function XingcePracticePage() {
                       >
                         <span className="practice-opt-key">{o.key}</span>
                         {imgQ ? '' : <MathText text={o.text} />}
+                        {/* 对错不能只靠红/绿框（WCAG 1.4.1）：✓/✗ 视觉标记 + 读屏文本 */}
+                        {qJudged && (o.key === q.answer || pick === o.key) && (
+                          <span className="practice-opt-mark" aria-hidden="true">
+                            {o.key === q.answer ? '✓' : '✗'}
+                          </span>
+                        )}
+                        {qJudged && o.key === q.answer && <span className="sr-only">正确答案</span>}
+                        {qJudged && pick === o.key && o.key !== q.answer && (
+                          <span className="sr-only">你的选择，错误</span>
+                        )}
                       </button>
                     )
                   })}
                 </div>
-                {/* 判定结果只靠选项的红/绿框表达；解析紧跟其后 */}
+                {/* 判定由红/绿框 + ✓/✗ 标记 + 读屏文本表达；解析紧跟其后 */}
                 {qJudged && q.explanation && (
                   <div className="practice-explain">
                     <CondLines text={q.explanation} />

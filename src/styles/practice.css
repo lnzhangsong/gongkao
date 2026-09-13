@@ -265,6 +265,21 @@
   box-shadow: inset 3px 0 0 #b3261e;
 }
 
+/* 对错的非颜色线索：✓/✗ 标记（读屏文本用 .sr-only，见 base.css） */
+.practice-opt-mark {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font: 13px/1 var(--mono);
+}
+
+.practice-opt.right .practice-opt-mark {
+  color: #2e7d32;
+}
+
+.practice-opt.wrong .practice-opt-mark {
+  color: #b3261e;
+}
+
 .practice-opt-key {
   font: inherit;
   letter-spacing: 0.05em;
@@ -282,10 +297,6 @@
   color: #2e7d32;
   /* 判定落屏时轻微回弹（减少动效由 html.reduced-motion 全局关闭） */
   animation: practice-opt-settle 0.2s ease-out;
-}
-
-.practice-verdict.is-wrong {
-  color: #b3261e;
 }
 
 .practice-explain {

@@ -1,8 +1,10 @@
 # 质量门禁 CI：所有 push/PR 强制跑，与本地 `.vite-hooks/pre-push` 同一套 gate。
 # 本地钩子可 --no-verify 跳过、clone 后未必装好——这里是不可绕过的兜底。
 #
-# e2e（pnpm test:e2e，145 项）也进 CI：本地 macOS 用系统 Edge 免下载，
-# Linux runner 用 playwright 自带的 Chromium（按 playwright-core 版本动态安装）。
+# e2e（pnpm test:e2e）也进 CI：本地 macOS 与 GitHub ubuntu runner 都自带 Microsoft Edge
+# （runner 镜像 Browsers 一栏有），统一走 channel=msedge，无需下载浏览器。
+# 注意：这里不能用 npx —— 本仓 devEngines.packageManager 要求 pnpm，npm 11 会直接
+# 报 EBADDEVENGINES 拒跑；也正因如此才选择复用系统 Edge 而不是装 playwright CLI。
 name: CI
 
 on:
@@ -66,10 +68,5 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
-      # 用与 playwright-core 完全相同的版本装 Chromium，避免 browser revision 不匹配
-      - name: Install Chromium
-        run: >-
-          npx --yes playwright@$(node -p "require('playwright-core/package.json').version")
-          install --with-deps chromium
       - name: E2E smoke
         run: pnpm run test:e2e

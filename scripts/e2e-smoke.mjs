@@ -1,8 +1,8 @@
 /* 端到端冒烟测试：无头浏览器验证路由、渲染、标注、删除与持久化
  * 依赖：本地 API server（node:sqlite 提供 /api），由本脚本自动拉起
- * 浏览器：本地 macOS 走系统 Edge（免下载）；其他平台走 playwright 自带 Chromium
- *   （CI 需先跑 `npx playwright@<playwright-core 同版本> install --with-deps chromium`）。
- *   E2E_CHANNEL 可显式指定 channel（置空则强制用自带浏览器）。 */
+ * 浏览器：默认走系统 Microsoft Edge（macOS 本机与 GitHub ubuntu runner 都自带）。
+ *   E2E_CHANNEL 可覆盖 channel；置空字符串则用 playwright 自带 Chromium
+ *   （需先 `pnpm dlx playwright@<playwright-core 同版本> install --with-deps chromium`）。 */
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 
@@ -18,8 +18,8 @@ await new Promise((r) => setTimeout(r, 1200))
 const results = []
 const errors = []
 
-/* 空字符串 = 显式要求用自带 Chromium（CI 走这条） */
-const browserChannel = process.env.E2E_CHANNEL ?? (process.platform === 'darwin' ? 'msedge' : '')
+/* 默认系统 Edge；E2E_CHANNEL='' 显式要求用自带 Chromium */
+const browserChannel = process.env.E2E_CHANNEL ?? 'msedge'
 const browser = await chromium.launch({
   ...(browserChannel ? { channel: browserChannel } : {}),
   headless: true,

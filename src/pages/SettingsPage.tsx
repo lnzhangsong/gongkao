@@ -572,7 +572,7 @@ function AiSection() {
           </div>
         </div>
       </div>
-      <div className="setting-row" style={{ borderBottom: 0 }}>
+      <div className="setting-row ai-row">
         <div className="ai-config">
           <div className="ai-field">
             <label htmlFor="ai-base-url">接口地址 BASE URL</label>
@@ -605,7 +605,7 @@ function AiSection() {
               onChange={(e) => setAiSettings({ model: e.target.value })}
             />
           </div>
-          <div className="ai-field">
+          <div className="ai-field ai-field-passphrase">
             <label htmlFor="ai-sync-passphrase">同步口令 SYNC PASSPHRASE</label>
             <input
               id="ai-sync-passphrase"
@@ -615,12 +615,14 @@ function AiSection() {
               autoComplete="new-password"
               onChange={(e) => setSyncPassphrase(e.target.value)}
             />
-            <span className="setting-desc">口令只存本机；换设备要填同一个才能解开云端密文。</span>
           </div>
-          <button className="ghost" onClick={runTest} disabled={testing}>
-            {testing ? '测试中…' : '测试连通'}
-          </button>
-          {result && <span className={`ai-status ${result.ok ? 'ok' : 'err'}`}>{result.text}</span>}
+          <div className="ai-actions">
+            <button className="ghost" onClick={runTest} disabled={testing}>
+              {testing ? '测试中…' : '测试连通'}
+            </button>
+            {result && <span className={`ai-status ${result.ok ? 'ok' : 'err'}`}>{result.text}</span>}
+            <span className="ai-hint">口令只存本机；换设备要填同一个才能解开云端密文。</span>
+          </div>
         </div>
       </div>
     </>

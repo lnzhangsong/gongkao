@@ -412,11 +412,17 @@
 }
 
 /* —— AI 服务（BYOK）—— */
+/* 两行布局：三个连接字段一行；口令 + 测试按钮/结果一行。
+   此前 6 个子项挤 4 列 grid 自动换行，按钮被拉伸成整列宽、状态孤悬右侧。 */
+.ai-row {
+  border-bottom: 0;
+  padding-top: 26px; /* 与上方标题行的分隔线拉开距离 */
+}
 .ai-config {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr auto;
+  grid-template-columns: 1.2fr 1fr 0.8fr;
   gap: 12px;
   align-items: end;
 }
@@ -424,6 +430,16 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+}
+.ai-field-passphrase {
+  grid-column: 1 / 2;
+}
+.ai-actions {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
 }
 .ai-field label {
@@ -450,14 +466,16 @@
   color: var(--muted);
   opacity: 0.7;
 }
-.ai-config .ghost {
+.ai-actions .ghost {
   height: 34px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .ai-status {
-  grid-column: 1 / -1;
-  font: 400 12px/1.6 var(--sans);
+  font: 400 12px/1.5 var(--sans);
   color: var(--muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .ai-status.ok {
   color: var(--accent-text);
@@ -465,8 +483,20 @@
 .ai-status.err {
   color: var(--danger);
 }
+/* 口令说明：与测试按钮同行（放口令列下方会把按钮挤得与输入框错位） */
+.ai-hint {
+  font: 400 12px/1.5 var(--sans);
+  color: var(--muted);
+  min-width: 0;
+}
 @media (max-width: 860px) {
   .ai-config {
     grid-template-columns: 1fr 1fr;
+  }
+  .ai-field-passphrase {
+    grid-column: auto;
+  }
+  .ai-actions {
+    grid-column: 1 / -1;
   }
 }

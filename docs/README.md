@@ -25,7 +25,7 @@
 **2026-09-13 CI 落地**：新增 `.github/workflows/ci.yml`，此前质量保障全部压在本地 pre-push 钩子上（`--no-verify` 可跳过、clone 后未必装好），线上零测试兜底。三个 job 全部只读权限（`permissions: contents: read`）+ 显式超时：
 > - ① **前端门禁**：`pnpm run gate` = check + test + build（Node 24 + `pnpm install --frozen-lockfile`）。
 > - ② **Python 管线测试**：`unittest discover -s scripts/tests`（行测解析 21 项），`pymupdf` 钉 1.28.2。
-> - ③ **端到端冒烟**：`pnpm run test:e2e`（146 项）。本地 macOS 与 GitHub ubuntu runner **都自带 Microsoft Edge**，统一走 `channel=msedge`，无需下载浏览器（首版曾用 `npx playwright@… install chromium`，因本仓 `devEngines.packageManager` 要求 pnpm、npm 11 直接报 `EBADDEVENGINES` 拒跑而废弃）。
+> - ③ **端到端冒烟**：`pnpm run test:e2e`（146 项）。复用系统已装浏览器、不下载 Chromium：`scripts/e2e-smoke.mjs` 按平台给候选 channel（Linux → `chrome`，macOS → `msedge`）逐个尝试并回退，实际用哪个会打进日志。踩过的两个坑：① 首版用 `npx playwright@… install chromium`，因本仓 `devEngines.packageManager` 要求 pnpm、npm 11 直接报 `EBADDEVENGINES` 拒跑；② 改用系统 Edge 后，Linux 上仍失败——playwright 把 `msedge` channel 写死到 `/opt/microsoft/msedge/msedge`，而 Edge 的 .deb 装的是 `microsoft-edge`，路径对不上，故 Linux 改走 runner 自带的 Google Chrome。
 >
 > 顺带修复一处**长期红着的 e2e**：`b22180e`（2026-09-11「错题本」）把行测判分从 `.practice-verdict` 文案改成选项红/绿框（`.practice-opt.right/.wrong`）+ 吸顶小结 `.practice-summary`，但 e2e 的 3 处断言仍等旧元素，首次失败即抛未捕获 `TimeoutError`，导致整个脚本当时崩掉、后续约 100 项断言从未执行——此前「e2e 全绿」的自述自 09-11 起已不成立。现已按新判定 UI 重写这 3 处断言，全量 146 项通过。
 

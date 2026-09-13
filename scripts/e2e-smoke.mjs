@@ -1,8 +1,7 @@
 /* 端到端冒烟测试：无头浏览器验证路由、渲染、标注、删除与持久化
  * 依赖：本地 API server（node:sqlite 提供 /api），由本脚本自动拉起
- * 浏览器：默认走系统 Microsoft Edge（macOS 本机与 GitHub ubuntu runner 都自带）。
- *   E2E_CHANNEL 可覆盖 channel；置空字符串则用 playwright 自带 Chromium
- *   （需先 `pnpm dlx playwright@<playwright-core 同版本> install --with-deps chromium`）。 */
+ * 浏览器：复用系统已装浏览器，不下载 Chromium——macOS 走 Edge，Linux runner 走系统
+ *   Google Chrome（见 launchBrowser 的候选与回退）。E2E_CHANNEL 可覆盖。 */
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 
@@ -18,13 +17,38 @@ await new Promise((r) => setTimeout(r, 1200))
 const results = []
 const errors = []
 
-/* 默认系统 Edge；E2E_CHANNEL='' 显式要求用自带 Chromium */
-const browserChannel = process.env.E2E_CHANNEL ?? 'msedge'
-const browser = await chromium.launch({
-  ...(browserChannel ? { channel: browserChannel } : {}),
-  headless: true,
-  args: ['--no-sandbox', '--disable-gpu'],
-})
+/* 浏览器选择：按平台给出候选 channel，逐个尝试，谁先起来用谁，并把结果打进日志。
+   - macOS 本机 / GitHub ubuntu 都自带浏览器，不需要下载 Chromium
+   - Linux 上 playwright 把 msedge channel 写死到 /opt/microsoft/msedge/msedge，而 Edge 的
+     .deb 装的是 microsoft-edge，路径对不上；runner 自带 Google Chrome，路径 /opt/google/chrome/chrome
+     正好是 playwright `chrome` channel 的期望值 → Linux 优先 chrome
+   - E2E_CHANNEL 显式指定时只试它（'' = 用 playwright 自带 Chromium，需自行 install） */
+async function launchBrowser() {
+  const explicit = process.env.E2E_CHANNEL
+  const candidates =
+    explicit !== undefined
+      ? [explicit]
+      : process.platform === 'linux'
+        ? ['chrome', 'msedge', '']
+        : ['msedge', 'chrome', '']
+  const failures = []
+  for (const channel of candidates) {
+    const label = channel || 'playwright 自带 Chromium'
+    try {
+      const b = await chromium.launch({
+        ...(channel ? { channel } : {}),
+        headless: true,
+        args: ['--no-sandbox', '--disable-gpu'],
+      })
+      console.log(`[e2e] 浏览器：${label}`)
+      return b
+    } catch (e) {
+      failures.push(`${label}: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]}`)
+    }
+  }
+  throw new Error(`无可用浏览器，候选全部失败：\n  ${failures.join('\n  ')}`)
+}
+const browser = await launchBrowser()
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 page.on('console', (m) => {

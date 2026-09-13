@@ -1,10 +1,11 @@
 # 质量门禁 CI：所有 push/PR 强制跑，与本地 `.vite-hooks/pre-push` 同一套 gate。
 # 本地钩子可 --no-verify 跳过、clone 后未必装好——这里是不可绕过的兜底。
 #
-# e2e（pnpm test:e2e）也进 CI：本地 macOS 与 GitHub ubuntu runner 都自带 Microsoft Edge
-# （runner 镜像 Browsers 一栏有），统一走 channel=msedge，无需下载浏览器。
-# 注意：这里不能用 npx —— 本仓 devEngines.packageManager 要求 pnpm，npm 11 会直接
-# 报 EBADDEVENGINES 拒跑；也正因如此才选择复用系统 Edge 而不是装 playwright CLI。
+# e2e（pnpm test:e2e）也进 CI：复用 runner 自带的浏览器，不下载 Chromium。
+# 候选按平台排：Linux → chrome（/opt/google/chrome/chrome，runner 自带）、macOS → msedge。
+# 注意：playwright 在 Linux 把 msedge channel 写死到 /opt/microsoft/msedge/msedge，而 Edge
+# 的 .deb 装的是 microsoft-edge，路径对不上——所以 Linux 不能只靠 msedge。
+# 也不能用 npx 装浏览器：本仓 devEngines.packageManager 要求 pnpm，npm 11 直接 EBADDEVENGINES。
 name: CI
 
 on:

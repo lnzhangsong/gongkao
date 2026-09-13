@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""行测 2000–2025 题图/材料图裁切回填（配合 scripts/parse-xingce-pdf.py）
+"""行测 2000–2025 题图/材料图裁切落盘（配合 scripts/parse-xingce-pdf.py）
 
 2000–2025 推荐版是「真题 PDF（题干+选项、图在文本层外）+ 答案解析 PDF」两套文件；
 图形推理题图、资料分析图表材料、公式/柱状/饼图选项在 PDF 里是**内嵌位图**。
-本脚本从真题 PDF 按题号定位、把区域内的内嵌图渲染成 WebP（data URL）回填 JSON 的
-`image` / `groupImage` 字段；再跑 scripts/import-xingce.mjs 即落盘 data/xingce-img/。
+本脚本从真题 PDF 按题号定位、把区域内的内嵌图渲染成 WebP，**直接落盘**
+`data/xingce-img/{paper_id}/{q|g}{题号|组号}_{i}.webp`；JSON 里只写轻量引用：
 
-前端按「卷号 + q{题号}/g{组号}」约定取图（src/data/xingceImages.ts），不读 API 的 image 字段。
+    "image": [{"file": "q73_0.webp", "w": 1137, "h": 44}]
+
+（不写 base64：同一张图在 git 里存两份、且每次重裁都重写 MB 级 JSON。）
+前端按「卷号 + q{题号}/g{组号}」约定取图（src/data/xingceImages.ts），不读 API 的 image 字段；
+`scripts/import-xingce.mjs` 只从引用里收集宽高生成尺寸清单，不再解码图片。
 
 用法：
   python3 scripts/parse-xingce-images.py --paper 2022-副省级
@@ -17,15 +21,16 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import re
+import shutil
 from pathlib import Path
 
 import pymupdf
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_JSON_DIR = ROOT / "data" / "xingce"
+DEFAULT_IMG_DIR = ROOT / "data" / "xingce-img"
 DEFAULT_Q_DIR = Path(
     "/Users/tomcat/Documents/docs/【01】国考真题资料/国考2000-2026真题pdf 【推荐用这个版本】"
     "/2000-2025国考行测PDF/行测-真题"
@@ -96,17 +101,17 @@ def png_to_webp(png: bytes, quality: int) -> tuple[bytes, str, int, int]:
         return png, "png", 0, 0
 
 
-def to_image_json(items: list[dict]) -> str:
-    return json.dumps(
-        [
-            {
-                "u": f"data:image/{it['ext']};base64," + base64.b64encode(it["b"]).decode(),
-                "w": it["w"],
-                "h": it["h"],
-            }
-            for it in items
-        ]
-    )
+def write_image_files(img_dir: Path, paper_id: str, items: list[dict], kind: str, key: int, dry: bool) -> list[dict]:
+    """裁片落盘为 {kind}{key}_{i}.{ext}，返回 JSON 里的轻量引用 [{file, w, h}]。"""
+    refs = []
+    target = img_dir / paper_id
+    for i, it in enumerate(items):
+        name = f"{kind}{key}_{i}.{it['ext']}"
+        if not dry:
+            target.mkdir(parents=True, exist_ok=True)
+            (target / name).write_bytes(it["b"])
+        refs.append({"file": name, "w": it["w"], "h": it["h"]})
+    return refs
 
 
 def trimmed_png(doc, pno, clip, pad=5):
@@ -248,19 +253,22 @@ def find_paper_pdf(q_dir: Path, year: int, level: str) -> Path | None:
     return cands[0] if len(cands) == 1 else None
 
 
-def process(json_path: Path, pdf_path: Path, dry: bool) -> None:
+def process(json_path: Path, pdf_path: Path, img_dir: Path, dry: bool) -> None:
     paper = json.loads(json_path.read_text(encoding="utf-8"))
+    paper_id = paper["id"]
     doc = pymupdf.open(str(pdf_path))
     lines = build_index(doc)
     questions = paper["questions"]
     chain = question_chain(lines, max(q["idx"] for q in questions))
     by_idx = {q["idx"]: q for q in questions}
 
-    # 先清空旧的图字段，避免本轮没抽到图时把上一轮的陈旧裁片留在 JSON 里
-    # （曾导致小图裁片被体积阈值过滤后，仍回落到旧的「整行」裁片 → 前端看起来重复）
+    # 先清空旧的图字段与图目录：图由本脚本直接落盘，清掉避免旧序号文件残留
+    # （残留会被前端 import.meta.glob 读成重复图），也避免本轮没抽到图时留着旧引用
     for q in questions:
         q["image"] = None
         q["groupImage"] = None
+    if not dry:
+        shutil.rmtree(img_dir / paper_id, ignore_errors=True)
 
     def qpos(n):
         return chain.get(n)
@@ -297,9 +305,10 @@ def process(json_path: Path, pdf_path: Path, dry: bool) -> None:
         ]
         items = render_regions(doc, regions)
         if items:
+            refs = write_image_files(img_dir, paper_id, items, "g", gid, dry)
             for q in questions:
                 if q.get("groupId") == gid:
-                    q["groupImage"] = to_image_json(items)
+                    q["groupImage"] = refs
             n_group_img += 1
             print(f"  组{gid}（{first}-{max(members)}）材料图 {len(items)} 张")
 
@@ -332,7 +341,7 @@ def process(json_path: Path, pdf_path: Path, dry: bool) -> None:
         ]
         items = render_regions(doc, regions)
         if items:
-            q["image"] = to_image_json(items)
+            q["image"] = write_image_files(img_dir, paper_id, items, "q", n, dry)
             # 题图已包含选项图形（图形推理/公式选项），清掉文本占位，
             # 前端按「纯图选项题」渲染成字母钮（XingcePracticePage imgQ 分支）
             for o in q.get("options", []):
@@ -353,6 +362,7 @@ def process(json_path: Path, pdf_path: Path, dry: bool) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--json-dir", type=Path, default=DEFAULT_JSON_DIR)
+    ap.add_argument("--img-dir", type=Path, default=DEFAULT_IMG_DIR)
     ap.add_argument("--q-dir", type=Path, default=DEFAULT_Q_DIR)
     ap.add_argument("--paper", help="单卷：<year>-<level>，如 2022-副省级")
     ap.add_argument("--year", type=int)
@@ -378,7 +388,7 @@ def main() -> None:
             print(f"✗ {jp.name}：未找到对应真题 PDF")
             continue
         print(f"→ {jp.name} ← {pdf.name}")
-        process(jp, pdf, args.dry)
+        process(jp, pdf, args.img_dir, args.dry)
 
 
 if __name__ == "__main__":

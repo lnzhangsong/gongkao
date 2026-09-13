@@ -1,1 +1,15 @@
+#!/usr/bin/env sh
+# 提交前门禁：
+# 1) 暂存文件的格式 / lint（vp staged，规则见 vite.config.ts 的 staged）
+# 2) 行测「JSON 引用 ↔ data/xingce-img 文件 ↔ git 索引」校验：缺失 / 孤儿 / 旧 base64 /
+#    漏 git add 或目录被 ignore，都拦下。
+#    必须前置到提交：图片只能从**仓库外**的真题 PDF 重裁，一旦漏 add 或被 ignore，
+#    推到远端就永久丢图（详见 src/lib/xingceImagesArtifact.test.ts 的说明）。
+#
+# 机制：core.hooksPath=.vite-hooks/_，_/pre-commit 分发到本文件（见 .vite-hooks/_/h），
+# 由 `vp config`（package.json prepare）在安装后接好，无需手动装钩子。
+#
+# 临时跳过：git commit --no-verify
+# 手动预跑：vp staged && node scripts/import-xingce.mjs --dry
 vp staged
+node scripts/import-xingce.mjs --dry

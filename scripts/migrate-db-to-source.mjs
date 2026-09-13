@@ -1,19 +1,33 @@
 #!/usr/bin/env node
 /**
- * 一次性迁移：把 data/articles.db 里**没有可复现源**的两张表反导成可读源文件。
+ * 库 → 源：把 data/articles.db 的当前状态导回仓库内的可读源（单向数据流里「回写」那一侧）。
  *
- *   articles       → data/articles/{id}.json   每篇一个文件（与 data/shenlun、data/xingce 同惯例）
- *   guifan_terms   → data/guifan-terms.json    规范词全集
+ *   articles                   → data/articles/{id}.json
+ *   guifan_terms               → data/guifan-terms.json
+ *   papers/materials/questions → data/shenlun/{id}.json
  *
- * 背景：articles 的原始管线（docx → SQLite → src/data/articlesParsed.ts）在 5a9afc3 里被删，
- * 源 docx 在仓库外（/Users/nif/…），此后 DB 成了唯一副本；guifan_terms 的源 md 同样在仓库外。
- * 反导之后两者都有仓库内的可读源，库可由 scripts/rebuild-db.mjs 重建（库 = 产物）。
+ * 什么时候会用到：
+ *  - 本地管理 UI 改了数据（正常情况 api-server 会即时写穿，这里是兜底/修复）；
+ *  - 手工改过库、或想确认「库 → 源」不会产生意外 diff（幂等，跑完 git diff 应为空）。
  *
- * 用法：node scripts/migrate-db-to-source.mjs [--db data/articles.db] [--articles data/articles] [--terms data/guifan-terms.json]
+ * 用法：
+ *   node scripts/migrate-db-to-source.mjs            # 导出（覆盖写源）
+ *   node scripts/migrate-db-to-source.mjs --check    # 只校验：源与库逐字节一致？不一致 exit 1
+ *
+ * 保真：三种源都能逐字节还原（见 scripts/lib/export-source.mjs），所以正常导出不会产生假 diff。
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import {
+  articleToSource,
+  exportArticles,
+  exportGuifanTerms,
+  exportShenlunAll,
+  formatSource,
+  shenlunPaperToSource,
+  shenlunSourceFile,
+} from './lib/export-source.mjs'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const argOf = (flag, fallback) => {
@@ -25,53 +39,57 @@ const argOf = (flag, fallback) => {
 const DB = argOf('--db', 'data/articles.db')
 const ARTICLES_DIR = argOf('--articles', 'data/articles')
 const TERMS_FILE = argOf('--terms', 'data/guifan-terms.json')
+const SHENLUN_DIR = argOf('--shenlun', 'data/shenlun')
+const CHECK = process.argv.includes('--check')
 
 const db = new DatabaseSync(DB, { readOnly: true })
 
-/* ---------- articles → data/articles/{id}.json ---------- */
-
-/** 源文件字段显式写全（含 null），键序固定：schema 自解释、diff 稳定、round-trip 无损 */
-function articleToSource(r) {
-  return {
-    id: r.id,
-    title: r.title,
-    summary: r.summary,
-    source: r.source,
-    topic: r.topic,
-    column: r.column_name,
-    date: r.date,
-    readTime: r.read_time,
-    content: JSON.parse(r.content_json),
-    pullquote: r.pullquote,
-    finishNote: r.finish_note,
-    featured: Boolean(r.featured),
+if (CHECK) {
+  const problems = []
+  const expect = (file, data) => {
+    const want = formatSource(data)
+    let got = null
+    try {
+      got = fs.readFileSync(file, 'utf8')
+    } catch {
+      /* 文件缺失 → 记为不一致 */
+    }
+    if (got !== want) problems.push(path.relative(ROOT, file))
   }
+
+  const articleRows = db.prepare('SELECT * FROM articles ORDER BY id').all()
+  for (const r of articleRows) expect(path.join(ARTICLES_DIR, `${r.id}.json`), articleToSource(r))
+  expect(TERMS_FILE, db.prepare('SELECT id, theme, term, example FROM guifan_terms ORDER BY id').all())
+
+  const papers = db.prepare('SELECT id FROM papers ORDER BY year, level').all()
+  const known = new Set()
+  for (const { id } of papers) {
+    known.add(`${id}.json`)
+    expect(shenlunSourceFile(SHENLUN_DIR, id), shenlunPaperToSource(db, id))
+  }
+  /* 反向：源目录里有、库里没有的卷（重建时会被忽略，属漂移） */
+  if (fs.existsSync(SHENLUN_DIR)) {
+    for (const f of fs.readdirSync(SHENLUN_DIR)) {
+      if (f.endsWith('.json') && !known.has(f)) problems.push(`data/shenlun/${f}（库中无此卷）`)
+    }
+  }
+  db.close()
+
+  if (problems.length) {
+    console.error(`✗ 源与库不一致（${problems.length} 处）：\n  - ${problems.slice(0, 10).join('\n  - ')}`)
+    console.error('  改源后用 `vp run db:rebuild` 重建库；改库后用 `node scripts/migrate-db-to-source.mjs` 写回源。')
+    process.exit(1)
+  }
+  console.log(`✓ 源与库逐字节一致（articles ${articleRows.length} · 规范词 · 申论 ${papers.length}）`)
+  process.exit(0)
 }
 
-fs.rmSync(ARTICLES_DIR, { recursive: true, force: true })
-fs.mkdirSync(ARTICLES_DIR, { recursive: true })
-
-const articles = db.prepare('SELECT * FROM articles ORDER BY id').all()
-let articleBytes = 0
-for (const r of articles) {
-  const body = JSON.stringify(articleToSource(r), null, 2) + '\n'
-  fs.writeFileSync(path.join(ARTICLES_DIR, `${r.id}.json`), body)
-  articleBytes += Buffer.byteLength(body)
-}
-
-/* ---------- guifan_terms → data/guifan-terms.json ---------- */
-
-/* id 有空洞（1..3043 共 3039 条，本地增删留下的），必须显式带上：重建时按 id 原样写回，
-   否则 AUTOINCREMENT 会重新编号，前端 TermHighlight 的 term-seen 事件 id 就对不上了 */
-const terms = db.prepare('SELECT id, theme, term, example FROM guifan_terms ORDER BY id').all()
-const termsBody = JSON.stringify(terms, null, 2) + '\n'
-fs.mkdirSync(path.dirname(TERMS_FILE), { recursive: true })
-fs.writeFileSync(TERMS_FILE, termsBody)
-
+const nA = exportArticles(db, ARTICLES_DIR)
+const nT = exportGuifanTerms(db, TERMS_FILE)
+const nP = exportShenlunAll(db, SHENLUN_DIR)
 db.close()
 
-const mb = (n) => (n / 1048576).toFixed(2) + ' MB'
-console.log(`articles: ${articles.length} 篇 → ${path.relative(ROOT, ARTICLES_DIR)}/（${mb(articleBytes)}）`)
-console.log(
-  `guifan_terms: ${terms.length} 条 → ${path.relative(ROOT, TERMS_FILE)}（${mb(Buffer.byteLength(termsBody))}）`,
-)
+console.log(`articles: ${nA} 篇 → ${path.relative(ROOT, ARTICLES_DIR)}/`)
+console.log(`guifan_terms: ${nT} 条 → ${path.relative(ROOT, TERMS_FILE)}`)
+console.log(`申论试卷: ${nP} 卷 → ${path.relative(ROOT, SHENLUN_DIR)}/`)
+console.log('（幂等：源本来就是库导出的，重复跑不会有 diff）')

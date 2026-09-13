@@ -22,8 +22,13 @@ import { DatabaseSync } from 'node:sqlite'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { exportGuifanTerms, exportShenlunPaper, removeShenlunSource } from './lib/export-source.mjs'
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const DATA_DIR = path.join(PROJECT_ROOT, 'data')
+/** 写接口改的是库，但**源才是真相**：每次写入后要按这些路径回写 */
+const TERMS_SOURCE = path.join(DATA_DIR, 'guifan-terms.json')
+const SHENLUN_SOURCE_DIR = path.join(DATA_DIR, 'shenlun')
 
 // 加载 .env / .env.local（Vite 只喂前端构建，不会传给本进程；不加载的话
 // 照 .env.example 填的 WRITE_TOKEN 静默不生效——危险方向的失效）。
@@ -61,6 +66,22 @@ function writeAuthorized(req) {
 
 function denyWrite(respond) {
   respond(json({ error: '未授权：缺少或错误的 x-write-token' }), 401)
+}
+
+/**
+ * 写穿：本地写接口改的是 `data/articles.db`，而**源（data/*.json）才是真相**，
+ * 库里的一切都是 `vp run db:rebuild` 的产物。所以每次成功写入后把结果回写源，
+ * 否则下次重建（build / 测试 / 换机器）会把这次改动丢掉。
+ * 回写失败只记日志、不影响本次响应——`src/lib/dbSource.test.ts` 会把这种漂移抓出来。
+ */
+function syncSource(label, fn) {
+  try {
+    fn()
+  } catch (err) {
+    console.error(
+      `[写穿失败] ${label}未写回 data/ 源：${err.message}（可跑 node scripts/migrate-db-to-source.mjs 修复）`,
+    )
+  }
 }
 
 // —— 申论真题写接口专用本地 DB 句柄（GET 已转发 api/exams.ts，生产只读）——
@@ -199,6 +220,7 @@ const server = createServer(async (req, res) => {
       const { lastInsertRowid } = d
         .prepare('INSERT INTO guifan_terms (theme, term, example) VALUES (?, ?, ?)')
         .run(theme, term, example)
+      syncSource('规范词', () => exportGuifanTerms(d, TERMS_SOURCE))
       void respond(json({ ok: true, id: Number(lastInsertRowid) }))
     } catch (err) {
       void respond(json({ error: String(err) }, 400))
@@ -239,6 +261,7 @@ const server = createServer(async (req, res) => {
         void respond(json({ error: 'not found' }, 404))
         return
       }
+      syncSource('规范词', () => exportGuifanTerms(d, TERMS_SOURCE))
       void respond(json({ ok: true }))
     } catch (err) {
       void respond(json({ error: String(err) }, 400))
@@ -261,6 +284,7 @@ const server = createServer(async (req, res) => {
         void respond(json({ error: 'not found' }, 404))
         return
       }
+      syncSource('规范词', () => exportGuifanTerms(d, TERMS_SOURCE))
       void respond(json({ ok: true }))
     } catch (err) {
       void respond(json({ error: String(err) }, 400))
@@ -300,6 +324,7 @@ const server = createServer(async (req, res) => {
         `INSERT INTO papers (id, year, level, title, subject, source_file)
          VALUES (?, ?, ?, ?, '申论', ?)`,
       ).run(id, year, level, title, `manual/${id}.md`)
+      syncSource('试卷', () => exportShenlunPaper(d, SHENLUN_SOURCE_DIR, id))
       void respond(json({ ok: true, id }))
     } catch (err) {
       void respond(json({ error: String(err) }, 400))
@@ -379,10 +404,13 @@ const server = createServer(async (req, res) => {
         )
       }
       d.exec('COMMIT')
+      syncSource('试卷', () => exportShenlunPaper(d, SHENLUN_SOURCE_DIR, newId))
       void respond(json({ ok: true, id: newId }))
     } catch (err) {
       try {
-        d.exec('ROLLBACK')
+        /* d0 与 d 是同一个句柄（openExamDb 有缓存）；这里用 d0 是因为它在 try 外声明，
+           原写法在 catch 里引用 try 内声明的 d 会 ReferenceError，回滚被静默吞掉 */
+        d0.exec('ROLLBACK')
       } catch {}
       void respond(json({ error: String(err) }, 400))
     }
@@ -408,6 +436,7 @@ const server = createServer(async (req, res) => {
         return
       }
       d.exec('COMMIT')
+      syncSource('试卷', () => removeShenlunSource(SHENLUN_SOURCE_DIR, id))
       void respond(json({ ok: true }))
     } catch (err) {
       try {

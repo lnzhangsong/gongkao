@@ -113,6 +113,52 @@ describe('data/guifan-terms.json ↔ guifan_terms 表', () => {
   })
 })
 
+/* ---------- 库 → 源的完整性与「半个库」自愈 ---------- */
+
+describe('库 → 源 的完整性与修复', () => {
+  it('migrate-db-to-source --check：三种源与库逐字节一致（含 shenlun 孤儿文件检测）', () => {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts/migrate-db-to-source.mjs'), '--check'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    })
+    expect(out).toContain('逐字节一致')
+  })
+
+  it('ensure-db 会把「只有一张表的半个库」重建完整（只判文件存在是不够的）', () => {
+    const partial = path.join(os.tmpdir(), `readbook-partial-${process.pid}.db`)
+    for (const suffix of ['', '-wal', '-shm']) fs.rmSync(partial + suffix, { force: true })
+    const stub = new DatabaseSync(partial)
+    stub.exec('CREATE TABLE articles (id TEXT)') // 模拟单独跑 import-articles 建出的残件
+    stub.close()
+
+    execFileSync(process.execPath, [path.join(ROOT, 'scripts/ensure-db.mjs'), '--db', partial], {
+      cwd: ROOT,
+      stdio: 'ignore',
+    })
+    const fixed = new DatabaseSync(partial, { readOnly: true })
+    try {
+      const tables = (
+        fixed.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]
+      ).map((r) => r.name)
+      expect(tables).toEqual(
+        expect.arrayContaining([
+          'articles',
+          'guifan_terms',
+          'papers',
+          'materials',
+          'questions',
+          'xg_papers',
+          'articles_fts',
+        ]),
+      )
+      expect((fixed.prepare('SELECT COUNT(*) AS n FROM articles').get() as { n: number }).n).toBeGreaterThan(0)
+    } finally {
+      fixed.close()
+      for (const suffix of ['', '-wal', '-shm']) fs.rmSync(partial + suffix, { force: true })
+    }
+  })
+})
+
 /* ---------- 可选：完整重建等价性（较重，默认跳过） ---------- */
 
 const rebuildCheck = process.env.DB_REBUILD_CHECK === '1'

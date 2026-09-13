@@ -166,8 +166,14 @@ node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现�
 
 - 后两份源是 2026-09-13 用 `scripts/migrate-db-to-source.mjs` 从库里反导出来的：它们的原始
   上游在**仓库外**（年编 docx 在 `/Users/nif/…`，规范词合集 md 同样），此前 DB 是唯一副本。
-- `src/lib/dbSource.test.ts` 守卫「源 ↔ 库」逐字段一致；`DB_REBUILD_CHECK=1 vp test run`
-  再验证「从源重建的库与现库逐表逐列一致」（`created_at` 是入库时间戳，不参与比对）。
+- **本地写接口会写穿到源**：管理 UI 的规范词增删改、试卷新建/编辑/删除在写库之后即时把结果
+  回写 `data/guifan-terms.json` / `data/shenlun/{id}.json`（`scripts/lib/export-source.mjs`），
+  所以 UI 改完直接提交源即可，不用手工导出。回写是**逐字节保真**的，不会产生假 diff。
+  兜底/修复：`node scripts/migrate-db-to-source.mjs`（全量写回）；`--check` 只校验不写。
+- `src/lib/dbSource.test.ts` 守卫：① 文章/规范词「源 ↔ 库」逐字段一致；② `migrate-db-to-source
+  --check` 对三种源做**逐字节**比对（含 shenlun 孤儿文件检测）；③ `ensure-db` 能把「只有一张表
+  的半个库」重建完整；④ `DB_REBUILD_CHECK=1 vp test run` 再验证「从源重建的库与现库逐表逐列
+  一致」（`created_at` 是入库时间戳，不参与比对）。
 - **`data/articles.db` 不再提交进 git**（`.gitignore` 忽略）——它是构建产物，仓库里进 git 的是
   `data/` 下的可读源。clone 下来后 `scripts/ensure-db.mjs` 会在库缺失时自动重建：
   `vp run build` / `vp run test run` / `pnpm dev:api` / `pnpm dev:all` 都会触发，也可手动

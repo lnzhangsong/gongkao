@@ -57,6 +57,15 @@ for (const [script, label] of STEPS) {
   execFileSync(process.execPath, [path.join(ROOT, 'scripts', script), '--db', DB], { cwd: ROOT, stdio: 'inherit' })
 }
 
+/* VACUUM：重建过程（尤其 FTS trigram 索引的灌入/重建）会留下大量空闲页，真空一次把文件
+   收到最小。线上按 Functions Storage 计费，而 4 个函数各自 includeFiles 这份库 → 每省
+   1MB 就是 4MB 部署体积，值得这一步（实测 16.77MB → 15.90MB）。 */
+{
+  const vacuum = new DatabaseSync(DB)
+  vacuum.exec('VACUUM')
+  vacuum.close()
+}
+
 const db = new DatabaseSync(DB, { readOnly: true })
 const counts = [
   'articles',

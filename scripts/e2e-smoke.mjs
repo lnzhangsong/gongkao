@@ -1024,7 +1024,13 @@ check(
   page.url(),
 )
 check('设置页含「账号」分区', (await page.locator('#account').count()) === 1)
-check('未登录时账号分区给出登录入口', (await page.locator('#account button.ghost').count()) === 1)
+check(
+  /* 配了 Supabase → 有登录按钮；没配（CI / 新 clone 的默认态）→ 渲染「云端账号未配置」提示。
+     此前只断言 button.ghost，本地有 .env 才过，CI 无 .env 必红。 */
+  '未登录时账号分区给出登录入口或未配置提示',
+  (await page.locator('#account button.ghost').count()) === 1 ||
+    (await page.locator('#account').innerText()).includes('未配置'),
+)
 check('账号分区未登录不显示昵称输入', (await page.locator('#account .settings-input').count()) === 0)
 
 await open('/settings')

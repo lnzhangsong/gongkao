@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import re
 import shutil
@@ -41,8 +42,20 @@ PAGE_MARGIN_Y = 36
 FOOTER = 40
 
 PLACEHOLDER = "（原卷为图形/公式，待补图）"
+# 极少数纯图题在真题 PDF 里连图都缺（2004-B 题59：题号后没有图形）——题干占位，避免整卷入不了库
+PLACEHOLDER_STEM = "（原卷为图形，题干待补）"
 FIG_REF_RE = re.compile(r"下图|如图|上图|所给的四个(图形|选项)|以下哪个饼图|以下柱状图|以下哪个图形|图片")
-LEVEL_KW = {"副省级": ["副省级", "省级"], "地市级": ["地市级", "地市", "市地级"], "行政执法": ["行政执法"]}
+LEVEL_KW = {
+    "副省级": ["副省级", "省级"],
+    "地市级": ["地市级", "地市", "市地级"],
+    "行政执法": ["行政执法"],
+    # 早年卷别（2000–2014）：A/B 卷、一/二 卷按关键词匹配；单卷年份仅一张 PDF 走 find_paper_pdf 兜底
+    "A卷": ["A卷"],
+    "B卷": ["B卷"],
+    "卷一": ["卷（一）", "卷(一)"],
+    "卷二": ["卷（二）", "卷(二)"],
+    "未分级": [],
+}
 
 
 # ---------- PDF 行索引 / 题号链 ----------
@@ -117,6 +130,80 @@ def render_regions(doc, regions, quality=82, min_bytes=400):
             continue
         items.append({"b": b, "ext": ext, "w": w or _w, "h": h or _h})
     return items
+
+
+def render_block(doc, start, end, min_bytes=400):
+    """矢量图回退：题号到下一题号之间整块渲染（跨页逐页），返回 write_image_files 的 items 格式。"""
+    (sp, sy), (ep, ey) = start, end
+    items = []
+    for pno in range(sp, ep + 1):
+        y0 = sy if pno == sp else 0
+        y1 = ey if pno == ep else doc[pno].rect.height - FOOTER
+        if y1 - y0 < 8:
+            continue
+        clip = pymupdf.Rect(0, y0, doc[pno].rect.width, y1)
+        png, w, h = trimmed_png(doc, pno, clip)
+        b, ext, _w, _h = png_to_webp(png, 82)
+        if len(b) < min_bytes:
+            continue
+        items.append({"b": b, "ext": ext, "w": w or _w, "h": h or _h})
+    return items
+
+
+def render_range_rows(doc, start, end, count: int, min_bytes=400):
+    """整块图形推理（文本层只有「16-25」区间号）：把区间内每一行图按像素行带切成一道题。
+
+    行带 = 同页渲染后「非空白行」的连续段，间隔 <12pt 合并（图与其 A/B/C/D 字母同属一行），
+    高度 <20pt 的纯文字行丢弃。返回前 count 个 items（顺序即题号顺序）。"""
+    try:
+        from PIL import Image, ImageOps
+    except Exception:
+        print("  ! 未装 Pillow，整块图无法按行切分")
+        return []
+    (sp, sy), (ep, ey) = start, end
+    items = []
+    for pno in range(sp, ep + 1):
+        y0 = sy if pno == sp else 0
+        y1 = ey if pno == ep else doc[pno].rect.height - FOOTER
+        if y1 - y0 < 8:
+            continue
+        clip = pymupdf.Rect(0, y0, doc[pno].rect.width, y1)
+        pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=clip)
+        img = Image.open(io.BytesIO(pix.tobytes("png"))).convert("L")
+        w, h = img.size
+        # 每行只要有非白像素就算内容（用极值，不能用行平均：细线条行平均后会被判成空白）
+        data = list(img.getdata())
+        bands: list[list[int]] = []
+        s = None
+        for y in range(h):
+            content = min(data[y * w : (y + 1) * w]) < 245
+            if content and s is None:
+                s = y
+            if not content and s is not None:
+                bands.append([s, y])
+                s = None
+        if s is not None:
+            bands.append([s, h])
+        merged: list[list[int]] = []
+        for bd in bands:
+            if merged and bd[0] - merged[-1][1] < int(12 * ZOOM):
+                merged[-1][1] = bd[1]
+            else:
+                merged.append(list(bd))
+        for bd in merged:
+            if (bd[1] - bd[0]) / ZOOM < 20:
+                continue
+            crop = img.crop((0, bd[0], w, bd[1]))
+            bbox = ImageOps.invert(crop).getbbox()
+            if bbox:
+                crop = crop.crop((max(0, bbox[0] - 5), 0, min(w, bbox[2] + 5), crop.height))
+            buf = io.BytesIO()
+            crop.save(buf, "PNG")
+            b, ext, _w, _h = png_to_webp(buf.getvalue(), 82)
+            if len(b) < min_bytes:
+                continue
+            items.append({"b": b, "ext": ext, "w": _w, "h": _h})
+    return items[:count]
 
 
 def text_floor(lines, pno: int, lo_y: float, rect) -> float | None:
@@ -255,8 +342,74 @@ def process(json_path: Path, pdf_path: Path, img_dir: Path, dry: bool) -> None:
                     o["text"] = ""
             n_q_img += 1
             print(f"  题{n}（{q.get('subtype')}）题图 {len(items)} 张")
+        elif all((o.get("text") or "").strip() in ("", PLACEHOLDER) for o in q.get("options", [])):
+            # 矢量图回退：区域内无内嵌位图且选项全为占位/空（整题为矢量绘制的早年图形推理），
+            # 把题号到下一题号之间整块渲染成图——题干/选项都在图里，前端同样走 imgQ 分支
+            block = render_block(doc, (pos[0], pos[1].y0), end)
+            if block:
+                q["image"] = write_image_files(img_dir, paper_id, block, "q", n, dry)
+                for o in q.get("options", []):
+                    if (o.get("text") or "").strip() == PLACEHOLDER:
+                        o["text"] = ""
+                n_q_img += 1
+                print(f"  题{n}（{q.get('subtype')}）矢量题图整块 {len(block)} 张")
+            else:
+                print(f"  · 题{n}（{q.get('subtype')}）区域内无内嵌图（可能为矢量图，待裁整块）")
         else:
             print(f"  · 题{n}（{q.get('subtype')}）区域内无内嵌图（可能为矢量图，待裁整块）")
+
+    # 整块图形推理（2003-B 卷 16-25）：文本层只有「16-25」区间号，按像素行带切图后逐题回填
+    warns_text = "\n".join(paper.get("warnings") or []) if not isinstance(paper.get("warnings"), str) else paper["warnings"]
+    for m in re.finditer(r"图形推理\s*(\d+)\s*[-–—~]\s*(\d+)\s*为整块图", warns_text):
+        a, b = int(m.group(1)), int(m.group(2))
+        rng = next(
+            ((p, r) for p, r, t in lines if re.fullmatch(rf"\s*{a}\s*[-–—~至]\s*{b}\s*", t)),
+            None,
+        )
+        if not rng:
+            print(f"  ! 整块图 {a}-{b}：PDF 未找到区间行，跳过")
+            continue
+        nxt = qpos(b + 1)
+        end = (nxt[0], nxt[1].y0 - 2) if nxt else (rng[0], doc[rng[0]].rect.height - FOOTER)
+        # 下一区段标题若比下一题号更早，以上界截断，免把「二、演绎推理」也切进最后一行图
+        for p, r, t in lines:
+            if (p, r.y0) <= (rng[0], rng[1].y0):
+                continue
+            if re.match(r"^(?:第[一二三四五六七八九十]+部分|[一二三四五六七八九十]+[、.．])\s*\S", t):
+                if (p, r.y0 - 2) < end:
+                    end = (p, max(0.0, r.y0 - 2))
+                break
+        got = render_range_rows(doc, (rng[0], rng[1].y1), end, b - a + 1)
+        if len(got) != b - a + 1:
+            print(f"  ! 整块图 {a}-{b}：检出 {len(got)} 行，与 {b - a + 1} 题不符")
+        for i, n in enumerate(range(a, b + 1)):
+            q = by_idx.get(n)
+            if q is None or i >= len(got):
+                continue
+            q["image"] = write_image_files(img_dir, paper_id, [got[i]], "q", n, dry)
+            for o in q.get("options", []):
+                if (o.get("text") or "").strip() == PLACEHOLDER:
+                    o["text"] = ""
+            n_q_img += 1
+        if got:
+            print(f"  整块图 {a}-{b}：切成 {len(got)} 题图")
+
+    # 纯图题（无题干、无 groupStem）连配图都没抽到：题干占位，别让整卷入不了库。
+    # 只兜这种「整题都在图里」的形态，正常文字题缺题干仍然走 import 校验报错。
+    blank = []
+    for q in questions:
+        if not (q.get("stem") or "").strip() and not q.get("image") and not q.get("groupStem"):
+            q["stem"] = PLACEHOLDER_STEM
+            blank.append(q["idx"])
+    if blank:
+        msg = f"题干缺失且未抽到配图，已占位（待补图）：{blank}"
+        w = paper.get("warnings")
+        if isinstance(w, list):
+            w.append(msg)
+        elif w:
+            paper["warnings"] = [str(w), msg]
+        else:
+            paper["warnings"] = [msg]
 
     if dry:
         print(f"✓ {json_path.name}（dry）：组材料图 {n_group_img} 组、题图 {n_q_img} 题")

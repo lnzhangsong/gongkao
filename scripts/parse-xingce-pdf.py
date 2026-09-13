@@ -94,15 +94,52 @@ def norm(s: str) -> str:
 
 
 PAGE_FOOT_RE = re.compile(r"^[-—\s]*\d{1,3}[-—\s]*$|^第\s*\d+\s*页\s*共?\s*\d*\s*页?$|^\d{1,3}\s*/\s*\d{1,3}$")
+# 2023–2025 卷的页脚/页眉会被 PyMuPDF 并进正文行（甚至插进句子中间，如「…之第5页,共25页下，…」），
+# 整行锚定的 PAGE_FOOT_RE 抓不到，必须行内清理。
+INLINE_FOOT_RE = re.compile(r"第\s*\d+\s*页\s*[，,]?\s*共\s*\d+\s*页?")
+INLINE_HEAD_RE = re.compile(
+    r"20\d{2}\s*年?\s*(?:国家公务员录用考试|国考)\s*《行测》[^（(）)]{0,16}(?:[（(][^）)]*[）)])?"
+)
+
+
+def strip_page_artifacts(line: str) -> str:
+    """删掉行内页脚（第N页，共M页）与卷名页眉；循环到稳定，因两者常首尾相接。"""
+    prev = None
+    while prev != line:
+        prev = line
+        line = INLINE_FOOT_RE.sub("", line)
+        line = INLINE_HEAD_RE.sub("", line)
+    return line.strip()
 SECTION_RE = re.compile(
-    r"^(?:第([一二三四五六七八九十]+)部分|[一二三四五六七八九十]+、)\s*"
-    r"(政治理论|常识判断|言语理解与表达|言语理解|数量关系|判断推理|资料分析|常识应用)"
+    r"^(?:第([一二三四五六七八九十]+)部分|[一二三四五六七八九十]+[、.．])\s*"
+    r"((?:政治理论|常识判断|常识应用|言语理解与表达|言语理解|数量关系|数字推理|数学运算"
+    r"|判断推理|图形推理|定义判断|演绎推理|类比推理|事件排序|机械推理|资料分析))"
     r"(?:[（(][^）)]*[）)])?\s*[：:，,]?.*$"
 )
-SEC_ALIAS = {"言语理解": "言语理解与表达", "常识应用": "常识判断"}
+# 行首名称（无「第X部分/N、」前缀）——「第X部分」与名称分行时的跨行合并用
+SECTION_NAME_RE = re.compile(
+    r"^(?:政治理论|常识判断|常识应用|言语理解与表达|言语理解|数量关系|数字推理|数学运算"
+    r"|判断推理|图形推理|定义判断|演绎推理|类比推理|事件排序|机械推理|资料分析)"
+)
+PART_LINE_RE = re.compile(r"^第[一二三四五六七八九十]+部分\s*$")
+SEC_ALIAS = {
+    "言语理解": "言语理解与表达",
+    "常识应用": "常识判断",
+    # 早年（2000–2006）数量/判断部分的子块名归并到父区段（细分题型由 infer_subtype 推）
+    "数字推理": "数量关系",
+    "数学运算": "数量关系",
+    "图形推理": "判断推理",
+    "定义判断": "判断推理",
+    "演绎推理": "判断推理",
+    "类比推理": "判断推理",
+    "事件排序": "判断推理",
+    "机械推理": "判断推理",
+}
 
 # 题干/材料重排：句末标点后的换行是真心换行；枚举标记行首保留换行
 TERMINAL_RE = re.compile(r"[。！？；…：][”』」)）》】]*$")
+# 「16-25」整块图形推理：文本层只有区间号，10 道题全是矢量图（2003-B 卷）
+RANGE_LINE_RE = re.compile(r"^(\d{1,3})\s*[-—–~至]\s*(\d{1,3})$")
 MARK_RE = re.compile(r"^(?:[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮]|[（(][0-9一二三四五六七八九十]{1,3}[)）]|[一二三四五六七八九十]{1,3}、|\d{1,2}[.、](?!\d)|【)")
 
 
@@ -134,11 +171,19 @@ def reflow(lines: list[str]) -> str:
 def extract_lines(pdf_path: Path) -> list[list[str]]:
     doc = pymupdf.open(pdf_path)
     pages: list[list[str]] = []
-    for pg in doc:
+    for pno, pg in enumerate(doc):
         raw = pg.get_text("text").replace("\r\n", "\n")
         lines = []
         for l in raw.split("\n"):
             l = norm(l)
+            if not l:
+                continue
+            # 首页开头的含「行测」行是卷标题，和页眉同形，别被 strip_page_artifacts 删掉；
+            # 页眉也可能在 get_text 顺序里落到页尾（2023 行政执法在第 56 行），用「前 3 行」限制住。
+            if pno == 0 and len(lines) <= 2 and "行测" in l and not PAGE_FOOT_RE.match(l):
+                lines.append(l)
+                continue
+            l = strip_page_artifacts(l)
             if not l or PAGE_FOOT_RE.match(l):
                 continue
             lines.append(l)
@@ -150,26 +195,40 @@ def extract_lines(pdf_path: Path) -> list[list[str]]:
 # ---------- 真题：题干 / 选项 ----------
 
 OPT_RE = re.compile(r"^([A-E])\s*[.．、]\s*(.*)$")
-Q_START_RE = re.compile(r"^(\d{1,3})\s*([.．、])\s*(.*)$")
+Q_START_RE = re.compile(r"^(\d{1,3})\s*([.．、:：]?)\s*(.*)$")
 
 
-def is_question_start(line: str, expect: int) -> tuple[int, str] | None:
+def is_question_start(line: str, expect: int) -> tuple[int, str, bool] | None:
+    """匹配 (题号, 题干, 是否跳号)。跳号 = PDF 里中间题整题缺失（2006 卷 52 题不存在）。"""
     m = Q_START_RE.match(line)
     if not m:
         return None
     num = int(m.group(1))
     sep, rest = m.group(2), m.group(3).strip()
-    if num != expect:
+    if not sep:
+        # 无分隔符（2019 卷「47基础数学是…」）：顺序保护下只在严格等于 expect 时接受
+        return (num, rest, False) if num == expect else None
+    if num < expect:
         return None
-    # 「1.5 万亿」这类小数只有句点分隔符才需要排除；「3、2020 年…」是合法题干
-    if sep in ".．" and rest[:1].isdigit():
+    if num > expect:
+        # 跳号：仅带分隔符、跨度有限、且题干有实义文本时接受——
+        # 资料分析表格文本「100.0」（纯数字小数）、断行百分比「19.3%）相比…」不是题号（2001/2007 卷踩过）
+        if num - expect <= 10 and re.search(r"[^\d\s.．]", rest) and not re.match(r"^\d+(?:\.\d+)?%", rest):
+            return (num, rest, True)
         return None
-    return num, rest
+    # 「1.5 万亿」这类小数只有句点分隔符才需要排除；「3、2020 年…」是合法题干。
+    # 但数量关系题干本身就可能以数字开头：「23.1，2，2，4，( )」（数列，数字后逗号）、
+    # 「38．19991998的末位数字」（长数字）、「5.2／3，1／2」（分数斜杠）、「27．6」（纯数字）、
+    # 「46.1 235×6 788」（千分位空格）、「96.70年代…」（整数+年代）——
+    # 只有「1–2 位数字 + 紧跟汉字/字母」才是真小数（'5万亿'）
+    if sep in ".．" and re.match(r"^\d{1,2}(?!年代)[^\d，,、／/\s]", rest):
+        return None
+    return num, rest, False
 
 
 def clean_question_rest(rest: str) -> str:
-    """去掉题号后的题型标记：「（单选题）」「(单选)」等。"""
-    m = re.match(r"^[（(]\s*(单选题|多选题|不定项选择题?|单选|多选)\s*[)）]\s*(.*)$", rest)
+    """去掉题号后的题型标记：「（单选题）」「(单选)」「单选、」（2002 卷）等。"""
+    m = re.match(r"^(?:[（(]\s*)?(单选题|多选题|不定项选择题?|单选|多选)\s*[)）、]?\s*(.*)$", rest)
     return m.group(2).strip() if m else rest
 
 
@@ -182,15 +241,96 @@ def looks_like_material(lines: list[str], min_chars: int) -> bool:
     return sum(len(l) for l in lines) >= min_chars
 
 
+# 资料分析组头标记：「（二）」「一、根据下列图表回答问题。」「回答 111～115 题」等
+ZL_GROUP_MARK_RE = re.compile(
+    r"^[（(]\s*[一二三四五六七八九十\d]+\s*[）)]"
+    r"|根据(?:以下资料|所给材料|所给的材料|下述材料|下列图表|下列资料|下图|上图)"
+    r"|回答?\s*\d+\s*[-—–~至]\s*\d+\s*题"
+)
+ZL_STEM_END_RE = re.compile(r"[？?：:]$")
+
+
+def split_zl_material(lines: list[str]) -> tuple[str | None, list[str]]:
+    """资料分析组首题缺号时，_post 里混着「组头 + 材料」与本题题干。按组头标记定位材料，
+    再以题干结尾标点（？/：）切出题干，返回 (材料文本 | None, 题干行)。无组头标记则整段当题干。"""
+    k = next((i for i, l in enumerate(lines) if ZL_GROUP_MARK_RE.search(l)), None)
+    if k is None:
+        return None, lines
+    tail = lines[k:]
+    s = next((i for i in range(len(tail) - 1, -1, -1) if ZL_STEM_END_RE.search(tail[i])), len(tail) - 1)
+    material, stem = tail[:s], tail[s:]
+    if not material or not stem:
+        return None, lines
+    return reflow(material), stem
+
+
 def parse_questions(pages: list[list[str]]) -> dict:
     flat: list[str] = []
     for p in pages:
         flat.extend(p)
         flat.append("")
-    title = next((l for l in flat if l), "")
+    # 早年（2000–2014）区段标题跨两行：「第一部分\n言语理解」。把「第X部分」行与
+    # 下一行的区段名合并，SECTION_RE 才能识别（合并用名称前缀正则，不要求完整一行）
+    merged: list[str] = []
+    i = 0
+    while i < len(flat):
+        line = flat[i]
+        if PART_LINE_RE.match(line) and i + 1 < len(flat) and SECTION_NAME_RE.match(flat[i + 1]):
+            merged.append(line + flat[i + 1])
+            i += 2
+            continue
+        merged.append(line)
+        i += 1
+    flat = merged
+    # 2024 卷选项断行：「B\n                   .2项」→ 合并为「B.2项」
+    # （PDF 把选项字母单独成行，内容行的「.」留在下一行且前导空格已被 strip）
+    fixed: list[str] = []
+    i = 0
+    while i < len(flat):
+        line = flat[i]
+        if re.fullmatch(r"[A-E]", line) and i + 1 < len(flat) and re.match(r"[.．]", flat[i + 1]):
+            fixed.append(line + flat[i + 1])
+            i += 2
+            continue
+        fixed.append(line)
+        i += 1
+    flat = fixed
+    # 图形题选项字母挤在一行（2003-A 卷 17「C D」）：拆成独立字母行，后续按空文本选项收
+    split_letters: list[str] = []
+    for l in flat:
+        if re.fullmatch(r"(?:[A-E][ \t]*){2,5}", l):
+            split_letters.extend(re.findall(r"[A-E]", l))
+        else:
+            split_letters.append(l)
+    flat = split_letters
+    # 2024/2025 卷「题号后置」格式：题干在前，「N.」独立成行，选项跟在题号行后。
+    # 把每道题的题干段挪回题号行（合并成「N.题干首行」），恢复「N.题干」的常规流。
+    bare = [i for i, l in enumerate(flat) if re.match(r"^\d{1,3}\.$", l)]
+    bare_nums = sorted(int(flat[i][:-1]) for i in bare)
+    # 只有全卷题号都后置（从 1 开始、密集）才重排；2003-A 卷 16–25 图形推理也是「N.」独立成行，
+    # 但它从 16 起跳，误触发会把题干重排成「A B C D」并吞掉第 16 题。
+    if len(bare) >= 10 and bare_nums[0] <= 2:
+        OPT_LINE = re.compile(r"^[A-E][.．、]")
+        SEC_LINE = re.compile(r"^(?:第[一二三四五六七八九十]+部分|[一二三四五六七八九十]+[、.．])")
+        for i in reversed(bare):  # 从后往前挪，前面段的索引不受影响；挪动段行数不变
+            n = int(flat[i][:-1])
+            j = i
+            while j > 0:
+                prev = flat[j - 1]
+                if not prev or OPT_LINE.match(prev) or SEC_LINE.match(prev) or re.match(r"^\d{1,3}\.$", prev):
+                    break
+                j -= 1
+            if j < i:
+                stem = flat[j:i]
+                flat[j : i + 1] = [f"{n}.{stem[0]}"] + stem[1:]
+    # 标题取首个区段标题之前的非区段/题号行；区段行之前没有标题（2023 卷）则留空走 fallback
+    sec_at = next((i for i, l in enumerate(flat) if SECTION_RE.match(l)), None)
+    head_lines = flat[:sec_at] if sec_at is not None else flat
+    title = next((l for l in head_lines if l and not re.match(r"^\d{1,3}[.．、]", l)), "")
 
     questions: list[dict] = []
     materials: dict[int, str] = {}  # 题号 → 该题组公共材料（资料分析图表文字 / 言语篇章阅读）
+    warnings: list[str] = []
     section: str | None = None
     cur: dict | None = None
     cur_opt: int | None = None
@@ -233,10 +373,35 @@ def parse_questions(pages: list[list[str]]) -> dict:
             continue
         if not line:
             continue
+        rm = RANGE_LINE_RE.match(line)
+        if rm and section == "判断推理":
+            a, b = int(rm.group(1)), int(rm.group(2))
+            if 0 < b - a + 1 <= 15 and a >= expect:
+                flush()
+                for n in range(a, b + 1):
+                    # 整题为矢量图，文本层无题干/选项字母：建题占位，图由裁图脚本按行带切
+                    questions.append(
+                        {
+                            "idx": n,
+                            "options": [],
+                            "stem_lines": [""],
+                            "stem": "",
+                            "section": section,
+                            "_post": [],
+                            "next_idx": None,
+                            "_subtype": "图形推理",
+                        }
+                    )
+                warnings.append(f"图形推理 {a}-{b} 为整块图，已按题号建题（待补图）")
+                expect = b + 1
+                cur, cur_opt, pre = None, None, []
+                continue
         started = is_question_start(line, expect)
         if started:
+            num, rest, skipped = started
             flush()
-            num, rest = started
+            if skipped:
+                warnings.append(f"题号跳缺 {expect}–{num - 1}（PDF 里整题缺失）")
             cur = {"idx": num, "options": [], "stem_lines": [clean_question_rest(rest)], "_post": [], "next_idx": None}
             # 题前材料（cur 为 None 时累积的散行）归属本题
             if pre:
@@ -247,11 +412,88 @@ def parse_questions(pages: list[list[str]]) -> dict:
             continue
         if cur is None:
             if section == "资料分析":
+                # 资料分析组首题常缺题号，且刚好落在「上一题的选项之后、无 current 题」的窗口里
+                # （2016 地市 111/112）：pre 里已积累「组头+材料+题干」，遇到第一个 A 选项即可补题。
+                om0 = OPT_RE.match(line)
+                if om0 and om0.group(1) == "A" and pre and ZL_STEM_END_RE.search(pre[-1]):
+                    material, stem_lines = split_zl_material(pre)
+                    num = expect
+                    cur = {
+                        "idx": num,
+                        "options": [],
+                        "stem_lines": stem_lines,
+                        "_post": [],
+                        "next_idx": None,
+                    }
+                    if material:
+                        materials[num] = material
+                    pre = []
+                    warnings.append(f"第{num}题题号缺失，已按顺序补号")
+                    expect = num + 1
+                    cur["options"].append({"key": "A", "lines": [om0.group(2)]})
+                    cur_opt = 0
+                    continue
                 pre.append(line)
             continue
         om = OPT_RE.match(line)
         if om:
-            cur["options"].append({"key": om.group(1), "lines": [om.group(2)]})
+            key, text = om.group(1), om.group(2)
+        elif cur is not None:
+            # 图形题选项常只有字母、图在文本层外（2003-A 卷 16–25）：整行单个字母且正好是
+            # 当前题的下一个选项键，就当空文本选项。杂散字前缀（2019 省级 q60「呢B、…」）同理。
+            expect_key = chr(ord(cur["options"][-1]["key"]) + 1) if cur["options"] else "A"
+            existing = {o["key"] for o in cur["options"]}
+            # 单个字母行：按顺序的下一键，或与已有选项重复（上一题 4 项已满、新题题号又缺失时，
+            # 是新题的第一个 A；交给下面的「选项 key 重复」分支补号）。
+            if re.fullmatch(r"[A-E]", line) and (line == expect_key or line in existing):
+                key, text = line, ""
+            else:
+                m3 = re.match(r"^[^\sA-Ea-e]{1,2}\s*([A-E])\s*[.．、]\s*(.+)$", line)
+                if m3 and m3.group(1) == expect_key:
+                    key, text = m3.group(1), m3.group(2)
+                else:
+                    key = text = None
+        else:
+            key = text = None
+        if key is not None:
+            if any(o["key"] == key for o in cur["options"]):
+                # 排版粘连（2018 副省「B、C、柏林…」）：上一选项字母粘到本行行首，本选项真字母在 text 里
+                m2 = re.match(r"^([A-E])\s*[.．、]\s*(.*)$", text)
+                if m2 and not any(o["key"] == m2.group(1) for o in cur["options"]):
+                    key, text = m2.group(1), m2.group(2)
+                else:
+                    # 选项字母重复 = 新题开始：题号行缺失（2012 卷 104、2016 地市 32）或被
+                    # 小数守卫误拒（2003-A 卷 78/124、2003-B 卷 5）时，上一题会把新题的题干
+                    # 与选项一起吞掉（表现为「选项 key 重复」）。把 _post 里累积的散行当作
+                    # 新题题干，题号按顺序补 expect。
+                    stem_lines = cur.pop("_post", [])
+                    if stem_lines:
+                        stem_lines[0] = re.sub(r"^\d{1,3}\s*[.．、:：]\s*", "", stem_lines[0])
+                    # 资料分析组首题缺号：_post 前半是组头+材料，后半才是题干——
+                    # 材料要单独存进 materials（assign_groups 靠它分组），否则整组材料会
+                    # 混进题干预设、分组也会串位。
+                    material, stem_lines = (split_zl_material(stem_lines) if section == "资料分析" else (None, stem_lines))
+                    flush()
+                    num = expect
+                    cur = {
+                        "idx": num,
+                        "options": [],
+                        "stem_lines": stem_lines,
+                        "_post": [],
+                        "next_idx": None,
+                    }
+                    if material:
+                        materials[num] = material
+                    if pre:
+                        cur["groupStem"] = reflow(pre)
+                        materials[num] = cur["groupStem"]
+                        pre = []
+                    warnings.append(f"第{num}题题号缺失，已按顺序补号")
+                    expect = num + 1
+                    cur["options"].append({"key": key, "lines": [text]})
+                    cur_opt = len(cur["options"]) - 1
+                    continue
+            cur["options"].append({"key": key, "lines": [text]})
             cur_opt = len(cur["options"]) - 1
             continue
         if cur_opt is not None:
@@ -261,7 +503,7 @@ def parse_questions(pages: list[list[str]]) -> dict:
             cur["stem_lines"].append(line)
 
     flush()
-    return {"title": title, "questions": questions, "warnings": [], "materials": materials}
+    return {"title": title, "questions": questions, "warnings": warnings, "materials": materials}
 
 
 def answers_from_text(text: str) -> dict[int, dict]:
@@ -269,30 +511,45 @@ def answers_from_text(text: str) -> dict[int, dict]:
     scripts/tests/test_xingce_answers.py 用真实 bug 案例锁住这里的每个分支）。"""
 
     # 块头：「N.解析」「N. 解析」「第【N】题」，以及 2015–2021 的「N、」
-    # （题号+顿号，题干与解析紧跟在同一行，所以这一支不加行尾锚点）
-    head_re = re.compile(r"(?m)^(?:第\s*【?\s*(\d{1,3})\s*】?\s*题|(\d{1,3})\s*[.．]\s*解析)\s*$|^(?:(\d{1,3}))\s*、")
-    heads: list[tuple[int, int, int]] = []
+    # （题号+顿号，题干与解析紧跟在同一行，所以这一支不加行尾锚点）；
+    # 2000–2006 为「N.A【解析】」/「N.B［解析］」（2006 全角方括号）/「N【答案】」（2004 B，无分隔符），
+    # 括号内的答案字母在解析内文缺失时兜底
+    head_re = re.compile(
+        r"(?m)^(?:第\s*【?\s*(\d{1,3})\s*】?\s*题|(\d{1,3})\s*[.．]\s*解析)\s*$"
+        # 「N、」裸顿号块头（2015–2021）：后面不能紧跟另一个「数字、」，那是正文枚举（2004B「41、42、44…」）
+        r"|^(?:(\d{1,3}))\s*、(?!\s*\d{1,3}\s*[、.．])"
+        # 结构化块头（「N.A【解析】」「N【答案】C」「N.B［解析］」），字母在括号前或括号后
+        r"|(\d{1,3})\s*[.．、]?\s*([A-E]{1,5})?\s*[【\[［]\s*(?:解析|答案)\s*[】\]］]\s*([A-E]{1,5})?"
+        # 2003 卷：「70.B」独立成行（多选题字母可达 5 个），【解析】在下一行（行首+行尾锚定防误切正文）
+        r"|^(\d{1,3})\s*[.．、]?\s*([A-E]{1,5})\s*$"
+        r"|【\s*(\d{1,3})\s*】\s*解析"
+    )
+    heads: list[tuple[int, int, int, str | None]] = []
     seen: set[int] = set()
     last: int | None = None
     for m in head_re.finditer(text):
-        num = int(m.group(1) or m.group(2) or m.group(3))
+        num = int(m.group(1) or m.group(2) or m.group(3) or m.group(4) or m.group(7) or m.group(9))
+        letter = m.group(5) or m.group(6) or m.group(8)
         # 去重 + 限制跨度：解析正文里的「1、」式枚举通常与已出现的题号重复；
         # 允许小跨度乱序（2016 副省答案 PDF 里 79 排在 77/78 之前），但不接受跳到很远的号。
-        # 第一个块头无条件接受：last 从 0 起算的话，首题号 >6 的答案片段会整卷落空。
-        if num in seen or (last is not None and num > last + 6):
+        # 例外：带结构标记的块头（【答案】/【解析】/「N.字母」行）文本顺序可乱（2004B 提取乱序），
+        # 只要题号没见过就接受——「N、」裸顿号分支才受 last+6 约束。
+        if num in seen:
+            continue
+        if m.group(3) is not None and last is not None and num > last + 6:
             continue
         seen.add(num)
         last = max(last, num) if last is not None else num
-        heads.append((m.start(), num, m.end()))
+        heads.append((m.start(), num, m.end(), letter))
     # 「正确答案:【C】」型（2023 等）也可作为块头
-    blocks: dict[int, str] = {}
-    for k, (pos, num, end) in enumerate(heads):
+    blocks: dict[int, list] = {}  # num -> [body, 块头字母 | None]
+    for k, (pos, num, end, letter) in enumerate(heads):
         stop = heads[k + 1][0] if k + 1 < len(heads) else len(text)
         body = text[end:stop]
         if num not in blocks:
-            blocks[num] = body
+            blocks[num] = [body, letter]
         else:
-            blocks[num] += "\n" + body
+            blocks[num][0] += "\n" + body
 
     ANS_PAT = re.compile(
         r"因此[，,]\s*选择\s*([A-E])\s*选项"
@@ -300,15 +557,32 @@ def answers_from_text(text: str) -> dict[int, dict]:
         # 各年句式不一致：「故正确答案为A。」「故正确答案B。」（无「为」）、
         # 「故正确选项为C。」「故正确答案选B。」，且 PDF 换行会把「故正确答案」与「为A」拆到两行 → \s* 要能跨行
         r"|故正确(?:答案|选项)\s*[为选]?\s*([A-E])"
+        r"|故选\s*([A-E])"
         r"|答案为\s*([A-E])"
         r"|答案[:：]\s*【?\s*([A-E])\s*】?"
+        # 2009 卷结语句式：「…A项正确。」
+        r"|([A-E])项正确"
+        # 2002 卷块头「N、【答案】B」落在 body 开头
+        r"|【答案】\s*([A-E])"
     )
+
+    # 「快速对答案」表（2023+ 答案卷首）：【1-5】CCDBB —— 作为块内句式缺失时的兜底
+    table_ans: dict[int, str] = {}
+    for tm in re.finditer(r"【(\d{1,3})-(\d{1,3})】\s*([A-E]{2,})", text):
+        a, b, letters = int(tm.group(1)), int(tm.group(2)), tm.group(3)
+        if 0 < b - a + 1 == len(letters):
+            for k, ch in enumerate(letters):
+                table_ans.setdefault(a + k, ch)
 
     # 无块头时（整卷只有【N】解析 或 快速对答案表），额外尝试表格式答案
     out: dict[int, dict] = {}
-    for num, body in blocks.items():
+    for num, (body, head_letter) in blocks.items():
         m = ANS_PAT.search(body)
         ans = next((g for g in m.groups() if g), None) if m else None
+        if ans is None:
+            ans = head_letter  # 「N.A【解析】」型块头自带答案字母
+        if ans is None:
+            ans = table_ans.get(num)  # 「快速对答案」表兜底
         expl = body.strip()
         if not expl:
             expl = ""
@@ -363,11 +637,15 @@ INLINE_OPT_RE = re.compile(r"([A-E])\s*[.．、]\s*")
 
 def recover_inline_options(q: dict) -> bool:
     """选项与题干挤在同一行的年份（如 2022 行政执法 83）：在 stem+已知选项 里找
-    连续的 A→B→C→D 标记并重新切分。成功返回 True。"""
+    连续的 A→B→C→D 标记并重新切分。成功返回 True。
+    2004 卷选项全部为空且无分隔符（「A简单多数规则B绝对多数规则…」）：字母后直接跟
+    文字也算标记（宽松模式，仅在全卷选项无文本来源时才有意义）。"""
     if len(q["options"]) >= 4:
         return False
+    loose = not any((o["text"] or "").strip() for o in q["options"])
     text = q["stem"] + "".join(f"\n{o['key']}．{o['text']}" for o in q["options"])
-    marks = [(m.start(), m.group(1), m.end()) for m in INLINE_OPT_RE.finditer(text)]
+    pat = re.compile(r"([A-E])\s*[.．、]?\s*(?=[^\s])") if loose else INLINE_OPT_RE
+    marks = [(m.start(), m.group(1), m.end()) for m in pat.finditer(text)]
     best: list[tuple[int, str, int]] | None = None
     seq: list[tuple[int, str, int]] = []
     for m in marks:
@@ -487,7 +765,7 @@ def assign_groups(questions: list[dict], materials: dict[int, str], warnings: li
 def build_paper(year: int, level: str, q_pdf: Path, a_pdf: Path) -> dict:
     pages = extract_lines(q_pdf)
     parsed = parse_questions(pages)
-    warnings: list[str] = []
+    warnings: list[str] = list(parsed["warnings"])
     questions = parsed["questions"]
 
     # 选项修复：行内选项（题干与 A/B 挤在一行）切分；纯图片选项题按 A-D 补齐占位
@@ -514,7 +792,7 @@ def build_paper(year: int, level: str, q_pdf: Path, a_pdf: Path) -> dict:
         a = ans.get(q["idx"])
         q["answer"] = a["answer"] if a else None
         q["explanation"] = (a["explanation"] or None) if a else None
-        q["subtype"] = infer_subtype(q.get("section"), q["stem"], q["options"])
+        q["subtype"] = q.pop("_subtype", None) or infer_subtype(q.get("section"), q["stem"], q["options"])
         q["image"] = None
         q["groupStem"] = q.get("groupStem")
 
@@ -575,12 +853,67 @@ def build_paper(year: int, level: str, q_pdf: Path, a_pdf: Path) -> dict:
     }
 
 
+# ---------- 同年兄弟卷答案回填 ----------
+
+def option_signature(q: dict) -> tuple:
+    return tuple((o.get("key"), (o.get("text") or "").strip()) for o in q.get("options", []))
+
+
+def is_distinctive(q: dict) -> bool:
+    """选项是否有足够真实文本可当同题指纹。
+
+    图形题选项全是「（原卷为图形/公式，待补图）」占位，题干又常是同一句
+    「从所给的四个选项中，选择最合适的一个填入问号处…」——不设门槛会把缺答案的图形题
+    错配到另一道图形题（2016 副省 76 踩过）。
+    """
+    real = [t for t in ((o.get("text") or "").strip() for o in q.get("options", [])) if t and "待补" not in t]
+    return len(real) >= 2
+
+
+def backfill_answers(out_dir: Path) -> int:
+    """同年兄弟卷同题回填缺失答案（2016 副省/地市、2022 副省/地市/行执 共用题库）。
+
+    只在「题干 + 选项完全一致」且候选答案唯一时回填，避免把形近题串了。幂等：只填 answer 为空的题。
+    """
+    papers: list[tuple[Path, dict]] = []
+    for f in sorted(out_dir.glob("guokao-xingce-*.json")):
+        papers.append((f, json.loads(f.read_text(encoding="utf-8"))))
+    index: dict[tuple, set[str]] = {}
+    for _, p in papers:
+        for q in p["questions"]:
+            if q.get("answer") and (q.get("stem") or "").strip() and is_distinctive(q):
+                index.setdefault((p["year"], q["stem"].strip(), option_signature(q)), set()).add(q["answer"])
+    filled = 0
+    for f, p in papers:
+        changed = False
+        for q in p["questions"]:
+            if q.get("answer") or not (q.get("stem") or "").strip() or not is_distinctive(q):
+                continue
+            answers = index.get((p["year"], q["stem"].strip(), option_signature(q)))
+            if answers and len(answers) == 1:
+                q["answer"] = next(iter(answers))
+                warns = p.setdefault("warnings", [])
+                if isinstance(warns, list):
+                    warns.append(f"第{q['idx']}题答案缺失，已由同年兄弟卷同题回填：{q['answer']}")
+                changed = True
+                filled += 1
+        if changed:
+            f.write_text(json.dumps(p, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return filled
+
+
 # ---------- 文件配对 ----------
 
 LEVEL_PAT = [
     ("副省级", re.compile(r"副省级|省级|省部级")),
     ("地市级", re.compile(r"地市级|市地级|地市")),
     ("行政执法", re.compile(r"行政执法")),
+    # 早年卷别：2002–2004 为 A/B 卷，2005–2006 为 一/二 卷；
+    # 2000–2001、2007–2014 单卷无卷别，discover 里 fallback 「未分级」
+    ("A卷", re.compile(r"A卷")),
+    ("B卷", re.compile(r"B卷")),
+    ("卷一", re.compile(r"卷（一）|卷\(一\)")),
+    ("卷二", re.compile(r"卷（二）|卷\(二\)")),
 ]
 
 
@@ -602,9 +935,10 @@ def discover(q_dir: Path, a_dir: Path) -> list[dict]:
     for sub, key in ((q_dir, "q"), (a_dir, "a")):
         for f in sorted(sub.glob("*.pdf")):
             y, lv = file_year(f.name), file_level(f.name)
-            if not y or not lv:
+            if not y:
                 continue
-            pairs.setdefault((y, lv), {})[key] = f
+            # 单卷年份（2000–2001、2007–2014）无卷别标记，统一入「未分级」
+            pairs.setdefault((y, lv or "未分级"), {})[key] = f
     out = []
     for (y, lv), d in sorted(pairs.items()):
         out.append({"year": y, "level": lv, "q": d.get("q"), "a": d.get("a")})
@@ -674,6 +1008,12 @@ def main() -> None:
         print(f"   区段 {sections}")
         for w in paper["warnings"]:
             print(f"   warn: {w}")
+
+    # 全量/整年跑完后，再做一次跨卷回填（单卷 --paper 不跨卷，避免读写到别的卷）
+    if args.all or args.year:
+        n = backfill_answers(args.out)
+        if n:
+            print(f"答案回填：{n} 题来自同年兄弟卷同题")
 
 
 if __name__ == "__main__":

@@ -149,7 +149,9 @@ function validate(paper, _file) {
     if (typeof q.idx !== 'number' || seen.has(q.idx)) errs.push(`${at} idx 缺失或重复`)
     seen.add(q.idx)
     if (!SECTIONS.includes(q.section)) errs.push(`${at} section 非法：${q.section}`)
-    if (!q.stem) errs.push(`${at} stem 为空`)
+    /* 纯图题（早年卷整题为图，裁图回填后有 image 无 stem）豁免：前端按 imgQ 分支渲染 */
+    /* 篇章/材料组内题可无独立题干（2002 A 卷 54/58/59 原卷就没有题干行），有 groupStem 即可 */
+    if (!q.stem && !q.image && !q.groupStem) errs.push(`${at} stem 为空`)
     /* 逻辑填空题干被截断的特征（2026 副省 38-45 实际踩过）：「依次填入…」被切剩「依次」 */ else if (
       /[。！？] ?依次$/.test(q.stem)
     )
@@ -164,8 +166,8 @@ function validate(paper, _file) {
       for (const o of opts) if (!o.text && !q.image) errs.push(`${at} 选项 ${o.key} 文本为空且无配图`)
     }
     if (q.answer == null) warns.push(`第${q.idx}题答案缺失（引流版解析未收录）`)
-    else if (!/^[A-E]$/.test(q.answer)) errs.push(`${at} answer 非法：${q.answer}`)
-    else if (!keys.includes(q.answer)) errs.push(`${at} answer 不在选项中`)
+    else if (!/^[A-E]{1,5}$/.test(q.answer)) errs.push(`${at} answer 非法：${q.answer}`)
+    else if (![...q.answer].every((ch) => keys.includes(ch))) errs.push(`${at} answer 不在选项中`)
     if ((!Array.isArray(opts) || opts.length < 2) && !q.image) errs.push(`${at} 选项少于 2 项且无配图`)
   }
   return { errs, warns }

@@ -1,0 +1,5 @@
+# api/ 目录下**每个文件**都会被部署成 Serverless Function（不管它导不导出 handler）。
+# 测试文件不是接口，却会各自打包一份测试框架（实测 api/api-server.test 单个 ~8.7MB），
+# 白白计入 Functions Storage，还暴露成公开端点（线上命中返回 500，api-server.test 会
+# 去 spawn 子进程、挂到超时）。本地 `vp test run` 不受本文件影响。
+api/*.test.ts

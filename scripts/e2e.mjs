@@ -64,9 +64,16 @@ async function waitForDev(port, timeoutMs = 30000) {
   return false
 }
 
+/* dev.kill 只 SIGTERM 到 vp 外壳：内层 vite 子进程会存活并继续占用 5173，
+   再跑一次 e2e 就变成「端口被上轮残留占用」。按端口兜底清一次，才是真的收干净。 */
+function stopDevServer() {
+  dev.kill('SIGTERM')
+  killPort(WEB_PORT)
+}
+
 const ready = await waitForDev(WEB_PORT)
 if (!ready) {
-  dev.kill('SIGTERM')
+  stopDevServer()
   process.exit(1)
 }
 console.log(`[e2e] dev server 就绪（http://localhost:${WEB_PORT}）`)
@@ -78,8 +85,8 @@ const smoke = spawn(process.execPath, ['scripts/e2e-smoke.mjs'], {
 })
 const code = await new Promise((resolve) => smoke.on('close', resolve))
 
-// 5) 收尾：杀掉 dev server
-dev.kill('SIGTERM')
+// 5) 收尾：杀掉 dev server（含 vp 外壳下的 vite 子进程）
+stopDevServer()
 
 console.log(`[e2e] 冒烟结束，退出码 ${code}`)
 process.exit(code ?? 1)

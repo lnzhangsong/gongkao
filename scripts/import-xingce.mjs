@@ -392,7 +392,9 @@ function main() {
   // 生成尺寸清单 TS：前端按「卷号/文件名」查 w/h，给 <img> 预留布局防抖动
   // dry 模式不落盘：否则会把上次全量导入收集到的尺寸清空（图片文件并未重建）
   if (!DRY) {
+    /* 显式排序：Object.entries 顺序来自 readdirSync（平台/文件系统相关），不排会反复抖 diff */
     const dimsLines = Object.entries(imageDims)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([k, d]) => `  '${k}': { w: ${d.w}, h: ${d.h} },`)
       .join('\n')
     fs.writeFileSync(

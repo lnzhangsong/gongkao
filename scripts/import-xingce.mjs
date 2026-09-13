@@ -20,13 +20,14 @@
  *       "options": [{"key":"A","text":"……"}, …],
  *       "answer": "C",
  *       "explanation": "……",
- *       "image": null                  // 题图：JSON 数组字符串的 data URL（入库时落盘 data/xingce-img/{paper_id}/，db 只存路径）
+ *       "image": null                  // 题图引用：[{file:"q{idx}_0.webp", w, h}]，字节在 data/xingce-img/
  *     }, …
  *   ]
  * }
  *
  * 产出：data/articles.db 新增 xg_papers / xg_questions 两表（与申论 papers/questions 平行，互不干扰）；
- *       base64 题图/材料图写进 data/xingce-img/{paper_id}/（db 不存 base64，否则整库几十 MB 且每次入库 git 全量重写）
+ *       图片**不经过本脚本落盘**——scripts/parse-xingce-images.py 直接写进 data/xingce-img/{paper_id}/，
+ *       JSON 只存引用。本脚本从引用收集宽高，生成 src/data/xingceImageDims.generated.ts。
  *
  * 用法：node scripts/import-xingce.mjs [--src data/xingce] [--db data/articles.db] [--dry]
  */
@@ -161,32 +162,26 @@ function main() {
   }
 
   /**
-   * base64 题图/材料图落盘 data/xingce-img/{paper_id}/，供前端 import.meta.glob 打进构建。
-   * value 是 JSON 数组字符串的 data URL；已是文件（重跑）或空值时跳过。
-   * 文件名由卷号+题号/组号决定（q{idx}_N / g{groupId}_N），重裁后内容随之覆盖更新。
-   * db 不存图片路径——前端按「卷号+题号/组号」约定取图。
+   * 收集题图/材料图尺寸。JSON 只存**引用** {file,w,h}，字节由 scripts/parse-xingce-images.py
+   * 直接落盘 data/xingce-img/{paper_id}/（不再往 JSON 塞 base64：同一张图会被 git 存两份，
+   * 且每次重裁都重写 MB 级 JSON）。这里只校验文件在、并生成尺寸清单。
    */
   const imageDims = {}
-  function writeImages(paperId, kind, key, value) {
+  const missingImages = []
+  const legacyImages = []
+  function collectImageDims(paperId, value) {
     if (!value) return
-    let items
-    try {
-      const parsed = JSON.parse(value)
-      items = Array.isArray(parsed) ? parsed : [parsed]
-    } catch {
-      items = [{ u: value }]
+    if (typeof value === 'string') {
+      legacyImages.push(paperId)
+      return
     }
-    const dir = path.join(IMG_DIR, paperId)
-    fs.mkdirSync(dir, { recursive: true })
-    items.forEach((it, i) => {
-      const u = typeof it === 'string' ? it : it.u
-      const ext = u.slice(5, u.indexOf(';')).split('/')[1] || 'png'
-      fs.writeFileSync(
-        path.join(dir, `${kind}${key}_${i}.${ext}`),
-        Buffer.from(u.slice(u.indexOf('base64,') + 7), 'base64'),
-      )
-      if (it.w > 0 && it.h > 0) imageDims[`${paperId}/${kind}${key}_${i}`] = { w: it.w, h: it.h }
-    })
+    if (!Array.isArray(value)) return
+    for (const it of value) {
+      if (!it?.file) continue
+      const key = `${paperId}/${String(it.file).replace(/\.(webp|png)$/, '')}`
+      if (it.w > 0 && it.h > 0) imageDims[key] = { w: it.w, h: it.h }
+      if (!fs.existsSync(path.join(IMG_DIR, paperId, it.file))) missingImages.push(key)
+    }
   }
 
   const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.json'))
@@ -233,20 +228,15 @@ function main() {
         warnings,
       )
       db.prepare('DELETE FROM xg_questions WHERE paper_id = ?').run(paper.id)
-      /* 先清空该卷图目录再重写：JSON 是图的唯一来源，重裁后旧序号文件（如合并前的
-         q4_1）若残留，前端 import.meta.glob 会把它们一并读入，表现为图片重复。
-         仅当解析出的目录确实落在 IMG_DIR 下才删（paper.id 来自数据文件，防路径穿越）。 */
-      const paperImgDir = path.join(IMG_DIR, paper.id)
-      if (path.dirname(paperImgDir) === IMG_DIR) fs.rmSync(paperImgDir, { recursive: true, force: true })
-      else console.error(`✗ ${file}：paper.id 含路径分隔符，跳过图片目录清理：${paper.id}`)
       const ins = db.prepare(
         `INSERT INTO xg_questions (paper_id, idx, section, subtype, group_id, group_stem, group_image, stem, options, answer, explanation, image)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       for (const q of paper.questions) {
-        // 图片只落盘不进库：前端按「卷号+题号/组号」从构建产物取图
-        writeImages(paper.id, 'g', q.groupId ?? q.idx, q.groupImage ?? null)
-        writeImages(paper.id, 'q', q.idx, q.image ?? null)
+        /* 图片字节在 data/xingce-img/，这里只登记尺寸；db 不存图片路径
+           （前端按「卷号+题号/组号」从构建产物取图） */
+        collectImageDims(paper.id, q.groupImage)
+        collectImageDims(paper.id, q.image)
         // 解析/选项重排：PDF 视觉换行的句中断行并回一句。题干与材料不重排——
         // 它们的换行是导入时就有意拼接/分条的结构（当前数据均为零换行）
         const options = q.options.map((o) => ({ ...o, text: reflowText(o.text ?? '') }))
@@ -277,6 +267,16 @@ function main() {
     }
   }
   console.log(`完成：${ok}/${files.length} 个文件`)
+  if (legacyImages.length) {
+    console.error(
+      `✗ 以下卷的 image/groupImage 还是旧的 base64 字符串格式，请重跑 scripts/parse-xingce-images.py：${[...new Set(legacyImages)].join('、')}`,
+    )
+  }
+  if (missingImages.length) {
+    console.error(
+      `✗ 以下图片在 data/xingce-img/ 下不存在（引用与文件不一致）：${missingImages.slice(0, 10).join('、')}`,
+    )
+  }
 
   // 生成尺寸清单 TS：前端按「卷号/文件名」查 w/h，给 <img> 预留布局防抖动
   // dry 模式不落盘：否则会把上次全量导入收集到的尺寸清空（图片文件并未重建）

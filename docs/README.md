@@ -11,7 +11,16 @@
 > **2026-09-10 渲染纯性收尾 + 数据层测试**：`recallProbability` / `echoCompare` / `reviewQueue` 的 `now` 改为调用方传入（此前内部读 `Date.now()`，却在渲染路径的 useMemo / 排序里被调用）；补 `import`（跨设备迁移解析）、`richNote`（**XSS 净化，安全边界**）、`export`（时间格式化与下载触发）单测，引入 `happy-dom` 作为 DOM 测试环境；单测 87 → 123。`reviewQueue` 的固定 7 天间隔仍是文档 §五登记的演进项（非缺陷）。
 > **2026-09-10 行测刷题体验**：键盘作答（A–E 选项 / ←→ 切题 / Enter 提交 / Esc 退出）、整组判分小结、选项分栏按视觉宽度自适应、答题卡跟随与跳题偏移；顺手修掉「题组标题与材料贴太紧」和「答题卡跳题被吸顶页头遮挡」两个可见缺陷。e2e 138 项全绿。
 > **2026-09-10 账号并入设置页**：`/account` 独立页取消，账号资料 / 昵称 / 云同步状态 / 退出登录整体下沉为设置页首个分区「账号」（`/settings#account`，支持 hash 深链定位）；导航栏「ACCOUNT」文字项收敛为人像图标深链；`/account` 保留为旧链接（含魔法链接邮件回跳）重定向。登录态判断从导航栏移除，`authStatus` 不再进首屏依赖。
-> **2026-09-13 工程质量批次**（本轮，非产品功能）：① **线上搜索接入 FTS5**——`api/articles.ts` 此前只用 `LIKE`/`instr` 全表扫，`articles_fts`（trigram 索引 + 触发器）形同虚设，且与本地 `api-server.mjs` 走 FTS 的行为不一致；现已对齐，两边共用「≥3 字符走 FTS / 短词回退 LIKE」。② **push 前本地门禁**：新增项目自有钩子 `.vite-hooks/pre-push`（Vite+ 机制，`prepare: vp config` 自动接好），push 时跑 `vp run gate` = `vp check` + `vp test run` + `vp run build`，任一失败中断 push；手动预跑 `vp run gate`，`git push --no-verify` 可临时跳过。此前这些只在本地手跑、无任何强制执行（158 项测试全靠自觉，云同步/DB journal 都出过真实 bug）。③ **固定 Node 运行时**：`.nvmrc` + `package.json` `engines`（`node:sqlite` 需 ≥22.5，此前无声明，Vercel 漂移会让 `/api/*` 全挂）。④ **字体**：界面拉丁字体 DM Sans/Mono 改 @fontsource 自托管（去掉 7 个 jsDelivr CSS，并去掉全站未用的 800 字重）；思源宋/黑体因单字族 30MB+ 仍走 CDN + 系统字体兜底。⑤ **安全头 / CSP**：`vercel.json` 注入 CSP、nosniff、Referrer-Policy、HSTS，`/assets`+`/fonts` 一年不可变缓存。⑥ **PostHog 换 slim 构建**：92KB → 47KB gzip（−49%）。⑦ `chunkSizeWarningLimit` 3000 → 800（原值等于关闭体积告警）。⑧ **新增 59 项测试**（158 → 217）：`api/*.test.ts` 端点集成测试 22 项（读真实 DB，含 FTS 一致性）、`annotationStore` 11、`articleStore` 12、`shenlunStore` 14。⑨ **启用 jsx-a11y lint**：75 条告警清零（关掉 `prefer-tag-over-role`/`no-autofocus` 两条刻意模式规则，其余模态遮罩、卡片、标签关联、contentEditable aria 等逐项修复）。
+> **2026-09-13 工程质量批次**（本轮，非产品功能）：
+> - ① **线上搜索接入 FTS5**——`api/articles.ts` 此前只用 `LIKE`/`instr` 全表扫，`articles_fts`（trigram 索引 + 触发器）形同虚设，且与本地 `api-server.mjs` 走 FTS 的行为不一致；现已对齐，两边共用「≥3 字符走 FTS / 短词回退 LIKE」。
+> - ② **push 前本地门禁**：新增项目自有钩子 `.vite-hooks/pre-push`（Vite+ 机制，`prepare: vp config` 自动接好），push 时跑 `vp run gate` = `vp check` + `vp test run` + `vp run build`，任一失败中断 push；手动预跑 `vp run gate`，`git push --no-verify` 可临时跳过。此前这些只在本地手跑、无任何强制执行（158 项测试全靠自觉，云同步/DB journal 都出过真实 bug）。
+> - ③ **固定 Node 运行时**：`.nvmrc` + `package.json` `engines`（`node:sqlite` 需 ≥22.5，此前无声明，Vercel 漂移会让 `/api/*` 全挂）。
+> - ④ **字体**：界面拉丁字体 DM Sans/Mono 改 @fontsource 自托管（去掉 7 个 jsDelivr CSS，并去掉全站未用的 800 字重）；思源宋/黑体因单字族 30MB+ 仍走 CDN + 系统字体兜底。
+> - ⑤ **安全头 / CSP**：`vercel.json` 注入 CSP、nosniff、Referrer-Policy、HSTS，`/assets`+`/fonts` 一年不可变缓存。
+> - ⑥ **PostHog 换 slim 构建**：92KB → 47KB gzip（−49%）。
+> - ⑦ `chunkSizeWarningLimit` 3000 → 800（原值等于关闭体积告警）。
+> - ⑧ **新增 59 项测试**（158 → 217）：`api/*.test.ts` 端点集成测试 22 项（读真实 DB，含 FTS 一致性）、`annotationStore` 11、`articleStore` 12、`shenlunStore` 14。
+> - ⑨ **启用 jsx-a11y lint**：75 条告警清零（关掉 `prefer-tag-over-role`/`no-autofocus` 两条刻意模式规则，其余模态遮罩、卡片、标签关联、contentEditable aria 等逐项修复）。
 **2026-09-13 写路径决策**：规范词/试卷的增删改**仅保留本地 api-server，生产永久只读**（决策文档《规范词与试卷写路径决策.md》）——Supabase 写路径方案评估后不采纳（需新表 + RLS + 云同步语义，成本远超功能权重）。配套落地：
 > - `GET /api/capabilities` 能力探测：`api-server.mjs` 按请求方回答 `write`（设了 `WRITE_TOKEN` 时无令牌即 `false`），前端 `useLocalWrite()` 收口判定，**不按构建模式判断**（`vp preview` 生产构建挂本地 server 时写入口正确可见）；探测只缓存明确的 HTTP 答复，网络失败不落缓存、可重试（`dev:all` 下浏览器先于 api-server 就绪不会把写入口永久锁死）。
 > - 三处写入口按探测显隐：`ReadingPage` 划词「存规范词」、`ExamPreviewPage` 编辑/新增/删除、`TermsPage` 增删改——生产不再渲染点了必失败的按钮（此前 `import.meta.env.DEV` 自判只盖了 1/3，阅读页主路径的「存规范词」漏网）。

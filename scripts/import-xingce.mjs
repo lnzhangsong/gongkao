@@ -233,9 +233,20 @@ function main() {
   const db = DRY ? null : new DatabaseSync(DB)
   if (db) ensureTables(db)
 
-  /* 先统一读盘并收集图片引用：dry 模式也要做，才能校验「引用 ↔ 文件」一致 */
-  const papers = files.map((file) => ({ file, paper: JSON.parse(fs.readFileSync(path.join(SRC, file), 'utf8')) }))
+  /* 先统一读盘并收集图片引用：dry 模式也要做，才能校验「引用 ↔ 文件」一致。
+     读盘失败 / questions 缺失 / id 非字符串都不在这一步炸掉——那会抛原始 TypeError
+     或 ReferenceError，交给 validate() 报可读的错误更合适。 */
+  const papers = []
+  for (const file of files) {
+    try {
+      papers.push({ file, paper: JSON.parse(fs.readFileSync(path.join(SRC, file), 'utf8')) })
+    } catch (err) {
+      console.error(`✗ ${file}：读取/解析失败（${err.message}）`)
+      process.exitCode = 1
+    }
+  }
   for (const { paper } of papers) {
+    if (typeof paper.id !== 'string' || !Array.isArray(paper.questions)) continue
     for (const q of paper.questions) {
       collectImageRefs(paper.id, q.groupImage)
       collectImageRefs(paper.id, q.image)

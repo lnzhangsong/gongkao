@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 from pypdf import PdfReader
+from xingce_common import cut_ad, cut_leak
 
 LEVELS = [("副省级", "副省级"), ("地市", "地市级"), ("行政执法", "行政执法")]
 PART_RE = re.compile(r"^第[一二三四五六七八九十]+部分\s*(.+)$")
@@ -33,36 +34,7 @@ INLINE_GROUP_RE = re.compile(
     r"根据(?:以下资料|所给材料|所给的材料|下述材料)，?回答?\s*\d+\s*[-—–~至]\s*\d+\s*题"
 )
 # pypdf 会把部分头/指导语/下一题解析粘进上一个选项的行——这些标记之后的文本一律截断
-LEAK_RE = re.compile(
-    r"（共\s*\d+\s*题[，,]?参考时限"
-    r"|请开始答题"
-    r"|[一二三四五六七八九十]+、\s*(?:图形推理|定义判断|类比推理|逻辑判断|资料分析|数量关系|言语理解|言语理解与表达|常识判断|政治理论)"
-    r"|(?:[一二三四五六七八九十]+、\s*)?根据(?:以下资料|所给材料|所给的材料|下述材料)，?回答?\s*\d+\s*[-—–~至]\s*\d+\s*题"
-    r"|\d{1,3}[.．]\s*【解析】"
-)
-
-
-def cut_leak(s: str, nxt: int | None = None) -> str:
-    """截断粘进来的泄漏文本；nxt 给出紧邻下一题号时，连「N.」形态的下一题开头一起切
-    （小数如 78.5 不切，题号后紧跟年份如 78.2024年 要切）。"""
-    pat = LEAK_RE
-    if nxt is not None:
-        pat = re.compile(LEAK_RE.pattern + rf"|(?<![0-9]){nxt}[.．]\s*(?!\d{{1,2}}[^0-9])")
-    m = pat.search(s)
-    return s[: m.start()].rstrip() if m else s
-
-
 # 引流版尾部推广语（「…上岸咨询热线/微信：18650027100 要成公，选优公！圆您公职梦！」）
-AD_CUT = re.compile(
-    r"上岸咨询热线|要成公[，,]?选优公|圆您公职梦|优公教育|咨询热线[／/]|微信[：:]\s*\d{5,}"
-)
-
-
-def cut_ad(s: str | None) -> str | None:
-    if not s:
-        return s
-    m = AD_CUT.search(s)
-    return s[: m.start()].rstrip() if m else s
 FIG_Q_RE = re.compile(r"^从所给的四个选项中")
 
 

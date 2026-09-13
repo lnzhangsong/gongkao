@@ -27,6 +27,7 @@ import shutil
 from pathlib import Path
 
 import pymupdf
+from xingce_common import QNUM_RE_2000_2025, ZOOM, build_index, page_lines, png_to_webp, question_chain, safe_paper_dir, trimmed_png, write_image_files
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_JSON_DIR = ROOT / "data" / "xingce"
@@ -36,11 +37,9 @@ DEFAULT_Q_DIR = Path(
     "/2000-2025国考行测PDF/行测-真题"
 )
 
-ZOOM = 2.5
 PAGE_MARGIN_Y = 36
 FOOTER = 40
 
-QNUM_RE = re.compile(r"^(\d{1,3})\s*[.．、]")
 PLACEHOLDER = "（原卷为图形/公式，待补图）"
 FIG_REF_RE = re.compile(r"下图|如图|上图|所给的四个(图形|选项)|以下哪个饼图|以下柱状图|以下哪个图形|图片")
 LEVEL_KW = {"副省级": ["副省级", "省级"], "地市级": ["地市级", "地市", "市地级"], "行政执法": ["行政执法"]}
@@ -48,110 +47,7 @@ LEVEL_KW = {"副省级": ["副省级", "省级"], "地市级": ["地市级", "�
 
 # ---------- PDF 行索引 / 题号链 ----------
 
-def safe_paper_dir(img_dir: Path, paper_id: str) -> Path:
-    """paper_id 来自 JSON，可能被写坏成绝对路径或含 ..：rmtree 前强制校验仍落在 img_dir 内，
-    否则 ignore_errors=True 会安静地删到仓库外。"""
-    root = img_dir.resolve()
-    d = (img_dir / paper_id).resolve()
-    if d == root or root not in d.parents:
-        raise ValueError(f"paper_id 越界：{paper_id!r} → {d}")
-    return d
-
-
-def page_lines(page):
-    out = []
-    for b in page.get_text("dict")["blocks"]:
-        if b["type"] != 0:
-            continue
-        for l in b["lines"]:
-            text = "".join(s["text"] for s in l["spans"]).strip()
-            if text:
-                out.append((pymupdf.Rect(l["bbox"]), text))
-    return out
-
-
-def build_index(doc):
-    lines = []
-    for pno in range(len(doc)):
-        for rect, text in page_lines(doc[pno]):
-            lines.append((pno, rect, text))
-    return lines
-
-
-def question_chain(lines, max_q):
-    """题号 n → (page, rect)：全文行序里挑一条严格递增的题号候选链。"""
-    chain = {}
-    cur = (-1, pymupdf.Rect(0, 0, 0, 0))
-    for n in range(1, max_q + 1):
-        for pno, rect, text in lines:
-            if (pno, rect.y0) <= (cur[0], cur[1].y0):
-                continue
-            m = QNUM_RE.match(text)
-            if m and int(m.group(1)) == n:
-                chain[n] = (pno, rect)
-                cur = (pno, rect)
-                break
-    return chain
-
-
 # ---------- 图像工具 ----------
-
-def png_to_webp(png: bytes, quality: int) -> tuple[bytes, str, int, int]:
-    try:
-        import io
-
-        from PIL import Image
-
-        img = Image.open(io.BytesIO(png))
-        w, h = img.size
-        buf = io.BytesIO()
-        img.save(buf, "WEBP", quality=quality, method=6)
-        return buf.getvalue(), "webp", w, h
-    except Exception:
-        return png, "png", 0, 0
-
-
-def write_image_files(img_dir: Path, paper_id: str, items: list[dict], kind: str, key: int, dry: bool) -> list[dict]:
-    """裁片落盘为 {kind}{key}_{i}.{ext}，返回 JSON 里的轻量引用 [{file, w, h}]。"""
-    refs = []
-    target = img_dir / paper_id
-    for i, it in enumerate(items):
-        name = f"{kind}{key}_{i}.{it['ext']}"
-        if not dry:
-            target.mkdir(parents=True, exist_ok=True)
-            (target / name).write_bytes(it["b"])
-        refs.append({"file": name, "w": it["w"], "h": it["h"]})
-    return refs
-
-
-def trimmed_png(doc, pno, clip, pad=5):
-    """渲染后按非白像素收紧再留 pad 边（内嵌图 bbox 常带大片空白）。"""
-    pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=clip)
-    w, h, n = pix.width, pix.height, pix.n
-    s = pix.samples
-    stride = w * n
-
-    def min_row(y):
-        return min(s[y * stride : (y + 1) * stride])
-
-    def min_col(x):
-        return min(min(s[x * n + c :: stride]) for c in range(n))
-
-    top = next((y for y in range(h) if min_row(y) < 245), None)
-    if top is None:
-        return pix.tobytes("png"), w, h
-    bot = next(y for y in range(h - 1, -1, -1) if min_row(y) < 245)
-    left = next(x for x in range(w) if min_col(x) < 245)
-    right = next(x for x in range(w - 1, -1, -1) if min_col(x) < 245)
-    nclip = pymupdf.Rect(
-        max(clip.x0, clip.x0 + left / ZOOM - pad),
-        max(clip.y0, clip.y0 + top / ZOOM - pad),
-        min(clip.x1, clip.x0 + (right + 1) / ZOOM + pad),
-        min(clip.y1, clip.y0 + (bot + 1) / ZOOM + pad),
-    )
-    final = doc[pno].get_pixmap(matrix=pymupdf.Matrix(ZOOM, ZOOM), clip=nclip)
-    return final.tobytes("png"), final.width, final.height
-
 
 def is_ad_or_tiny(bb) -> bool:
     """页顶机构 logo（矮条紧贴页顶）与极小装饰图，不是题目内容。
@@ -269,7 +165,7 @@ def process(json_path: Path, pdf_path: Path, img_dir: Path, dry: bool) -> None:
     doc = pymupdf.open(str(pdf_path))
     lines = build_index(doc)
     questions = paper["questions"]
-    chain = question_chain(lines, max(q["idx"] for q in questions))
+    chain = question_chain(lines, max(q["idx"] for q in questions), qnum_re=QNUM_RE_2000_2025)
     by_idx = {q["idx"]: q for q in questions}
 
     # 先清空旧的图字段与图目录：图由本脚本直接落盘，清掉避免旧序号文件残留

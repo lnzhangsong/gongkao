@@ -264,17 +264,26 @@ def parse_questions(pages: list[list[str]]) -> dict:
     return {"title": title, "questions": questions, "warnings": [], "materials": materials}
 
 
-def parse_answers(pdf_path: Path) -> dict[int, dict]:
-    pages = extract_lines(pdf_path)
-    flat: list[str] = []
-    for p in pages:
-        flat.extend(p)
-        flat.append("")
-    text = "\n".join(flat)
+def answers_from_text(text: str) -> dict[int, dict]:
+    """答案解析纯文本解析（parse_answers 的内核，独立出来以便无 PDF 回归测试——
+    scripts/tests/test_xingce_answers.py 用真实 bug 案例锁住这里的每个分支）。"""
 
-    # 块头：「N.解析」「N. 解析」「第【N】题」等
-    head_re = re.compile(r"(?m)^(?:第\s*【?\s*(\d{1,3})\s*】?\s*题|(\d{1,3})\s*[.．]\s*解析)\s*$")
-    heads = [(m.start(), int(m.group(1) or m.group(2)), m.end()) for m in head_re.finditer(text)]
+    # 块头：「N.解析」「N. 解析」「第【N】题」，以及 2015–2021 的「N、」
+    # （题号+顿号，题干与解析紧跟在同一行，所以这一支不加行尾锚点）
+    head_re = re.compile(r"(?m)^(?:第\s*【?\s*(\d{1,3})\s*】?\s*题|(\d{1,3})\s*[.．]\s*解析)\s*$|^(?:(\d{1,3}))\s*、")
+    heads: list[tuple[int, int, int]] = []
+    seen: set[int] = set()
+    last: int | None = None
+    for m in head_re.finditer(text):
+        num = int(m.group(1) or m.group(2) or m.group(3))
+        # 去重 + 限制跨度：解析正文里的「1、」式枚举通常与已出现的题号重复；
+        # 允许小跨度乱序（2016 副省答案 PDF 里 79 排在 77/78 之前），但不接受跳到很远的号。
+        # 第一个块头无条件接受：last 从 0 起算的话，首题号 >6 的答案片段会整卷落空。
+        if num in seen or (last is not None and num > last + 6):
+            continue
+        seen.add(num)
+        last = max(last, num) if last is not None else num
+        heads.append((m.start(), num, m.end()))
     # 「正确答案:【C】」型（2023 等）也可作为块头
     blocks: dict[int, str] = {}
     for k, (pos, num, end) in enumerate(heads):
@@ -288,10 +297,13 @@ def parse_answers(pdf_path: Path) -> dict[int, dict]:
     ANS_PAT = re.compile(
         r"因此[，,]\s*选择\s*([A-E])\s*选项"
         r"|正确答案[是为][:：]?\s*【?\s*([A-E])\s*】?"
-        r"|故正确答案为\s*([A-E])"
+        # 各年句式不一致：「故正确答案为A。」「故正确答案B。」（无「为」）、
+        # 「故正确选项为C。」「故正确答案选B。」，且 PDF 换行会把「故正确答案」与「为A」拆到两行 → \s* 要能跨行
+        r"|故正确(?:答案|选项)\s*[为选]?\s*([A-E])"
         r"|答案为\s*([A-E])"
         r"|答案[:：]\s*【?\s*([A-E])\s*】?"
     )
+
     # 无块头时（整卷只有【N】解析 或 快速对答案表），额外尝试表格式答案
     out: dict[int, dict] = {}
     for num, body in blocks.items():
@@ -302,6 +314,15 @@ def parse_answers(pdf_path: Path) -> dict[int, dict]:
             expl = ""
         out[num] = {"answer": ans, "explanation": expl}
     return out
+
+
+def parse_answers(pdf_path: Path) -> dict[int, dict]:
+    pages = extract_lines(pdf_path)
+    flat: list[str] = []
+    for p in pages:
+        flat.extend(p)
+        flat.append("")
+    return answers_from_text("\n".join(flat))
 
 
 # ---------- 题型细分 ----------
@@ -590,11 +611,16 @@ def discover(q_dir: Path, a_dir: Path) -> list[dict]:
     return out
 
 
-def paper_has_text(pdf: Path, min_cjk: int = 300) -> bool:
+def paper_has_text(pdf: Path, min_ratio: float = 0.5) -> bool:
+    """整本抽样判断有无文本层：扫描件常常**只有个别页**带文本（比如封面/首页），
+    只看前几页会误判——2021 副省级答案就是首页 590 字、其余 35 页全空。
+    取首/1-4/中/3-4/尾五页，要求过半页有足量中文。"""
     doc = pymupdf.open(pdf)
-    txt = "".join(doc[i].get_text() for i in range(min(doc.page_count, 5)))
+    n = doc.page_count
+    idxs = sorted({0, n // 4, n // 2, (3 * n) // 4, n - 1})
+    with_text = sum(1 for i in idxs if len(re.findall(r"[\u4e00-\u9fff]", doc[i].get_text())) >= 50)
     doc.close()
-    return len(re.findall(r"[\u4e00-\u9fff]", txt)) >= min_cjk
+    return with_text / len(idxs) >= min_ratio
 
 
 # ---------- 主流程 ----------
@@ -616,7 +642,7 @@ def main() -> None:
         pairs = [p for p in pairs if p["year"] == int(y) and p["level"] == lv]
     elif args.year:
         pairs = [p for p in pairs if p["year"] == args.year]
-    elif not args.all:
+    elif not (args.all or args.list):
         ap.error("需指定 --paper / --year / --all / --list 之一")
 
     if args.list:

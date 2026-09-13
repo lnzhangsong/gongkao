@@ -166,6 +166,8 @@ export default defineConfig({
     env: {
       VITE_POSTHOG_KEY: '',
     },
+    // data/articles.db 现在是构建产物（未进 git），大量用例要读它：跑测试前先确保存在
+    globalSetup: ['./scripts/test-global-setup.mjs'],
   },
   server: {
     port: 5173,

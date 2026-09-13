@@ -24,7 +24,8 @@
 > - 新增 `scripts/import-articles.mjs`；`import-guifanci.mjs` 支持 JSON 源并把默认源改回仓库内；`migrate-fts.mjs` 支持 `--db`。
 > - 新增 `scripts/rebuild-db.mjs`（`vp run db:rebuild`）：删旧库 → 申论 → 行测 → 文章 → 规范词 → FTS；相对路径目标库必须落在仓库内。
 > - 新增 `src/lib/dbSource.test.ts` 守卫「源 ↔ 库」逐字段一致；`DB_REBUILD_CHECK=1` 再验证重建等价性。实测重建库与现库**逐表逐列一致**，唯一差异是 `papers`/`xg_papers` 的 `created_at` 入库时间戳（两者都不被 API/前端读取）。
-> - 收益：改数据从「16MB 二进制变更」变成可 diff、可 review 的文本源（517 篇 JSON 合计 2.1MB），且任何人 clone 后可一条命令重建。**`articles.db` 暂仍提交进 git**，彻底移出还差「构建前生成 + Vercel includeFiles 指向生成物」这一步。
+> - 收益：改数据从「16MB 二进制变更」变成可 diff、可 review 的文本源（517 篇 JSON 合计 2.1MB），且任何人 clone 后可一条命令重建。
+> - **`data/articles.db` 已移出 git**（2026-09-13 第二批）：改为构建产物，`scripts/ensure-db.mjs` 在缺失时自动重建，接入 `build` / `dev:api` / `dev:all` / vitest `globalSetup`；`vercel.json` 显式 `buildCommand: pnpm build`，保证打包 Functions 的 `includeFiles` 之前库已生成。已实测「删库 → `vp run gate`」可从零重建（32 文件 / 270 项全绿）。git 历史里的 23 版旧快照（未压缩 360MB）仍在，回收需重写历史（独立动作，未做）。
 
 ---
 

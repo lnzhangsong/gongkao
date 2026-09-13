@@ -79,7 +79,12 @@ describe('data/articles/*.json ↔ articles 表', () => {
     const mismatched = articleSources
       .filter((a) => JSON.stringify(a) !== JSON.stringify(rowToSource(byId.get(a.id)!)))
       .map((a) => a.id)
-    expect(mismatched).toEqual([])
+    expect(
+      mismatched,
+      '源与库不一致（上面这些 id）。改源之后要 `vp run db:rebuild` 重建库；' +
+        '若刚用本地管理 UI 改过数据（它直接写库），要先 `node scripts/migrate-db-to-source.mjs` 把改动导回源再提交——' +
+        '否则库是构建产物，下次重建就把改动丢了。',
+    ).toEqual([])
   })
 
   it('源字段合法（必填、readTime 正整数、content 段落数组、文件名 = id）', () => {
@@ -99,7 +104,11 @@ describe('data/guifan-terms.json ↔ guifan_terms 表', () => {
   it('源与库逐条一致（含 id 空洞）', () => {
     const source = JSON.parse(fs.readFileSync(TERMS_FILE, 'utf8')) as unknown
     const rows = db.prepare('SELECT id, theme, term, example FROM guifan_terms ORDER BY id').all()
-    expect(source).toEqual(rows)
+    expect(
+      source,
+      '规范词源与库不一致。改源后 `vp run db:rebuild`；若刚用 TermsPage 增删改过（直接写库），' +
+        '先 `node scripts/migrate-db-to-source.mjs` 导回源再提交，否则重建会丢掉这些改动。',
+    ).toEqual(rows)
     expect(rows.length).toBeGreaterThan(0)
   })
 })

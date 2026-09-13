@@ -1,4 +1,5 @@
 {
+  "buildCommand": "pnpm build",
   "functions": {
     "api/articles.ts": {
       "includeFiles": "data/articles.db"

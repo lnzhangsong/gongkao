@@ -80,6 +80,45 @@ describe('要点字段归一（A1）', () => {
     expect(ok?.origin).toBe('manual')
   })
 
+  it('非标准值留痕（B2）跟着要点一起存取，坏形状丢弃', () => {
+    const odd = [{ field: 'mode', got: '瞎写的', used: '归纳' }]
+    const p = normalizePoint({ text: 'x', mode: '归纳', sourceIdx: 1, nonstandard: odd })
+    expect(p?.nonstandard).toEqual(odd)
+    /* 三项都得是字符串，缺一项整条丢 */
+    expect(normalizePoint({ text: 'y', nonstandard: [{ field: 'mode' }] })?.nonstandard).toBeUndefined()
+    expect(normalizePoint({ text: 'y', nonstandard: 'bad' })?.nonstandard).toBeUndefined()
+  })
+
+  it('用户改过该字段后，对应提示清除（B2）：改 mode 不误删 sourceIdx 的提示', () => {
+    const s = useExamStudyStore.getState()
+    s.setPoints(
+      'p1',
+      4,
+      [
+        {
+          id: 't1',
+          text: '要点',
+          mode: '归纳',
+          sourceIdx: 1,
+          nonstandard: [
+            { field: 'mode', got: '瞎写的', used: '归纳' },
+            { field: 'sourceIdx', got: '99', used: '材料外' },
+          ],
+        },
+      ],
+      'ai',
+    )
+    /* 只改无关字段：提示保留（不是「编辑过就清空」） */
+    useExamStudyStore.getState().updatePoint('p1', 4, 't1', { text: '改了要点句' })
+    expect(useExamStudyStore.getState().traces['p1#4'].points[0].nonstandard).toHaveLength(2)
+    useExamStudyStore.getState().updatePoint('p1', 4, 't1', { mode: '改写' })
+    expect(useExamStudyStore.getState().traces['p1#4'].points[0].nonstandard).toEqual([
+      { field: 'sourceIdx', got: '99', used: '材料外' },
+    ])
+    useExamStudyStore.getState().updatePoint('p1', 4, 't1', { sourceIdx: 2 })
+    expect(useExamStudyStore.getState().traces['p1#4'].points[0].nonstandard).toBeUndefined()
+  })
+
   it('importTraces 入口即归一（旧字段、坏形状一视同仁）', () => {
     const s = useExamStudyStore.getState()
     s.importTraces([

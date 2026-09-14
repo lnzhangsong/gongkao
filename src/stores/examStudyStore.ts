@@ -25,6 +25,18 @@ export const DERIVE_MODE_HINTS: Record<DeriveMode, string> = {
   补充: '材料外：背景 / 常识 / 热词补充',
 }
 
+/** AI 给出规范外取值时的留痕（B2）：不再静默改成合法值，而是把原值报出来——
+ *  AI 原值 `got` 供展示端提示，实际采用 `used`（字段本身仍取合法值，统计端不会被脏值污染）。
+ *  用户行内改过该字段即视为已修正，提示随之清除（见 updatePoint）。 */
+export interface NonstandardValue {
+  /** 字段名（当前用到的是 mode / sourceIdx） */
+  field: string
+  /** AI 原样返回的值（字符串化） */
+  got: string
+  /** 实际采用的值（展示文案） */
+  used: string
+}
+
 export interface AnswerPointTrace {
   id: string
   /** 要点句：对应参考答案中的一条 / 一层（无答案题为推导出的参考要点） */
@@ -39,6 +51,8 @@ export interface AnswerPointTrace {
   quote?: string
   /** 加工判断：为什么用这种加工方式而不是别的——原文说法与答案表述差在哪 */
   modeWhy?: string
+  /** AI 规范外取值留痕（B2）：非空即代表这条要点的 AI 输出有可疑处 */
+  nonstandard?: NonstandardValue[]
 }
 
 /* ---------------- 要点字段归一（A1） ----------------
@@ -51,6 +65,16 @@ type RawPoint = Partial<AnswerPointTrace> & { think?: unknown; note?: unknown }
 
 /** 取非空字符串（去首尾空白），否则 undefined */
 const asText = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
+
+/** 非标准值留痕的形状校验：三项都是字符串才留，坏形状直接丢弃 */
+function asNonstandard(v: unknown): NonstandardValue[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const list = v.filter((x): x is NonstandardValue => {
+    const o = x as Partial<NonstandardValue> | null
+    return Boolean(o && typeof o.field === 'string' && typeof o.got === 'string' && typeof o.used === 'string')
+  })
+  return list.length ? list : undefined
+}
 
 /** 单个要点归一：补 id、字段别名合并（新字段优先，与旧展示逻辑 `locate ?? think` 一致）、mode/sourceIdx 保底 */
 export function normalizePoint(raw: unknown): AnswerPointTrace | null {
@@ -66,6 +90,7 @@ export function normalizePoint(raw: unknown): AnswerPointTrace | null {
     locate: asText(p.locate) ?? asText(p.think),
     quote: asText(p.quote),
     modeWhy: asText(p.modeWhy) ?? asText(p.note),
+    nonstandard: asNonstandard(p.nonstandard),
   }
 }
 
@@ -191,6 +216,18 @@ export function asMarksRecord(data: unknown): QuestionMarks | null {
   return null
 }
 
+/** 行内改过某字段 = 用户已按自己的判断修正（B2）：该字段的「AI 非标准值」提示随之清掉。
+ *  草稿态与入库态共用（草稿在页面里，入库走 updatePoint），改完立即不再提示。 */
+export function patchPoint(p: AnswerPointTrace, patch: Partial<Omit<AnswerPointTrace, 'id'>>): AnswerPointTrace {
+  const next = { ...p, ...patch }
+  if (!p.nonstandard?.length || patch.nonstandard !== undefined) return next
+  const touched = ['mode', 'sourceIdx'].filter((f) => patch[f as 'mode' | 'sourceIdx'] !== undefined)
+  if (!touched.length) return next
+  const kept = p.nonstandard.filter((o) => !touched.includes(o.field))
+  next.nonstandard = kept.length ? kept : undefined
+  return next
+}
+
 function upsertTrace(
   s: ExamStudyState,
   paperId: string,
@@ -239,7 +276,7 @@ export const useExamStudyStore = create<ExamStudyState>()(
           upsertTrace(s, paperId, qIdx, (cur) => ({
             ...cur,
             origin: 'manual',
-            points: cur.points.map((p) => (p.id === pointId ? { ...p, ...patch } : p)),
+            points: cur.points.map((p) => (p.id === pointId ? patchPoint(p, patch) : p)),
           })),
         ),
 

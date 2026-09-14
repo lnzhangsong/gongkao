@@ -923,6 +923,14 @@
   color: var(--accent-text);
 }
 
+/* AI 规范外取值的提示（B2）：比正文醒目、比错误轻，占卡片顶部一行 */
+.draw-odd {
+  margin: 0 0 8px;
+  font: 11.5px/1.75 var(--sans);
+  color: var(--accent-text);
+  opacity: 0.9;
+}
+
 /* —— 卡片：唯一容器语言（答题纸同款） —— */
 .draw-card {
   background: var(--soft);

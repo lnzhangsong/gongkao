@@ -3,16 +3,28 @@
  * 把真题参考答案逐要点拆开——每条要点标注「从材料哪句话来、经过了什么加工」。
  * 输入 = 题干 + 要求 + 参考答案 + 相关材料全文（客户端组装，AI-4 同款基础设施）；
  * 输出走 extractJson 容错解析；字段归一（含旧字段别名）统一走 examStudyStore 的 normalizePoint，
- * sourceIdx 做范围校验；产出一律先进页面草稿态，人工确认后才写入 examStudyStore（A3 不变）。
+ * 字段的示例值/填写要求/校验白名单同源于 POINT_FIELDS（B1），规范外取值只记录不静默改写（B2）；
+ * 产出一律先进页面草稿态，人工确认后才写入 examStudyStore（A3 不变）。
  */
 import {
+  DERIVE_MODE_HINTS,
+  DERIVE_MODES,
   MARK_LEVELS,
   MARK_ROLES,
   normalizePoint,
   type AnswerPointTrace,
   type MarkLevel,
   type MaterialMark,
+  type NonstandardValue,
 } from '../stores/examStudyStore'
+import {
+  isStandard,
+  renderFieldRules,
+  renderFieldsExample,
+  showValue,
+  type FieldCtx,
+  type FieldSpec,
+} from './aiFieldSpec'
 import { aiChat, extractJson } from './ai'
 
 export interface TraceExamMaterial {
@@ -36,13 +48,43 @@ const MAX_MATERIAL_LEN = 6000
 const SYSTEM =
   '你是申论答案解析专家，擅长把参考答案逐要点回溯到给定材料原文，并判定每个要点经过了什么加工。只输出 JSON，不要输出任何解释文字。'
 
+/** 要点字段规格（B1）：prompt 的 JSON 示例、填写要求、解析校验三者同源于此，不再各写一遍 */
+export const POINT_FIELDS = {
+  text: {
+    example: '"要点句：参考答案里的一条要点或一层意思"',
+    required: true,
+  },
+  mode: {
+    example: `"${DERIVE_MODES.join('|')}"`,
+    values: DERIVE_MODES,
+    fallback: '归纳',
+  },
+  sourceIdx: {
+    /* 示例必须是合法 JSON：裸说明文字曾在这里出现，模型只能靠猜（B1 顺手修正） */
+    example: '1',
+    material: true,
+    fallback: null,
+    rule: 'sourceIdx 必须取自下方【材料编号】里出现过的数字，找不到出处的要点填 null（材料外）、mode 填「补充」或「推理」，不要猜编号',
+  },
+  locate: {
+    example:
+      '"定位方法：可复用的查找步骤——先抓题干哪个关键词/设问方向 → 据此判断去哪类材料找（问题段/对策段/案例段）→ 在材料里按什么信号找到这一处（如高频词、转折词、人物做法）。写成方法论，不粘贴本题具体情况"',
+    rule: 'locate 是重点：教「怎么定位」——读者拿到另一道题也能照着这个方法找材料，禁止只说“定位到材料X”而不给依据',
+  },
+  quote: {
+    example: '"支撑这个要点的材料原句（从材料原文里摘，40 字以内；材料外可省略）"',
+    rule: 'quote 必须是材料原文的连续片段（可截取），不得改写拼接',
+  },
+  modeWhy: {
+    example:
+      '"加工判断：为什么这条是这种加工方式而不是别的——对照原文说法与答案表述，指出差距（口语vs书面 / 一处vs多处 / 具体vs规范 / 明说vs可推出），让读者学会下次自己判断"',
+    rule: 'modeWhy 是重点：教「怎么判断加工方式」——必须点出原文表述与答案表述的具体差距（如：原文“路不好走”是具体现象，答案需要规范表达，所以是提升；原文有三处同类描述，答案合成一条，所以是归纳），让读者下次自己会选',
+  },
+} as const satisfies Record<string, FieldSpec>
+
+/** 六类加工方式的口诀速查：由 store 的枚举与说明生成，避免 prompt 再抄一遍定义 */
 const MODE_RULES = `mode 从以下六类里选（覆盖「抄材料→半加工→全加工→材料外」谱系）：
-- 摘抄：原词原句直接搬用；
-- 改写：同义换写，如口语换书面、句式重组；
-- 提升：具体现象上纲为规范表达（如「路不好走」→「基础设施薄弱」）；
-- 归纳：多个同类信息合并成一条，前置总括词；
-- 推理：从材料信息分析推断得出（如由问题反推对策）；
-- 补充：材料外的背景、常识、热词。`
+${DERIVE_MODES.map((m) => `- ${m}——${DERIVE_MODE_HINTS[m]}`).join('；\n')}。`
 
 /** 拼材料块：带编号与标签，长度截断防撑爆上下文 */
 function buildMaterialBlock(materials: TraceExamMaterial[]): string {
@@ -51,15 +93,9 @@ function buildMaterialBlock(materials: TraceExamMaterial[]): string {
     .join('\n\n')
 }
 
-/** AI 溯源/推导：有答案 → 拆解答案来源；无答案 → 从材料推导参考要点。产出同构（草稿，待人工确认） */
-export async function draftAnswerTrace(opts: {
-  question: TraceExamQuestion
-  /** 相关材料（questionMaterials 匹配；为空时调用方应给全卷材料） */
-  materials: TraceExamMaterial[]
-  signal?: AbortSignal
-}): Promise<AnswerPointTrace[]> {
+/** 组装溯源/推导 prompt（纯函数，便于单测断言「prompt 与字段规格同源」） */
+export function buildTracePrompt(opts: { question: TraceExamQuestion; materials: TraceExamMaterial[] }): string {
   const q = opts.question
-  const materialBlock = buildMaterialBlock(opts.materials)
   /* 无答案题：从「解释已有答案」换成「从材料推导参考要点」，产出结构不变 */
   const task = q.answer
     ? `请把参考答案逐要点拆解溯源：每个要点回答「这段话是怎么来的」。`
@@ -69,34 +105,36 @@ export async function draftAnswerTrace(opts: {
 - text 尽量保持原答案表述`
     : `- 要点合起来就是这道题的参考答案，一般 ${q.type === '大作文' ? '4~8' : '3~8'} 条，按作答逻辑排序；
 - text 用规范表达写成分条要点（可直接当参考答案用），不要成段成文`
-  const user = `下面是一道申论真题和它的给定资料。${task}输出 JSON 对象：
+  return `下面是一道申论真题和它的给定资料。${task}输出 JSON 对象：
 {
   "points": [
     {
-      "text": "要点句：参考答案里的一条要点或一层意思",
-      "mode": "摘抄|改写|提升|归纳|推理|补充",
-      "sourceIdx": 材料编号（数字，取下方【材料编号】的数字；材料外填 null）,
-      "locate": "定位方法：可复用的查找步骤——先抓题干哪个关键词/设问方向 → 据此判断去哪类材料找（问题段/对策段/案例段）→ 在材料里按什么信号找到这一处（如高频词、转折词、人物做法）。写成方法论，不粘贴本题具体情况",
-      "quote": "支撑这个要点的材料原句（从材料原文里摘，40 字以内；材料外可省略）",
-      "modeWhy": "加工判断：为什么这条是这种加工方式而不是别的——对照原文说法与答案表述，指出差距（口语vs书面 / 一处vs多处 / 具体vs规范 / 明说vs可推出），让读者学会下次自己判断"
+${renderFieldsExample(POINT_FIELDS)}
     }
   ]
 }
 ${MODE_RULES}
 要求：
 ${pointsRule}；
-- locate 是重点：教「怎么定位」——读者拿到另一道题也能照着这个方法找材料，禁止只说“定位到材料X”而不给依据；
-- modeWhy 是重点：教「怎么判断加工方式」——必须点出原文表述与答案表述的具体差距（如：原文“路不好走”是具体现象，答案需要规范表达，所以是提升；原文有三处同类描述，答案合成一条，所以是归纳），让读者下次自己会选；
-- quote 必须是材料原文的连续片段（可截取），不得改写拼接；找不到出处的要点 sourceIdx 填 null、mode 填「补充」或「推理」。
+${renderFieldRules(POINT_FIELDS)}
 
 【题目】${q.stem}${q.requirement ? `\n要求：${q.requirement}` : ''}${q.type ? `\n题型：${q.type}` : ''}
 ${q.answer ? `\n【参考答案】\n${q.answer.slice(0, MAX_ANSWER_LEN)}\n` : ''}
 【给定资料】
-${materialBlock}`
+${buildMaterialBlock(opts.materials)}`
+}
+
+/** AI 溯源/推导：有答案 → 拆解答案来源；无答案 → 从材料推导参考要点。产出同构（草稿，待人工确认） */
+export async function draftAnswerTrace(opts: {
+  question: TraceExamQuestion
+  /** 相关材料（questionMaterials 匹配；为空时调用方应给全卷材料） */
+  materials: TraceExamMaterial[]
+  signal?: AbortSignal
+}): Promise<AnswerPointTrace[]> {
   const raw = await aiChat({
     messages: [
       { role: 'system', content: SYSTEM },
-      { role: 'user', content: user },
+      { role: 'user', content: buildTracePrompt(opts) },
     ],
     json: true,
     temperature: 0.3,
@@ -108,17 +146,29 @@ ${materialBlock}`
   )
 }
 
-/** 解析 + 校验 AI 返回：字段别名归一（走 store 的 normalizePoint）、mode 枚举容错、sourceIdx 范围校验（越界/非数字回退 null） */
+/** 解析 + 校验 AI 返回：字段别名归一（走 store 的 normalizePoint）+ 规范外取值记录（B2，不静默改写） */
 export function parseTraceResult(raw: string, validIdx: number[]): AnswerPointTrace[] {
   const out = extractJson<{ points?: unknown }>(raw)
-  const idxSet = new Set(validIdx)
+  const ctx: FieldCtx = { validIdx: new Set(validIdx) }
   const points = (Array.isArray(out.points) ? out.points : [])
     .map((item): AnswerPointTrace | null => {
       const p = normalizePoint(item)
       /* 空要点（无 text）丢弃：AI 偶尔会多吐一条空壳 */
       if (!p || !p.text) return null
-      /* 越界编号按「材料外」处理，防止来源下拉指向不存在的材料 */
-      if (p.sourceIdx != null && !idxSet.has(p.sourceIdx)) p.sourceIdx = null
+      const src = (item ?? {}) as Record<string, unknown>
+      const odd: NonstandardValue[] = []
+      /* mode：拿原始值判白名单——归一后它已回退成合法枚举，查不出来 */
+      const rawMode = src.mode
+      if (rawMode != null && rawMode !== '' && !isStandard(POINT_FIELDS.mode, rawMode, ctx)) {
+        odd.push({ field: 'mode', got: showValue(rawMode), used: p.mode })
+      }
+      /* sourceIdx：AI 给了值却落不进本卷材料（越界或非数字）→ 按材料外算，但把原值报出来 */
+      const hasIdx = src.sourceIdx != null && src.sourceIdx !== ''
+      if (hasIdx && !isStandard(POINT_FIELDS.sourceIdx, p.sourceIdx, ctx)) {
+        odd.push({ field: 'sourceIdx', got: showValue(src.sourceIdx), used: '材料外' })
+        p.sourceIdx = null
+      }
+      if (odd.length) p.nonstandard = odd
       return p
     })
     .filter((p): p is AnswerPointTrace => p !== null)

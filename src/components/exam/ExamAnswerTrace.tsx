@@ -5,10 +5,12 @@ import { draftAnswerTrace, type TraceExamMaterial } from '../../lib/aiExamTrace'
 import {
   DERIVE_MODES,
   DERIVE_MODE_HINTS,
+  patchPoint,
   traceKey,
   useExamStudyStore,
   type AnswerPointTrace,
   type DeriveMode,
+  type NonstandardValue,
 } from '../../stores/examStudyStore'
 import { useAiStore, isAiConfigured } from '../../stores/aiStore'
 import { MenuSelect } from '../ui/MenuSelect'
@@ -137,7 +139,8 @@ export function ExamAnswerTrace({
   }
 
   const patchRow = (id: string, patch: Partial<AnswerPointTrace>, inDraft: boolean) => {
-    if (inDraft) setDraft((prev) => prev?.map((p) => (p.id === id ? { ...p, ...patch } : p)) ?? prev)
+    /* 草稿与入库都走 patchPoint：改过某字段即清掉该字段的「AI 非标准值」提示（B2） */
+    if (inDraft) setDraft((prev) => prev?.map((p) => (p.id === id ? patchPoint(p, patch) : p)) ?? prev)
     else updatePoint(paperId, q.idx, id, patch)
   }
 
@@ -254,6 +257,13 @@ export function ExamAnswerTrace({
   )
 }
 
+/** AI 非标准值提示文案（B2）：说清 AI 给的是什么、展示与统计实际按什么算 */
+function oddText(o: NonstandardValue): string {
+  if (o.field === 'mode') return `加工方式 AI 给的是「${o.got}」，不在六类里，已按「${o.used}」计`
+  if (o.field === 'sourceIdx') return `材料编号 AI 给的是「${o.got}」，本卷没有这则材料，已按「${o.used}」计`
+  return `${o.field} AI 给的是「${o.got}」，已按「${o.used}」计`
+}
+
 /** 要点叙事卡：编辑态可改写；只读态是「定位 → 材料 → 加工判断 → 要点句」方法链 */
 function PointCard({
   no,
@@ -280,6 +290,9 @@ function PointCard({
   onRemove: () => void
 }) {
   const material = materials.find((m) => m.idx === point.sourceIdx)
+  /* AI 规范外取值提示：编辑态也在（用户看得到才会去改） */
+  const odd = point.nonstandard ?? []
+  const oddBlock = odd.length > 0 && <p className="draw-odd">⚠ {odd.map(oddText).join('；')}</p>
   if (editing) {
     return (
       <article className="draw-card">
@@ -299,6 +312,7 @@ function PointCard({
             <Trash2 size={12} />
           </button>
         </div>
+        {oddBlock}
         <div className="draw-edit">
           <textarea
             rows={2}
@@ -395,6 +409,7 @@ function PointCard({
     /* 导图视图：节点卡 + 带箭头连线，终点是要点句 */
     return (
       <article className="draw-card trace-chain">
+        {oddBlock}
         <div className="trace-map">
           {steps.map((s) => (
             <MapNode key={s.key} step={s} />
@@ -409,6 +424,7 @@ function PointCard({
   }
   return (
     <article className="draw-card trace-chain">
+      {oddBlock}
       {steps.length > 0 && (
         <ol className="trace-steps">
           {steps.map((s) => (

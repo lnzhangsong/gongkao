@@ -156,7 +156,7 @@ export default defineConfig({
     tabWidth: 2,
     arrowParens: 'always',
     sortPackageJson: false,
-    ignorePatterns: ['node_modules', 'dist', '.npm-cache', '.vercel', 'design', '*.md'],
+    ignorePatterns: ['node_modules', 'dist', '.npm-cache', '.vercel', 'design'],
   },
   plugins: lazyPlugins(() => [react()]),
   test: {

@@ -29,20 +29,20 @@ vp preview         # 预览生产构建
 
 ## 页面路由
 
-| 路由 | 页面 | 对应设计稿 |
-|---|---|---|
-| `/` | 首页工作台（今日推荐、继续阅读、最近阅读、复习队列） | `design/pages/app.html` 首页部分 |
-| `/library` | 文章库（搜索 / 主题 / 来源 / 状态筛选 / 排序 / 分页） | `design/pages/library.html` |
-| `/reading/:articleId` | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记、申论拆解） | `design/pages/reading.html` |
-| `/notes` | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出） | `design/pages/notes.html` |
-| `/settings` | 设置（账号资料与云同步、字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html` |
-| `/exams` + `/exams/:examId` | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析 | 2000–2025 统一由 `scripts/parse-shenlun-pdf.py`（PDF→`data/shenlun/*.json`）+ `scripts/import-shenlun.mjs`（入库）维护 |
-| `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时） | 2026 卷由 `scripts/parse-xingce26.py`；2000–2025 卷由 `scripts/parse-xingce-pdf.py`（真题+答案解析双 PDF → `data/xingce/*.json`）+ `scripts/import-xingce.mjs`（入库），当前 2022 三卷已接入、其余年份整理进行中；设计与缺口见 `docs/行测做题模块设计方案.md` |
-| `/practice/wrong` | 行测错题本（接入复习队列，到期重做） | 同上 X3 |
-| `/terms` | 申论规范词库（1070+ 词，按主题检索） | `scripts/import-guifanci.mjs` 入库 |
-| `/assist` | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK） | `docs/申论写作AI辅助设计方案.md` |
-| `/admin` 系列 | 文章管理（列表 + 录入/编辑编辑器） | — |
-| `/login` | 登录（账号资料、同步状态、退出登录已并入 `/settings#account`） | `sql/profiles.sql` · `sql/sync.sql` |
+| 路由                               | 页面                                                                             | 对应设计稿                                                                                                                                                                                                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                | 首页工作台（今日推荐、继续阅读、最近阅读、复习队列）                             | `design/pages/app.html` 首页部分                                                                                                                                                                                                                              |
+| `/library`                         | 文章库（搜索 / 主题 / 来源 / 状态筛选 / 排序 / 分页）                            | `design/pages/library.html`                                                                                                                                                                                                                                   |
+| `/reading/:articleId`              | 阅读正文（进度、字号、主题、高亮 / 下划线 / 笔记、申论拆解）                     | `design/pages/reading.html`                                                                                                                                                                                                                                   |
+| `/notes`                           | 我的摘录（三栏：筛选 / 列表 / 详情，批量操作、导出）                             | `design/pages/notes.html`                                                                                                                                                                                                                                     |
+| `/settings`                        | 设置（账号资料与云同步、字体、字号、行高、主题、动效、AI 服务、数据导出 / 清空） | `design/pages/settings.html`                                                                                                                                                                                                                                  |
+| `/exams` + `/exams/:examId`        | 国考申论真题（材料/题目/参考答案对照，可编辑）+ 答案溯源解析                     | 2000–2025 统一由 `scripts/parse-shenlun-pdf.py`（PDF→`data/shenlun/*.json`）+ `scripts/import-shenlun.mjs`（入库）维护                                                                                                                                        |
+| `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时）                                             | 2026 卷由 `scripts/parse-xingce26.py`；2000–2025 卷由 `scripts/parse-xingce-pdf.py`（真题+答案解析双 PDF → `data/xingce/*.json`）+ `scripts/import-xingce.mjs`（入库），当前 2022 三卷已接入、其余年份整理进行中；设计与缺口见 `docs/行测做题模块设计方案.md` |
+| `/practice/wrong`                  | 行测错题本（接入复习队列，到期重做）                                             | 同上 X3                                                                                                                                                                                                                                                       |
+| `/terms`                           | 申论规范词库（1070+ 词，按主题检索）                                             | `scripts/import-guifanci.mjs` 入库                                                                                                                                                                                                                            |
+| `/assist`                          | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK）                               | `docs/申论写作AI辅助设计方案.md`                                                                                                                                                                                                                              |
+| `/admin` 系列                      | 文章管理（列表 + 录入/编辑编辑器）                                               | —                                                                                                                                                                                                                                                             |
+| `/login`                           | 登录（账号资料、同步状态、退出登录已并入 `/settings#account`）                   | `sql/profiles.sql` · `sql/sync.sql`                                                                                                                                                                                                                           |
 
 > 全部进度（P1–P7、AI 线、Paper OS 设计系统落地）**以 `docs/README.md` 的路线图表为唯一真源**；设计系统规范见 `design/design/DESIGN.md`。
 
@@ -78,10 +78,20 @@ React 页面组件
 ### 数据模型
 
 ```ts
-type Article = { id, title, summary, content: string[], source, topic, date, readTime, featured? }
-type ReadingProgress = { articleId, percent, lastPosition, lastReadAt, completed, startedAt, readCount, favorite }
-type ReaderSettings = { fontSize, lineHeight, fontFamily, readerTheme, reducedMotion, showAnnotations }
-type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', text, start, end, createdAt, noteText?, tags? }
+type Article = { id; title; summary; content: string[]; source; topic; date; readTime; featured? }
+type ReadingProgress = { articleId; percent; lastPosition; lastReadAt; completed; startedAt; readCount; favorite }
+type ReaderSettings = { fontSize; lineHeight; fontFamily; readerTheme; reducedMotion; showAnnotations }
+type Annotation = {
+  id
+  articleId
+  kind: 'highlight' | 'underline' | 'note'
+  text
+  start
+  end
+  createdAt
+  noteText?
+  tags?
+}
 ```
 
 ## 标注系统原理（核心）
@@ -101,13 +111,13 @@ type Annotation = { id, articleId, kind: 'highlight' | 'underline' | 'note', tex
 
 四套基础主题与 `design/explorations/palettes.html` 一致，graphite 墨夜来自 `2026-direction.html`，通过 `data-theme` 属性切换：
 
-| 主题 | 名称 | 关键色 |
-|---|---|---|
-| `paper` | 暖纸 | `--paper:#f4f0e9 --ink:#181817 --accent:#e96448` |
-| `blue` | 冷蓝 | `--paper:#e9edf4 --accent:#667ff0` |
-| `night` | 夜读绿 | `--paper:#20221f --accent:#d7f267` |
-| `violet` | 柔紫 | `--paper:#ebe8f6 --accent:#aa7bff` |
-| `graphite` | 墨夜 | `--paper:#101114 --accent:#d9ff5a`（提炼自 `design/explorations/2026-direction.html`） |
+| 主题       | 名称   | 关键色                                                                                 |
+| ---------- | ------ | -------------------------------------------------------------------------------------- |
+| `paper`    | 暖纸   | `--paper:#f4f0e9 --ink:#181817 --accent:#e96448`                                       |
+| `blue`     | 冷蓝   | `--paper:#e9edf4 --accent:#667ff0`                                                     |
+| `night`    | 夜读绿 | `--paper:#20221f --accent:#d7f267`                                                     |
+| `violet`   | 柔紫   | `--paper:#ebe8f6 --accent:#aa7bff`                                                     |
+| `graphite` | 墨夜   | `--paper:#101114 --accent:#d9ff5a`（提炼自 `design/explorations/2026-direction.html`） |
 
 阅读页可设置独立的「阅读主题」覆盖页面主题（设置 → 显示与主题）。设置页可开启「自动夜读」：系统进入深色模式时自动切换到夜读绿。
 
@@ -156,13 +166,13 @@ vp run db:rebuild                             # = node scripts/rebuild-db.mjs，
 node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现库比对）
 ```
 
-| 源 | 表 |
-|---|---|
-| `data/shenlun/*.json` | `papers` / `materials` / `questions` |
-| `data/xingce/*.json` | `xg_papers` / `xg_questions` |
-| `data/articles/{id}.json`（517 篇，每篇一个文件） | `articles` |
-| `data/guifan-terms.json`（3039 条，保留 id 空洞） | `guifan_terms` |
-| 派生（`migrate-fts.mjs`） | `articles_fts`（trigram FTS5） |
+| 源                                                | 表                                   |
+| ------------------------------------------------- | ------------------------------------ |
+| `data/shenlun/*.json`                             | `papers` / `materials` / `questions` |
+| `data/xingce/*.json`                              | `xg_papers` / `xg_questions`         |
+| `data/articles/{id}.json`（517 篇，每篇一个文件） | `articles`                           |
+| `data/guifan-terms.json`（3039 条，保留 id 空洞） | `guifan_terms`                       |
+| 派生（`migrate-fts.mjs`）                         | `articles_fts`（trigram FTS5）       |
 
 - 后两份源是 2026-09-13 用 `scripts/migrate-db-to-source.mjs` 从库里反导出来的：它们的原始
   上游在**仓库外**（年编 docx 在 `/Users/nif/…`，规范词合集 md 同样），此前 DB 是唯一副本。
@@ -171,7 +181,7 @@ node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现�
   所以 UI 改完直接提交源即可，不用手工导出。回写是**逐字节保真**的，不会产生假 diff。
   兜底/修复：`node scripts/migrate-db-to-source.mjs`（全量写回）；`--check` 只校验不写。
 - `src/lib/dbSource.test.ts` 守卫：① 文章/规范词「源 ↔ 库」逐字段一致；② `migrate-db-to-source
-  --check` 对三种源做**逐字节**比对（含 shenlun 孤儿文件检测）；③ `ensure-db` 能把「只有一张表
+--check` 对三种源做**逐字节**比对（含 shenlun 孤儿文件检测）；③ `ensure-db` 能把「只有一张表
   的半个库」重建完整；④ `DB_REBUILD_CHECK=1 vp test run` 再验证「从源重建的库与现库逐表逐列
   一致」（`created_at` 是入库时间戳，不参与比对）。
 - **`data/articles.db` 不再提交进 git**（`.gitignore` 忽略）——它是构建产物，仓库里进 git 的是

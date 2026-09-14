@@ -22,8 +22,8 @@
     "gate": "vp check && vp test run && vp run build",
     "lint": "vp lint .",
     "lint:fix": "vp lint . --fix",
-    "format": "vp fmt \"**/*.{ts,tsx,js,mjs,json,css}\"",
-    "format:check": "vp fmt --check \"**/*.{ts,tsx,js,mjs,json,css}\"",
+    "format": "vp fmt \"**/*.{ts,tsx,js,mjs,json,css,md}\"",
+    "format:check": "vp fmt --check \"**/*.{ts,tsx,js,mjs,json,css,md}\"",
     "prepare": "vp config",
     "test:py": "python3 -m unittest discover -s scripts/tests"
   },

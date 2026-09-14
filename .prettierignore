@@ -3,4 +3,3 @@ dist
 .npm-cache
 .vercel
 design
-*.md

@@ -1800,6 +1800,9 @@ p mark.exam-mark.lv-useless {
    颜色沿用 .draw-mode.m0~m5 的谱系（淡 → accent → ink → 斜纹=材料外），
    横轴左端「照抄材料」、右端「自己造」，一眼看出本题答案主要靠抄还是靠推。 */
 .mode-spectrum {
+  /* 定宽：谱系不随面板宽度伸缩（560px = 6 列 × 88px + 5 个 6px 间隙）
+     面板再宽也不拉长、再窄也只在放不下时按比例缩，图的比例在任何窗口下都一样 */
+  max-width: 560px;
   margin: 0 0 12px;
 }
 

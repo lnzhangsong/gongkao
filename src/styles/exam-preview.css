@@ -1810,15 +1810,17 @@ p mark.exam-mark.lv-useless {
 }
 
 .ms-axis {
-  display: flex;
-  align-items: flex-end;
+  /* 六等分定宽栅格：列宽只由容器决定，跟内容多少无关
+     （flex + flex:1 遇到长内容还要靠 min-width:0 兜底，grid 从根上不会被动） */
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
   gap: 6px;
   padding: 0 2px 6px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
 }
 
 .ms-col {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1864,10 +1866,17 @@ button.ms-col:hover {
 }
 
 .ms-bar {
-  width: 60%;
-  max-width: 26px;
+  /* 固定宽：此前是列宽的 60%，面板一窄柱子跟着变细 */
+  width: 26px;
   border-radius: 2px 2px 0 0;
   background: var(--accent);
+}
+
+/* 列内药丸固定占位：标签长短不影响列内布局（谱系里六个名字都是两字，但别留隐患） */
+.ms-col .draw-mode {
+  min-width: 3.2em;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .ms-bar.m0 {

@@ -362,7 +362,7 @@ export default function ExamPreviewPage() {
     const answered = draft.questions.filter((q) => q.answer).length
     return (
       <section className="reading-page">
-        <main className="reading-layout fade-in">
+        <main className="reading-layout exam-layout fade-in">
           <article>
             <header className="article-head">
               <button

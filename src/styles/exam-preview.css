@@ -1949,6 +1949,23 @@ button.ms-col:hover .draw-mode {
   }
 }
 
+/* —— 版心固定（真题页）——
+   正文栏此前是 minmax(0,900px)，且屏幕 ≥1600 加宽到 1160、≥2400 到 1420——随窗口伸缩。
+   现在钉到 --measure：选择器两个类，胜过 reading.css 各断点里的单类 .reading-layout 规则，
+   所以必须自己带断点：≤800px 仍按原样单列（右栏由汉堡菜单接管）。 */
+@media (min-width: 801px) {
+  .reading-layout.exam-layout {
+    grid-template-columns: minmax(0, var(--measure)) 280px;
+    max-width: calc(var(--measure) + 64px + 280px + 48px); /* 版心 + 间距 + 右栏 + 左右 padding */
+  }
+}
+
+/* 解析面板版心（+ 左右各 40px padding）；窗口再宽也不拉伸 */
+.shenlun-panel.exam-draw .shenlun-body {
+  max-width: calc(var(--measure-panel) + 80px);
+  margin: 0 auto;
+}
+
 @keyframes exam-draw-up {
   from {
     transform: translateY(24px);

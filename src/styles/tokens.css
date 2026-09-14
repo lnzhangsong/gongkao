@@ -216,6 +216,10 @@
   --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -20px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 6px 18px color-mix(in srgb, var(--ink) 16%, transparent);
   --container: 1180px;
+  /* 版心（钉死，不再随窗口加宽）：正文栏用 1000；
+     解析面板是卡片/要点面，用 1244（= 它原来的上限值）。窗口窄于版心时只能按比例缩，否则横向溢出。 */
+  --measure: 1000px;
+  --measure-panel: 1244px;
   --gutter: 38px;
   --gutter-sm: 20px;
   --space-xs: 8px;

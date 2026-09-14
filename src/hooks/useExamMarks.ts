@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { alertDialog } from '../components/ui/confirm'
 import { draftMaterialMarks } from '../lib/aiExamTrace'
+import { collectDistractions, type DistractionGroup } from '../lib/examDistractions'
 import { findQuoteInMaterial, type MarkRange } from '../lib/examMarks'
 import { joinParagraphs } from '../lib/examText'
 import { useExamStudyStore, type MaterialMark } from '../stores/examStudyStore'
@@ -123,6 +124,12 @@ export function useExamMarks(draft: ExamDetail | null, inlineMarks: boolean, aiC
     if (failed) setGenError(`${failed} 题生成失败，可再点一次重试（已有标注的题会跳过）`)
   }
 
+  /* 本卷干扰项（C5）：level = useless 的句子按材料汇总——材料级与题目级两种来源都收 */
+  const distractions = useMemo(
+    () => (draft ? collectDistractions(draft.id, draft.materials, allMarks) : ([] as DistractionGroup[])),
+    [draft, allMarks],
+  )
+
   /* 材料编号 → 标注区间（inlineMarks 关闭 = 完全不渲染，干净原文） */
   const markRangesByMat = useMemo(() => {
     const map = new Map<number, MarkRange[]>()
@@ -150,6 +157,7 @@ export function useExamMarks(draft: ExamDetail | null, inlineMarks: boolean, aiC
     flowModalIdx,
     setFlowModalIdx,
     flowByMat,
+    distractions,
     markRangesByMat,
     generateMaterialMarks,
     generateAllMarks,

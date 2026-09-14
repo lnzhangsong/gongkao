@@ -1491,6 +1491,81 @@ p mark.exam-mark.lv-useless {
   padding: 0 22px 18px;
 }
 
+/* —— 本卷干扰项一览（C5）：与行文思路弹窗同骨架，按材料分组的清单 ——
+   这些句子在原文本里只是划线小字，最该被单独看见的反而是「为什么没用」那句理由。 */
+.distract-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.distract-group {
+  padding: 11px 14px 9px;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--ink) 40%, var(--paper));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ink) 2%, var(--paper));
+}
+
+.distract-mat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  font: 700 13.5px/1.7 var(--sans);
+  color: var(--ink);
+}
+
+.distract-mat > span {
+  font: 400 11px/1.7 var(--sans);
+  color: var(--muted);
+}
+
+.distract-mat .text-btn {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.distract-item {
+  display: flex;
+  gap: 8px;
+  padding: 7px 0 6px;
+}
+
+.distract-item + .distract-item {
+  border-top: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.distract-no {
+  flex-shrink: 0;
+  font: 500 12px/1.9 var(--mono);
+  color: var(--muted);
+}
+
+.distract-quote {
+  margin: 0;
+  font: 12.5px/1.85 var(--serif);
+  color: var(--ink);
+}
+
+.distract-why {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 3px 0 0;
+  font: 11.5px/1.75 var(--sans);
+  color: var(--muted);
+}
+
+.distract-role {
+  flex-shrink: 0;
+  padding: 0 6px;
+  font: 700 10.5px/1.8 var(--sans);
+  color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 2px;
+}
+
 .exam-flow-head {
   position: sticky;
   top: 0;

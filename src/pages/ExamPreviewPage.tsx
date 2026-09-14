@@ -23,6 +23,7 @@ import { ExamMaterialEditor } from '../components/exam/ExamMaterialEditor'
 import { ExamEditBar } from '../components/exam/ExamEditBar'
 import { ExamListView } from '../components/exam/ExamListView'
 import { MarkedParagraph } from '../components/exam/ExamMarkedParagraph'
+import { ExamDistractionModal } from '../components/exam/ExamDistractionModal'
 import { ExamMaterialFlowModal } from '../components/exam/ExamMaterialFlowMap'
 import { useExamMarks } from '../hooks/useExamMarks'
 import { joinParagraphs, questionMaterials, reflowInline, reflowParagraphs } from '../lib/examText'
@@ -253,6 +254,7 @@ export default function ExamPreviewPage() {
   const aiConfigured = useAiStore((st) => isAiConfigured(st.settings))
   const {
     matHasMarks,
+    distractions,
     genProgress,
     genError,
     matGenIdx,
@@ -263,6 +265,10 @@ export default function ExamPreviewPage() {
     generateMaterialMarks,
     generateAllMarks,
   } = useExamMarks(draft, inlineMarks, aiConfigured)
+
+  /* 本卷干扰项一览（C5）：入口在右栏阅读辅助面板，弹窗与行文思路弹窗同骨架 */
+  const [distractionOpen, setDistractionOpen] = useState(false)
+  const distractionCount = distractions.reduce((n, g) => n + g.marks.length, 0)
 
   const reflowAll = () =>
     patchDraft((d) => {
@@ -635,9 +641,23 @@ export default function ExamPreviewPage() {
             onCycleTheme={cycleTheme}
             onToggleFocus={() => setFocusMode(!settings.focusMode)}
             onToggleTermBox={() => setTermBox(!settings.termBox)}
-            examMarks={{ on: inlineMarks, onToggle: toggleInlineMarks }}
+            examMarks={{
+              on: inlineMarks,
+              onToggle: toggleInlineMarks,
+              distractionCount,
+              onOpenDistractions: () => setDistractionOpen(true),
+            }}
             onOpenQuestions={() => setQuestionsOpen(true)}
           />
+
+          {distractionOpen && distractionCount > 0 && (
+            <ExamDistractionModal
+              groups={distractions}
+              anchorByNum={anchorByNum}
+              onJump={jumpTo}
+              onClose={() => setDistractionOpen(false)}
+            />
+          )}
 
           {flowModalIdx != null && (flowByMat.get(flowModalIdx)?.length ?? 0) > 0 && (
             <ExamMaterialFlowModal

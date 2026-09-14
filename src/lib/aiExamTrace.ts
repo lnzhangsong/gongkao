@@ -45,6 +45,10 @@ export interface TraceExamQuestion {
 const MAX_ANSWER_LEN = 2600
 const MAX_MATERIAL_LEN = 6000
 
+/** AI 漏填 use 时的兜底文案（材料标注侧的静默改值尚未收口，先把它显式化，
+ *  好让展示端能识别「这不是 AI 写的理由」而不是把它当成真说明，见 C5 干扰项一览） */
+export const MARK_USE_FALLBACK = '辅助句：帮助理解材料脉络，一般不直接进答案'
+
 const SYSTEM =
   '你是申论答案解析专家，擅长把参考答案逐要点回溯到给定材料原文，并判定每个要点经过了什么加工。只输出 JSON，不要输出任何解释文字。'
 
@@ -288,7 +292,7 @@ ${buildMaterialBlock(opts.materials)}`
         quote,
         role,
         /* 每句必有解释：AI 漏填 use 时按辅助句兜底 */
-        use: typeof m?.use === 'string' && m.use.trim() ? m.use.trim() : '辅助句：帮助理解材料脉络，一般不直接进答案',
+        use: typeof m?.use === 'string' && m.use.trim() ? m.use.trim() : MARK_USE_FALLBACK,
         level,
         /* 行文阶段（提纲用）：AI 未产出则缺省，展示端按连续同作用兜底分组 */
         stage:

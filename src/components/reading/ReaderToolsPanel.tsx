@@ -12,7 +12,8 @@ interface ReaderToolsPanelProps {
   activeTheme: string
   onCycleTheme: () => void
   /** 真题页专属：行文思路标注开关 + 作答要求抽屉入口（不传则隐藏） */
-  examMarks?: { on: boolean; onToggle: () => void }
+  /** 本卷干扰项（C5）：> 0 才显示入口；不传回调则隐藏 */
+  examMarks?: { on: boolean; onToggle: () => void; distractionCount?: number; onOpenDistractions?: () => void }
   onOpenQuestions?: () => void
   /** 收藏 / 标注显隐为文章专属能力：不传回调则隐藏对应条目（真题页） */
   favorite?: boolean
@@ -153,6 +154,14 @@ export function ReaderToolsPanel({
             onClick={examMarks.onToggle}
           >
             {examMarks.on ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      )}
+      {examMarks && (examMarks.distractionCount ?? 0) > 0 && (
+        <div className="tool">
+          <span>干扰项</span>
+          <button title="本卷 AI 判为无用的句子汇总：为什么看似相关却采不得分" onClick={examMarks.onOpenDistractions}>
+            查看 {examMarks.distractionCount}
           </button>
         </div>
       )}

@@ -6,7 +6,13 @@ import type { Article, ReadingProgress } from '../types'
 import { useAnnotationStore } from '../stores/annotationStore'
 import type { Annotation } from '../types'
 import { useShenlunStore, type ArticleStudy } from '../stores/shenlunStore'
-import { useExamStudyStore, asMarksRecord, type QuestionTrace, type QuestionMarks } from '../stores/examStudyStore'
+import {
+  useExamStudyStore,
+  asMarksRecord,
+  normalizeTrace,
+  type QuestionTrace,
+  type QuestionMarks,
+} from '../stores/examStudyStore'
 import { useAiAssistStore, type AssistRecord } from '../stores/aiAssistStore'
 import { useXingceStore, asXgAnswer, type XgAnswer } from '../stores/xingceStore'
 import { useAiStore, type AiSettings } from '../stores/aiStore'
@@ -121,11 +127,12 @@ const examStudyAdapter: TableAdapter<QuestionTrace | QuestionMarks> = {
   apply: (k, data) => {
     const kind = k.slice(0, k.indexOf('#'))
     const key = k.slice(k.indexOf('#') + 1)
-    /* 云端可能残留 9331181 修复前 traces/marks 同键互写的坏记录，形状不对就丢弃，防止拉取后页面崩溃 */
+    /* 云端可能残留 9331181 修复前 traces/marks 同键互写的坏记录，形状不对就丢弃，防止拉取后页面崩溃；
+       形状合法的记录一律过 normalizeTrace——字段别名归一（A1）与旧数据兼容都只做在 store 那一处 */
     if (kind === 'trace') {
-      const d = data as Partial<QuestionTrace>
-      if (!d || !Array.isArray(d.points)) return
-      useExamStudyStore.setState((s) => ({ traces: { ...s.traces, [key]: d as QuestionTrace } }))
+      const d = normalizeTrace(data, key)
+      if (!d) return
+      useExamStudyStore.setState((s) => ({ traces: { ...s.traces, [key]: d } }))
     } else {
       const ok = asMarksRecord(data)
       if (!ok) return

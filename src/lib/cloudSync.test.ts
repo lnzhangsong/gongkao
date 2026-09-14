@@ -297,6 +297,28 @@ describe('cloudSync 引擎（mock Supabase）', () => {
     expect(b.examStudy.getState().marks['p1#2']?.marks).toHaveLength(1)
   })
 
+  it('云端旧字段在拉取时归一（A1：think→locate / note→modeWhy），本地不再出现旧键', async () => {
+    const fake = createFakeSupabase()
+    /* 另一台设备（或升级前的本机）推上来的记录：只有旧字段 think / note */
+    fake.seed('exam_study', 'trace#p1#2', {
+      kind: 'trace',
+      key: 'p1#2',
+      data: {
+        ...trace(),
+        points: [{ id: 't1', text: '要点', mode: '摘抄', sourceIdx: 1, think: '旧定位', note: '旧加工' }],
+      },
+    })
+    const h = await boot(fake)
+    h.cloudSync.startCloudSync()
+    await h.cloudSync.syncNow()
+
+    const po = h.examStudy.getState().traces['p1#2']?.points[0]
+    expect(po?.locate).toBe('旧定位')
+    expect(po?.modeWhy).toBe('旧加工')
+    expect(po).not.toHaveProperty('think')
+    expect(po).not.toHaveProperty('note')
+  })
+
   it('坏记录拒入：形状不符的 xg_answers 不写入 store', async () => {
     const fake = createFakeSupabase()
     fake.seed('xg_answers', 'p1#1', { key: 'p1#1', data: { paperId: 'p1' } })

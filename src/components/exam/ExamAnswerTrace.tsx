@@ -17,7 +17,7 @@ import { alertDialog } from '../ui/confirm'
 /**
  * 要点列表（题目解析抽屉第一节）：
  * 有参考答案 = 溯源（答案每句话怎么来的），无答案 = 推导（AI 从材料造参考要点）。
- * 每条要点一张叙事卡：加工方式徽标 + 要点句 + 推理链（思路 → 出处 → 加工）。
+ * 每条要点一张叙事卡：加工方式徽标 + 要点句 + 方法链（定位 → 材料出处 → 加工判断）。
  * AI 产出先进草稿态（A3：生成 → 人工确认 → 入库）；入库后行内编辑直接写 store。
  */
 export function ExamAnswerTrace({
@@ -302,9 +302,9 @@ function PointCard({
         <div className="draw-edit">
           <textarea
             rows={2}
-            value={point.think ?? ''}
-            placeholder="思路：题干哪个词 → 定位哪则材料 → 怎么提炼出这条"
-            onChange={(e) => onChange({ think: e.target.value })}
+            value={point.locate ?? ''}
+            placeholder="定位方法：题干哪个词 → 去哪类材料找 → 按什么信号锁定（写成可复用步骤）"
+            onChange={(e) => onChange({ locate: e.target.value })}
           />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <MenuSelect
@@ -330,23 +330,24 @@ function PointCard({
             onChange={(e) => onChange({ quote: e.target.value })}
           />
           <input
-            value={point.note ?? ''}
-            placeholder="加工说明：原文 → 答案话，经过了什么"
-            onChange={(e) => onChange({ note: e.target.value })}
+            value={point.modeWhy ?? ''}
+            placeholder="加工判断：原文说法与答案表述差在哪、为什么是这种加工方式"
+            onChange={(e) => onChange({ modeWhy: e.target.value })}
           />
         </div>
       </article>
     )
   }
   const anchor = point.sourceIdx != null ? anchorByNum.get(point.sourceIdx) : undefined
-  /* 只读态方法链数据：定位 → 材料 → 加工判断；文字链与导图共用同一份 */
+  /* 只读态方法链数据：定位 → 材料 → 加工判断；文字链与导图共用同一份。
+     旧字段别名已在 store 的 normalizePoint 合并，这里只认 locate / modeWhy */
   const steps: { key: string; label: string; tone: string; node: ReactNode }[] = []
-  if (point.locate || point.think) {
+  if (point.locate) {
     steps.push({
       key: 'q',
       label: '定位',
       tone: 'n-locate',
-      node: <span>{point.locate ?? point.think}</span>,
+      node: <span>{point.locate}</span>,
     })
   }
   if (point.sourceIdx != null || point.quote) {
@@ -375,7 +376,7 @@ function PointCard({
       ),
     })
   }
-  if (point.modeWhy || point.note || point.mode) {
+  if (point.modeWhy || point.mode) {
     steps.push({
       key: 'p',
       label: '加工',
@@ -386,7 +387,6 @@ function PointCard({
             {point.mode}
           </span>
           {point.modeWhy && <span>{point.modeWhy}</span>}
-          {!point.modeWhy && point.note && <span>{point.note}</span>}
         </>
       ),
     })

@@ -58,6 +58,13 @@
 >   - GitHub 侧旧对象不会立即消失（仍可按已知 SHA 访问、直到服务端 GC）；如需彻底清除要另行联系 GitHub Support 触发仓库 GC。
 > - **本地写接口写穿到源**（同批）：`scripts/lib/export-source.mjs` 收口「库 → 源」映射（逐字节保真），api-server 的规范词增删改、试卷新建/编辑/删除在写库后即时回写 `data/guifan-terms.json` / `data/shenlun/{id}.json`——此前 UI 改完要记得手工 `migrate-db-to-source`，忘了就被下次重建丢掉。`migrate-db-to-source.mjs` 扩为三种源的全量写回 + `--check` 只校验；`src/lib/dbSource.test.ts` 相应加了「逐字节 `--check`」与「半个库自愈」两条守卫。
 
+**2026-09-15 M1 解析呈现优化 · A1 字段合并**：`AnswerPointTrace` 里两组语义重复字段合并——`think` → `locate`（怎么找到这条）、`note` → `modeWhy`（怎么加工出来的）；`ExamAnswerTrace.tsx` 里 `locate ?? think`、`modeWhy 优先否则 note` 两处兼容判断随之删除。
+
+> - 兼容只做在一处：新增 `examStudyStore.normalizePoint` / `normalizeTrace`，AI 解析（`parseTraceResult` 不再自己拆字段）、本地 IndexedDB 水合、云端 `exam_study` 拉取、`importTraces` 四条入口全部经过；旧键经归一即丢弃，下次同步回写云端自然消失，无需一次性迁移。
+> - `normalizeTrace` 同时接管原先散在 `cloudSync.ts` 的「坏形状记录拒入」判断，缺 `paperId`/`qIdx` 时用 `键` 补全；水合时只在「归一后与原文不同」才写回本地，避免覆盖水合期间其他入口的写入。
+> - prompt 删掉 `note` 字段（`modeWhy` 已覆盖同一语义），AI 若仍自由发挥返回 `note`/`think` 也会被归一函数接住。
+> - 单测 +10（`aiExamTrace` 旧字段归并、`examStudyStore` 归并与坏形状、`cloudSync` 云端旧字段拉取归一），共 287 项通过。
+
 **2026-09-14 文档纳入格式化**：Markdown 此前被两处忽略（`vite.config.ts` 的 `fmt.ignorePatterns` 与 `.prettierignore` 各有一条 `*.md`），文档长期无格式约束。Oxfmt（0.64）本身支持 Markdown（标题/列表符归一、表格按 CJK 显示宽度对齐、正文不重排），故：
 
 > - 摘掉两处 `*.md` 忽略；`format` / `format:check` 的 glob 补 `md`；
@@ -107,7 +114,7 @@
 | 申论写作AI辅助设计方案.md       | AI 线方案：AI-1~4+，决策 A1–A8（已全部落地）                                                                                                                                                          |
 | 申论方法论与答案溯源设计方案.md | 题目思路推导：底部上下分栏解析面板（可拖高/全屏）——AI 逐条推导/拆解要点，每条教「怎么定位 → 原文出处 → 怎么判断加工方式」；原文标注 = 高亮 + 句后内联「」解析（静态方法论方案已废弃，见文中修订记录） |
 | 数据飞轮与壁垒设计.md           | 壁垒演进顶层设计：飞轮四环节审计 + ROI 排序建议（使用信号回写为最高优先级）                                                                                                                           |
-| 设计与体验优化清单.md           | **当前待办**（M1 待实测 / **M1 解析呈现优化待修 A1–C5** / Paper OS Phase 2 / 飞轮四项）+ OpenUI 评估结论（不引入）+ 历史批次归档（2026-09-05 重组为两层）                                             |
+| 设计与体验优化清单.md           | **当前待办**（M1 待实测 / **M1 解析呈现优化 B1–C5**（A1 字段合并已完成）/ Paper OS Phase 2 / 飞轮四项）+ OpenUI 评估结论（不引入）+ 历史批次归档（2026-09-05 重组为两层）                             |
 | 学习者数据模型设计.md           | 学习对象 / 证据 / 掌握度的数据模型与分期（事件流底座）                                                                                                                                                |
 | 学习与复习算法.md               | 学习事件 → 到期队列 → 掌握度推导；FSRS 幂律简化 R(t) 与演进路线                                                                                                                                       |
 | 题目辅助作答设计方案.md         | 题目侧辅助作答（思路推导落位）                                                                                                                                                                        |

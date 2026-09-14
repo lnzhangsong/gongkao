@@ -2,15 +2,14 @@
  * AI 答案溯源（申论方法论与答案溯源设计方案 §4.2，M1）：
  * 把真题参考答案逐要点拆开——每条要点标注「从材料哪句话来、经过了什么加工」。
  * 输入 = 题干 + 要求 + 参考答案 + 相关材料全文（客户端组装，AI-4 同款基础设施）；
- * 输出走 extractJson 容错解析，mode / sourceIdx 做枚举与范围校验；
- * 产出一律先进页面草稿态，人工确认后才写入 examStudyStore（A3 不变）。
+ * 输出走 extractJson 容错解析；字段归一（含旧字段别名）统一走 examStudyStore 的 normalizePoint，
+ * sourceIdx 做范围校验；产出一律先进页面草稿态，人工确认后才写入 examStudyStore（A3 不变）。
  */
 import {
-  DERIVE_MODES,
   MARK_LEVELS,
   MARK_ROLES,
+  normalizePoint,
   type AnswerPointTrace,
-  type DeriveMode,
   type MarkLevel,
   type MaterialMark,
 } from '../stores/examStudyStore'
@@ -79,8 +78,7 @@ export async function draftAnswerTrace(opts: {
       "sourceIdx": 材料编号（数字，取下方【材料编号】的数字；材料外填 null）,
       "locate": "定位方法：可复用的查找步骤——先抓题干哪个关键词/设问方向 → 据此判断去哪类材料找（问题段/对策段/案例段）→ 在材料里按什么信号找到这一处（如高频词、转折词、人物做法）。写成方法论，不粘贴本题具体情况",
       "quote": "支撑这个要点的材料原句（从材料原文里摘，40 字以内；材料外可省略）",
-      "modeWhy": "加工判断：为什么这条是这种加工方式而不是别的——对照原文说法与答案表述，指出差距（口语vs书面 / 一处vs多处 / 具体vs规范 / 明说vs可推出），让读者学会下次自己判断",
-      "note": "加工说明：原文的什么信息、经过什么加工变成这条要点的话"
+      "modeWhy": "加工判断：为什么这条是这种加工方式而不是别的——对照原文说法与答案表述，指出差距（口语vs书面 / 一处vs多处 / 具体vs规范 / 明说vs可推出），让读者学会下次自己判断"
     }
   ]
 }
@@ -89,8 +87,7 @@ ${MODE_RULES}
 ${pointsRule}；
 - locate 是重点：教「怎么定位」——读者拿到另一道题也能照着这个方法找材料，禁止只说“定位到材料X”而不给依据；
 - modeWhy 是重点：教「怎么判断加工方式」——必须点出原文表述与答案表述的具体差距（如：原文“路不好走”是具体现象，答案需要规范表达，所以是提升；原文有三处同类描述，答案合成一条，所以是归纳），让读者下次自己会选；
-- quote 必须是材料原文的连续片段（可截取），不得改写拼接；找不到出处的要点 sourceIdx 填 null、mode 填「补充」或「推理」；
-- note 点明加工路径（例：「材料②『楼道堆物无人管』同义改写为规范表达」）。
+- quote 必须是材料原文的连续片段（可截取），不得改写拼接；找不到出处的要点 sourceIdx 填 null、mode 填「补充」或「推理」。
 
 【题目】${q.stem}${q.requirement ? `\n要求：${q.requirement}` : ''}${q.type ? `\n题型：${q.type}` : ''}
 ${q.answer ? `\n【参考答案】\n${q.answer.slice(0, MAX_ANSWER_LEN)}\n` : ''}
@@ -111,29 +108,18 @@ ${materialBlock}`
   )
 }
 
-/** 解析 + 校验 AI 返回：mode 枚举容错、sourceIdx 范围校验（越界/非数字回退 null） */
+/** 解析 + 校验 AI 返回：字段别名归一（走 store 的 normalizePoint）、mode 枚举容错、sourceIdx 范围校验（越界/非数字回退 null） */
 export function parseTraceResult(raw: string, validIdx: number[]): AnswerPointTrace[] {
-  const out = extractJson<{ points?: Partial<AnswerPointTrace>[] }>(raw)
+  const out = extractJson<{ points?: unknown }>(raw)
   const idxSet = new Set(validIdx)
   const points = (Array.isArray(out.points) ? out.points : [])
-    .map((p): AnswerPointTrace | null => {
-      const text = typeof p?.text === 'string' ? p.text.trim() : ''
-      if (!text) return null
-      const modeRaw = typeof p?.mode === 'string' ? p.mode.trim() : ''
-      const mode = (DERIVE_MODES as readonly string[]).includes(modeRaw) ? (modeRaw as DeriveMode) : '归纳'
-      const idxRaw = typeof p?.sourceIdx === 'number' ? p.sourceIdx : parseInt(String(p?.sourceIdx ?? ''), 10)
-      const sourceIdx = Number.isFinite(idxRaw) && idxSet.has(idxRaw) ? idxRaw : null
-      return {
-        id: `t${Math.random().toString(36).slice(2, 10)}`,
-        text,
-        mode,
-        sourceIdx,
-        think: typeof p?.think === 'string' && p.think.trim() ? p.think.trim() : undefined,
-        locate: typeof p?.locate === 'string' && p.locate.trim() ? p.locate.trim() : undefined,
-        quote: typeof p?.quote === 'string' && p.quote.trim() ? p.quote.trim() : undefined,
-        note: typeof p?.note === 'string' && p.note.trim() ? p.note.trim() : undefined,
-        modeWhy: typeof p?.modeWhy === 'string' && p.modeWhy.trim() ? p.modeWhy.trim() : undefined,
-      }
+    .map((item): AnswerPointTrace | null => {
+      const p = normalizePoint(item)
+      /* 空要点（无 text）丢弃：AI 偶尔会多吐一条空壳 */
+      if (!p || !p.text) return null
+      /* 越界编号按「材料外」处理，防止来源下拉指向不存在的材料 */
+      if (p.sourceIdx != null && !idxSet.has(p.sourceIdx)) p.sourceIdx = null
+      return p
     })
     .filter((p): p is AnswerPointTrace => p !== null)
   if (!points.length) throw new Error('AI 返回内容为空')

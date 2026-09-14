@@ -33,16 +33,62 @@ export interface AnswerPointTrace {
   mode: DeriveMode
   /** 来源材料 idx（materials[].idx）；null = 材料外（背景/常识/热词） */
   sourceIdx: number | null
-  /** 思维路径（旧字段，兼容保留）：怎么想到这条的 */
-  think?: string
   /** 定位方法：从题干哪个词出发、按什么依据找到这则材料/这一处——可复用的查找方法 */
   locate?: string
   /** 原文摘句：答案由这句话加工而来 */
   quote?: string
-  /** 加工说明（旧字段，兼容保留）：怎么从原文变成答案话 */
-  note?: string
   /** 加工判断：为什么用这种加工方式而不是别的——原文说法与答案表述差在哪 */
   modeWhy?: string
+}
+
+/* ---------------- 要点字段归一（A1） ----------------
+ * 历史上有两组语义重复的字段：think ≈ locate（怎么找到这条）、note ≈ modeWhy（怎么加工出来的）。
+ * 旧数据还在本地 IndexedDB 与云端 exam_study 里，且云端数据是 LWW 覆盖、无法假设谁先升级，
+ * 所以兼容只做在这一处：AI 解析、本地水合、云端拉取、导入四条入口全部走 normalizePoint，
+ * 展示端与统计端只认新字段，不再写 `locate ?? think` 这类判断。
+ * 旧字段一旦经过归一即不再保留，下次同步回写云端时自然消失。 */
+type RawPoint = Partial<AnswerPointTrace> & { think?: unknown; note?: unknown }
+
+/** 取非空字符串（去首尾空白），否则 undefined */
+const asText = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
+
+/** 单个要点归一：补 id、字段别名合并（新字段优先，与旧展示逻辑 `locate ?? think` 一致）、mode/sourceIdx 保底 */
+export function normalizePoint(raw: unknown): AnswerPointTrace | null {
+  if (!raw || typeof raw !== 'object') return null
+  const p = raw as RawPoint
+  const modeRaw = typeof p.mode === 'string' ? p.mode.trim() : ''
+  const idxRaw = typeof p.sourceIdx === 'number' ? p.sourceIdx : Number.parseInt(String(p.sourceIdx ?? ''), 10)
+  return {
+    id: typeof p.id === 'string' && p.id ? p.id : `t${Math.random().toString(36).slice(2, 10)}`,
+    text: typeof p.text === 'string' ? p.text : '',
+    mode: (DERIVE_MODES as readonly string[]).includes(modeRaw) ? (modeRaw as DeriveMode) : '归纳',
+    sourceIdx: Number.isFinite(idxRaw) ? idxRaw : null,
+    locate: asText(p.locate) ?? asText(p.think),
+    quote: asText(p.quote),
+    modeWhy: asText(p.modeWhy) ?? asText(p.note),
+  }
+}
+
+/** 整组要点归一（非对象项丢弃） */
+export function normalizePoints(raw: unknown): AnswerPointTrace[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map(normalizePoint).filter((p): p is AnswerPointTrace => p !== null)
+}
+
+/** 溯源记录归一 + 形状校验（云端可能残留 9331181 修复前 traces/marks 同键互写的坏记录）；
+ *  `key` = `${paperId}#${qIdx}`，记录自身缺 paperId/qIdx 时回退用键补全 */
+export function normalizeTrace(raw: unknown, key = ''): QuestionTrace | null {
+  const d = raw as Partial<QuestionTrace> | null
+  if (!d || typeof d !== 'object' || !Array.isArray(d.points)) return null
+  const [keyPaper = '', keyQ = ''] = key.split('#')
+  const qIdx = typeof d.qIdx === 'number' && Number.isFinite(d.qIdx) ? d.qIdx : Number.parseInt(keyQ, 10)
+  return {
+    paperId: typeof d.paperId === 'string' && d.paperId ? d.paperId : keyPaper,
+    qIdx: Number.isFinite(qIdx) ? qIdx : -1,
+    origin: d.origin === 'ai' ? 'ai' : 'manual',
+    points: normalizePoints(d.points),
+    updatedAt: typeof d.updatedAt === 'string' && d.updatedAt ? d.updatedAt : new Date().toISOString(),
+  }
 }
 
 export interface QuestionTrace {
@@ -287,7 +333,11 @@ export const useExamStudyStore = create<ExamStudyState>()(
         set((s) => {
           const next = { ...s.traces }
           for (const t of list) {
-            if (t && typeof t.paperId === 'string' && typeof t.qIdx === 'number') next[traceKey(t.paperId, t.qIdx)] = t
+            if (t && typeof t.paperId === 'string' && typeof t.qIdx === 'number') {
+              const key = traceKey(t.paperId, t.qIdx)
+              const ok = normalizeTrace(t, key)
+              if (ok) next[key] = ok
+            }
           }
           return { traces: next }
         }),
@@ -299,16 +349,31 @@ export const useExamStudyStore = create<ExamStudyState>()(
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({ traces: s.traces, marks: s.marks }),
       onRehydrateStorage: () => (state) => {
-        /* 本地 IndexedDB 残留的坏形状记录同样清洗掉 */
+        /* 本地 IndexedDB 里可能有坏形状记录（9331181 前的 traces/marks 同键互写）与 A1 前的旧字段；
+         * 一律归一，且只有「归一后与原文不同」才写回，避免覆盖水合期间其他入口的写入 */
         if (state) {
           const marks: Record<string, QuestionMarks> = {}
-          let dirty = false
-          for (const [k, rec] of Object.entries(state.marks)) {
+          const traces: Record<string, QuestionTrace> = {}
+          let marksDirty = false
+          let tracesDirty = false
+          for (const [k, rec] of Object.entries(state.marks ?? {})) {
             const ok = asMarksRecord(rec)
             if (ok) marks[k] = ok
-            else dirty = true
+            else marksDirty = true
           }
-          useExamStudyStore.setState(dirty ? { marks, _hasHydrated: true } : { _hasHydrated: true })
+          for (const [k, rec] of Object.entries(state.traces ?? {})) {
+            const ok = normalizeTrace(rec, k)
+            if (ok) {
+              traces[k] = ok
+              /* 键序不同即视为需重写（归一后的键序固定，写回一次后即稳定） */
+              if (JSON.stringify(ok) !== JSON.stringify(rec)) tracesDirty = true
+            } else tracesDirty = true
+          }
+          useExamStudyStore.setState({
+            ...(marksDirty ? { marks } : {}),
+            ...(tracesDirty ? { traces } : {}),
+            _hasHydrated: true,
+          })
           return
         }
         useExamStudyStore.setState({ _hasHydrated: true })

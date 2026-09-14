@@ -1842,12 +1842,26 @@ button.ms-col {
   cursor: pointer;
 }
 
-button.ms-col:hover {
-  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+/* 选中/悬停只落在「柱子 + 药丸」上——两者都是定宽元素（26px / 药丸宽度）；
+   以前给整列铺底色，选一列就在细柱群里冒出一块比柱子宽三四倍的色块，宽度还跟着列走 */
+.ms-col.on .ms-bar {
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--accent);
 }
 
-.ms-col.on {
-  background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+.ms-col.on .draw-mode {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.ms-col.on .ms-num {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+button.ms-col:hover .draw-mode {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .ms-col.zero {

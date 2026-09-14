@@ -70,10 +70,18 @@ export function ExamAnswerTrace({
   const [error, setError] = useState('')
   /* 要点展示形态：导图（默认）/ 文字链 */
   const [view, setView] = useState<'map' | 'text'>('map')
+  /* 谱系概览筛中的加工方式（C1）：只在只读态生效，见 filter */
+  const [modeFilter, setModeFilter] = useState<DeriveMode | null>(null)
 
   const points = draft ?? trace?.points ?? []
   const hasAnswer = Boolean(q.answer)
   const hasTrace = Boolean(trace?.points.length)
+
+  /* 筛选取「仍然有效」的那个：编辑态不筛（免得改完加工方式卡片突然消失），
+     点中的加工方式被 AI 重生成换掉后自动失效（免得停在空列表里退不出来） */
+  const filter = !editing && modeFilter && points.some((p) => p.mode === modeFilter) ? modeFilter : null
+  /* no 用要点在全集里的序号：筛选后编号不跳号 */
+  const rows = points.map((point, i) => ({ point, no: i + 1 })).filter(({ point }) => !filter || point.mode === filter)
 
   /** AI 相关材料优先，未匹配到则给全卷 */
   const promptMaterials = relatedIdx.length > 0 ? materials.filter((m) => relatedIdx.includes(m.idx)) : materials
@@ -185,6 +193,10 @@ export function ExamAnswerTrace({
 
       {error && <p className="draw-error">{error}</p>}
 
+      {open && points.length > 0 && (
+        <ModeSpectrum points={points} active={filter} onPick={editing ? undefined : setModeFilter} />
+      )}
+
       {open && (
         <details className="trace-mode-guide">
           <summary>加工方式怎么选？</summary>
@@ -212,10 +224,10 @@ export function ExamAnswerTrace({
         <>
           {draft && <p className="draw-hint">AI 草稿 · 顶部「完成编辑」保存入库</p>}
           <div>
-            {points.map((p, i) => (
+            {rows.map(({ point: p, no }) => (
               <PointCard
                 key={p.id}
-                no={i + 1}
+                no={no}
                 point={p}
                 view={view}
                 materials={materials}
@@ -254,6 +266,71 @@ export function ExamAnswerTrace({
         </>
       )}
     </section>
+  )
+}
+
+/** 加工方式谱系概览（C1）：六类本是一条「照抄材料 → 自己造」的连续谱。
+ *  以前每题只给每张卡一个彩色 pill，8 条散着、看不出整体靠抄还是靠推；
+ *  这里用一条横轴分布顶上，顺便当筛选入口（只读态点一列 = 只看这类要点）。 */
+function ModeSpectrum({
+  points,
+  active,
+  onPick,
+}: {
+  points: AnswerPointTrace[]
+  /** 当前筛中的加工方式；null = 未筛 */
+  active: DeriveMode | null
+  /** 点列切换筛选；编辑态不传 = 只作展示，不做可点的假动作 */
+  onPick?: (mode: DeriveMode | null) => void
+}) {
+  const counts = DERIVE_MODES.map((m) => points.filter((p) => p.mode === m).length)
+  const max = Math.max(...counts)
+  const fromMaterial = points.filter((p) => p.sourceIdx != null).length
+  const topIdx = counts.indexOf(max)
+  const activeCount = active ? counts[DERIVE_MODES.indexOf(active)] : 0
+  const summary = active
+    ? `已筛出「${active}」${activeCount} 条 · 再点该列取消`
+    : `${points.length} 条要点：${fromMaterial} 条出自材料、${points.length - fromMaterial} 条材料外 · 最多的是「${DERIVE_MODES[topIdx]}」（${max} 条）`
+  return (
+    <div className="mode-spectrum">
+      <p className="ms-summary">{summary}</p>
+      <div className="ms-axis">
+        {DERIVE_MODES.map((m, i) => {
+          const n = counts[i]
+          const cls = `ms-col${active === m ? ' on' : ''}${n ? '' : ' zero'}`
+          const inner = (
+            <>
+              <span className="ms-num">{n}</span>
+              <span className="ms-track">
+                <span className={`ms-bar m${i}`} style={{ height: `${n ? Math.max(14, (n / max) * 100) : 0}%` }} />
+              </span>
+              <span className={`draw-mode m${i}`}>{m}</span>
+            </>
+          )
+          return onPick ? (
+            <button
+              key={m}
+              type="button"
+              className={cls}
+              aria-pressed={active === m}
+              aria-label={`${m} ${n} 条`}
+              title={DERIVE_MODE_HINTS[m]}
+              onClick={() => onPick(active === m ? null : m)}
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={m} className={cls} aria-label={`${m} ${n} 条`} title={DERIVE_MODE_HINTS[m]}>
+              {inner}
+            </div>
+          )
+        })}
+      </div>
+      <div className="ms-foot" aria-hidden="true">
+        <span>← 照抄材料</span>
+        <span>自己造 →</span>
+      </div>
+    </div>
   )
 }
 

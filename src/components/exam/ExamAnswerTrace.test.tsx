@@ -100,6 +100,50 @@ describe('ExamAnswerTrace · 加工方式谱系概览（C1）', () => {
     expect(container.querySelector('.draw-no')?.textContent).toBe('1')
   })
 
+  it('同一句原文加工出的多条要点互相标注「与第 N 条同源」（C3 小改）', async () => {
+    await act(async () => {
+      useExamStudyStore.setState({
+        traces: {
+          'p1#1': {
+            paperId: 'p1',
+            qIdx: 1,
+            origin: 'ai',
+            updatedAt: '2026-09-15T00:00:00.000Z',
+            points: [
+              { id: 'a', text: '第一条', mode: '摘抄', sourceIdx: 1, quote: '同一句原文' },
+              { id: 'b', text: '第二条', mode: '归纳', sourceIdx: 1, quote: '同一句原文' },
+              { id: 'c', text: '第三条', mode: '改写', sourceIdx: 1, quote: '另一句' },
+            ],
+          },
+        },
+      })
+    })
+    await render()
+    const sibs = Array.from(container.querySelectorAll('.trace-sib')).map((el) => el.textContent)
+    expect(sibs).toEqual(['与第 2 条同源', '与第 1 条同源'])
+  })
+
+  it('带 focusPointId 渲染时该卡片带 flash 并有可定位的 id（从材料「答案②」点进来）', async () => {
+    await act(async () => {
+      root.render(
+        <ExamAnswerTrace
+          paperId="p1"
+          q={q}
+          materials={materials}
+          relatedIdx={[1]}
+          anchorByNum={new Map([[1, 'material-1']])}
+          onJump={() => {}}
+          defaultOpen
+          focusPointId="c"
+        />,
+      )
+    })
+    const card = container.querySelector('#trace-point-c')
+    expect(card).toBeTruthy()
+    expect(card?.className).toContain('flash')
+    expect(container.querySelectorAll('.draw-card.flash')).toHaveLength(1)
+  })
+
   it('筛中的加工方式被后续数据换掉后自动取消筛选（不卡在空列表）', async () => {
     await render()
     await pick('改写')

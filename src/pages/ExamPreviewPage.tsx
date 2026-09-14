@@ -262,9 +262,18 @@ export default function ExamPreviewPage() {
     setFlowModalIdx,
     flowByMat,
     markRangesByMat,
+    pointSourceByMark,
     generateMaterialMarks,
     generateAllMarks,
   } = useExamMarks(draft, inlineMarks, aiConfigured)
+
+  /* C4 反向索引点进来的那道题要点：打开解析抽屉并滚到那条卡片（highlight 后自动褪去） */
+  const [focusPointId, setFocusPointId] = useState<string | null>(null)
+  const openPoint = (qIdx: number, pointId: string) => {
+    setQuestionsOpen(false)
+    setFocusPointId(pointId)
+    setAnalysisIdx(qIdx)
+  }
 
   /* 本卷干扰项一览（C5）：入口在右栏阅读辅助面板，弹窗与行文思路弹窗同骨架 */
   const [distractionOpen, setDistractionOpen] = useState(false)
@@ -510,6 +519,8 @@ export default function ExamPreviewPage() {
                           key={i}
                           text={p}
                           ranges={(markRangesByMat.get(m.idx) ?? []).filter((r) => r.paraIndex === i)}
+                          sourceByMarkId={pointSourceByMark}
+                          onOpenPoint={openPoint}
                         />
                       ))}
                   </Fragment>
@@ -586,6 +597,8 @@ export default function ExamPreviewPage() {
                 indent={settings.indent}
                 onOpenAnalysis={(qIdx) => {
                   setQuestionsOpen(false)
+                  /* 从作答要求抽屉进来的不带焦点，免得沿用上一次 chip 点过的要点 */
+                  setFocusPointId(null)
                   setAnalysisIdx(qIdx)
                 }}
                 onClose={() => setQuestionsOpen(false)}
@@ -622,8 +635,10 @@ export default function ExamPreviewPage() {
                     relatedIdx={materialAnchors.get(aq.idx) ?? []}
                     anchorByNum={anchorByNum}
                     onJump={jumpTo}
+                    focusPointId={focusPointId ?? undefined}
                     onClose={() => {
                       setAnalysisIdx(null)
+                      setFocusPointId(null)
                       setQuestionsOpen(true)
                     }}
                   />

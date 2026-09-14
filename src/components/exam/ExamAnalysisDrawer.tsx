@@ -21,6 +21,7 @@ export function ExamAnalysisDrawer({
   relatedIdx,
   anchorByNum,
   onJump,
+  focusPointId,
   onClose,
 }: {
   paperId: string
@@ -29,6 +30,8 @@ export function ExamAnalysisDrawer({
   relatedIdx: number[]
   anchorByNum: Map<number, string>
   onJump: (id: string) => void
+  /** 从材料原文的「答案②」小标进来时带上：滚到那条要点并短暂高亮（C4） */
+  focusPointId?: string
   onClose: () => void
 }) {
   /* Escape 关闭；移动端（覆盖式底部面板）锁正文滚动——桌面端为上下分栏，正文照常滚动 */
@@ -144,6 +147,7 @@ export function ExamAnalysisDrawer({
             relatedIdx={relatedIdx}
             anchorByNum={anchorByNum}
             onJump={onJump}
+            focusPointId={focusPointId}
             defaultOpen
             autoToken={autoToken}
             editing={traceEditing}

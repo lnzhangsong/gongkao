@@ -3,6 +3,7 @@ import { alertDialog } from '../components/ui/confirm'
 import { draftMaterialMarks } from '../lib/aiExamTrace'
 import { collectDistractions, type DistractionGroup } from '../lib/examDistractions'
 import { findQuoteInMaterial, type MarkRange } from '../lib/examMarks'
+import { linkPointsToMarks, type PointSource } from '../lib/examPointSources'
 import { joinParagraphs } from '../lib/examText'
 import { useExamStudyStore, type MaterialMark } from '../stores/examStudyStore'
 import type { ExamDetail } from '../lib/api'
@@ -16,6 +17,7 @@ export function useExamMarks(draft: ExamDetail | null, inlineMarks: boolean, aiC
   const setMarks = useExamStudyStore((st) => st.setMarks)
   const removeMaterialMarks = useExamStudyStore((st) => st.removeMaterialMarks)
   const allMarks = useExamStudyStore((s) => s.marks)
+  const allTraces = useExamStudyStore((s) => s.traces)
 
   /* 该材料在任意层级（题目级/材料级）有标注 → 按钮显示「重新生成」 */
   const matHasMarks = useMemo(() => {
@@ -130,6 +132,13 @@ export function useExamMarks(draft: ExamDetail | null, inlineMarks: boolean, aiC
     [draft, allMarks],
   )
 
+  /* 反向索引（C4）：标注 id → 覆盖这句话的答案要点，句后挂「答案②」小标。
+     与 inlineMarks 无关——chip 只挂在句后解析块里，解析块本身由开关控制 */
+  const pointSourceByMark = useMemo(
+    () => (draft ? linkPointsToMarks(draft.id, allTraces, allMarks) : new Map<string, PointSource[]>()),
+    [draft, allTraces, allMarks],
+  )
+
   /* 材料编号 → 标注区间（inlineMarks 关闭 = 完全不渲染，干净原文） */
   const markRangesByMat = useMemo(() => {
     const map = new Map<number, MarkRange[]>()
@@ -159,6 +168,7 @@ export function useExamMarks(draft: ExamDetail | null, inlineMarks: boolean, aiC
     flowByMat,
     distractions,
     markRangesByMat,
+    pointSourceByMark,
     generateMaterialMarks,
     generateAllMarks,
   }

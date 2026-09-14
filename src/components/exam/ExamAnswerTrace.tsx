@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { ExamQuestion } from '../../lib/api'
 import { draftAnswerTrace, type TraceExamMaterial } from '../../lib/aiExamTrace'
+import { sameSourceSiblings } from '../../lib/examPointSources'
 import {
   DERIVE_MODES,
   DERIVE_MODE_HINTS,
@@ -31,6 +32,7 @@ export function ExamAnswerTrace({
   onJump,
   defaultOpen = false,
   autoToken = 0,
+  focusPointId,
   editing: editingProp = false,
   onToggleEditing,
   onBusyChange,
@@ -48,6 +50,8 @@ export function ExamAnswerTrace({
   defaultOpen?: boolean
   /** 「AI 解析本题」一键令牌：变化时自动触发本区块的 AI */
   autoToken?: number
+  /** 从材料原文「答案②」小标进来时带上：滚到那条要点并短暂高亮（C4） */
+  focusPointId?: string
   /** 编辑态由抽屉头「编辑」按钮统一控制；关闭编辑 = 保存入库 */
   editing?: boolean
   onToggleEditing?: () => void
@@ -82,6 +86,18 @@ export function ExamAnswerTrace({
   const filter = !editing && modeFilter && points.some((p) => p.mode === modeFilter) ? modeFilter : null
   /* no 用要点在全集里的序号：筛选后编号不跳号 */
   const rows = points.map((point, i) => ({ point, no: i + 1 })).filter(({ point }) => !filter || point.mode === filter)
+  /* C3（小改）：同一句原文变出多条要点时互相可见——「第 3 条与第 5 条同源」以前只能肉眼比对 */
+  /* 要点至多十来条，不值得 memo（points 每次渲染都是新数组，memo 也命中不了） */
+  const siblingsById = sameSourceSiblings(points)
+  /* 高亮从材料里点进来的那条（C4）：滚动 + 闪一下，1.6s 后褪去 */
+  const [flashId, setFlashId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!focusPointId) return
+    document.getElementById(`trace-point-${focusPointId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setFlashId(focusPointId)
+    const timer = window.setTimeout(() => setFlashId(null), 1600)
+    return () => window.clearTimeout(timer)
+  }, [focusPointId])
 
   /** AI 相关材料优先，未匹配到则给全卷 */
   const promptMaterials = relatedIdx.length > 0 ? materials.filter((m) => relatedIdx.includes(m.idx)) : materials
@@ -229,6 +245,8 @@ export function ExamAnswerTrace({
                 key={p.id}
                 no={no}
                 point={p}
+                siblings={siblingsById.get(p.id) ?? []}
+                flash={flashId === p.id}
                 view={view}
                 materials={materials}
                 materialOptions={materialOptions}
@@ -345,6 +363,8 @@ function oddText(o: NonstandardValue): string {
 function PointCard({
   no,
   point,
+  siblings,
+  flash,
   view,
   materials,
   materialOptions,
@@ -356,6 +376,10 @@ function PointCard({
 }: {
   no: number
   point: AnswerPointTrace
+  /** 同源的其它要点序号（C3 小改）：同一句原文变出多条要点 */
+  siblings: number[]
+  /** 从材料「答案②」小标进来时闪一下（C4） */
+  flash: boolean
   /** 只读态展示形态：导图 / 文字链 */
   view: 'map' | 'text'
   materials: TraceExamMaterial[]
@@ -370,9 +394,10 @@ function PointCard({
   /* AI 规范外取值提示：编辑态也在（用户看得到才会去改） */
   const odd = point.nonstandard ?? []
   const oddBlock = odd.length > 0 && <p className="draw-odd">⚠ {odd.map(oddText).join('；')}</p>
+  const cardClass = (base: string) => `${base}${flash ? ' flash' : ''}`
   if (editing) {
     return (
-      <article className="draw-card">
+      <article className={cardClass('draw-card')} id={`trace-point-${point.id}`}>
         <div className="draw-card-top">
           <span className="draw-no">{no}</span>
           <span className={`draw-mode m${DERIVE_MODES.indexOf(point.mode)}`} title={DERIVE_MODE_HINTS[point.mode]}>
@@ -463,6 +488,11 @@ function PointCard({
             ))}
           {point.quote && <span className="draw-quote">「{point.quote}」</span>}
           {point.sourceIdx == null && !point.quote && <span>材料外</span>}
+          {siblings.length > 0 && (
+            <span className="trace-sib" title="同一句原文加工出了多条要点">
+              与第 {siblings.join('、')} 条同源
+            </span>
+          )}
         </>
       ),
     })
@@ -485,7 +515,7 @@ function PointCard({
   if (view === 'map' && steps.length > 0) {
     /* 导图视图：节点卡 + 带箭头连线，终点是要点句 */
     return (
-      <article className="draw-card trace-chain">
+      <article className={cardClass('draw-card trace-chain')} id={`trace-point-${point.id}`}>
         {oddBlock}
         <div className="trace-map">
           {steps.map((s) => (
@@ -500,7 +530,7 @@ function PointCard({
     )
   }
   return (
-    <article className="draw-card trace-chain">
+    <article className={cardClass('draw-card trace-chain')} id={`trace-point-${point.id}`}>
       {oddBlock}
       {steps.length > 0 && (
         <ol className="trace-steps">

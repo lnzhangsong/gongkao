@@ -1235,6 +1235,48 @@ p mark.exam-mark.lv-useless {
   color: var(--ink);
 }
 
+/* —— 答案反查（C4）：句后解析块尾部的「答案②」小标，点开对应题目的解析并滚到该要点 —— */
+.exam-src-chip {
+  font: 700 10.5px/1.7 var(--mono);
+  color: var(--paper);
+  background: var(--accent);
+  border: none;
+  border-radius: 2px;
+  padding: 0 5px;
+  margin: 0 2px 0 3px;
+  cursor: pointer;
+  vertical-align: 1px;
+}
+
+.exam-src-chip:hover {
+  background: var(--accent-text);
+}
+
+/* 同源要点（C3 小改）：这句原文加工出的另外几条要点 */
+.trace-sib {
+  flex-shrink: 0;
+  font: 700 10.5px/1.8 var(--sans);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 8%, var(--paper));
+  border-radius: 2px;
+  padding: 0 6px;
+}
+
+/* 从材料点进来的要点：闪一下便于在长列表里定位（.draw-card 已有自己的背景色，只叠加描边） */
+.draw-card.flash {
+  animation: draw-card-flash 1.6s ease-out;
+}
+
+@keyframes draw-card-flash {
+  0%,
+  25% {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
 /* —— 要点推导链：题目 → 材料 → 加工 → 得出要点句，自上而下带竖线轨 —— */
 .trace-chain {
   display: flex;

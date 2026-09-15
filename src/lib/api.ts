@@ -335,3 +335,46 @@ export function deleteExam(id: string): Promise<{ ok: boolean }> {
   invalidateCache(['/api/exams'])
   return request(`/api/exams/${encodeURIComponent(id)}`, { method: 'DELETE' }, '删除失败')
 }
+
+/** —— 《申论写作八讲》方法论书（docs/申论方法论书融入方案.md）—— */
+
+/** 内容块：p 正文 · sig 例文标题行 · center 例文文章题 · img 图示（模型图/参考答案扫描图） */
+export interface BookBlock {
+  type: 'p' | 'sig' | 'center' | 'img'
+  text?: string
+  src?: string
+  w?: number | null
+  h?: number | null
+  /** img 图示性质：model 模型图 / answer 参考答案·对比 / essay 例文 / figure 其他 */
+  role?: 'model' | 'answer' | 'essay' | 'figure'
+}
+
+/**
+ * 渲染单元：一个标题 + 其下内容块。level 1=讲导语（title 为 null）/2=节/3=目；
+ * kind='summary' 为各节小结（要点卡，目录里单独标记）。
+ */
+export interface BookUnit {
+  id: string
+  /** 所属讲（0=前言，1-8=正文各讲） */
+  lecture: number
+  /** 讲内序号（从 1 起，含讲导语） */
+  idx: number
+  level: 1 | 2 | 3
+  title: string | null
+  kind: 'summary' | null
+  blocks: BookBlock[]
+}
+
+export interface ShenlunBook {
+  id: string
+  title: string
+  author: string
+  cover?: string
+  lectures: { id: string; idx: number; title: string }[]
+  units: BookUnit[]
+}
+
+/** 整书一次拉取（~500KB），经 cachedGet 会话缓存 */
+export function fetchShenlunBook(): Promise<ShenlunBook> {
+  return cachedGet('/api/shenlun-book', () => request('/api/shenlun-book'))
+}

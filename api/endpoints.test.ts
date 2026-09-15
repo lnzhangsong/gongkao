@@ -107,3 +107,31 @@ describe('/api/xingce（行测真题）', () => {
     expect(get(apiGET, '/api/xingce', '?id=__none__').status).toBe(404)
   })
 })
+
+describe('/api/shenlun-book（申论写作八讲）', () => {
+  it('返回 meta（讲目录）与渲染单元，块类型受控', async () => {
+    const data = await body<{
+      id: string
+      title: string
+      lectures: { idx: number; title: string }[]
+      units: {
+        id: string
+        lecture: number
+        idx: number
+        level: number
+        title: string | null
+        blocks: { type: string }[]
+      }[]
+    }>(get(apiGET, '/api/shenlun-book'))
+    expect(data.id).toBe('shenlun-writing-8')
+    expect(data.lectures.length).toBe(9) // 前言 + 八讲
+    expect(data.units.length).toBeGreaterThan(50)
+    // 单元按（讲, 讲内序号）严格递增
+    const order = (u: { lecture: number; idx: number }) => u.lecture * 10000 + u.idx
+    for (let i = 1; i < data.units.length; i++) {
+      expect(order(data.units[i])).toBeGreaterThan(order(data.units[i - 1]))
+    }
+    const valid = new Set(['p', 'sig', 'center', 'img'])
+    for (const u of data.units) for (const b of u.blocks) expect(valid.has(b.type)).toBe(true)
+  })
+})

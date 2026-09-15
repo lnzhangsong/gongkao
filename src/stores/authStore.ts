@@ -9,6 +9,7 @@ import { useAnnotationStore } from './annotationStore'
 import { useShenlunStore } from './shenlunStore'
 import { useExamStudyStore } from './examStudyStore'
 import { useXingceStore } from './xingceStore'
+import { useMethodStudyStore } from './methodStudyStore'
 import { useLearningEventStore } from './learningEventStore'
 import { useAiAssistStore } from './aiAssistStore'
 import { useAiStore, DEFAULT_AI_SETTINGS } from './aiStore'
@@ -55,6 +56,7 @@ function clearLocalData() {
   useShenlunStore.getState().clearAll()
   useExamStudyStore.getState().clearAll()
   useXingceStore.getState().clearAll()
+  useMethodStudyStore.getState().clearAll()
   useLearningEventStore.getState().clearAll()
   useAiAssistStore.getState().clearAll()
   useAiStore.setState({ settings: { ...DEFAULT_AI_SETTINGS } })

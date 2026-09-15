@@ -7,6 +7,7 @@
  *   data/xingce/*.json       xg_papers / xg_questions          （行测真题）
  *   data/articles/*.json     articles                          （人民日报文章）
  *   data/guifan-terms.json   guifan_terms                      （规范词）
+ *   data/shenlun-book/       shenlun_book / shenlun_book_units （申论写作八讲方法论书）
  *   articles_fts             派生索引，由 migrate-fts.mjs 全量重建
  *
  * 用法：node scripts/rebuild-db.mjs [--db data/articles.db]
@@ -47,6 +48,7 @@ const STEPS = [
   ['import-xingce.mjs', '行测真题'],
   ['import-articles.mjs', '人民日报文章'],
   ['import-guifanci.mjs', '规范词'],
+  ['import-shenlun-book.mjs', '申论写作八讲'],
   ['migrate-fts.mjs', '全文索引'],
 ]
 
@@ -75,6 +77,7 @@ const counts = [
   'questions',
   'xg_papers',
   'xg_questions',
+  'shenlun_book_units',
   'articles_fts',
 ]
   .map((t) => `${t} ${db.prepare(`SELECT COUNT(*) AS n FROM "${t}"`).get().n}`)

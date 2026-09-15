@@ -8,7 +8,7 @@
  * 仅本地才有的写接口（试卷/规范词增删改，生产走 Supabase）仍在本文件实现。
  *
  * 路由（GET 全部转发 api/data.ts 合并入口 / api/ai.ts；写接口仅本地提供）：
- *   GET /api/{articles,terms,exams,xingce} → api/data.ts（按 pathname 分发）
+ *   GET /api/{articles,terms,exams,xingce,shenlun-book} → api/data.ts（按 pathname 分发）
  *   POST /api/ai                           → api/ai.ts
  *   POST/PATCH/DELETE terms·exams  本地写接口（在本文件实现）
  *   （行测图片由前端 import.meta.glob 从 data/xingce-img/ 打进构建产物，无此路由）
@@ -294,6 +294,11 @@ const server = createServer(async (req, res) => {
   // 编辑保存（仅本地 api-server；Vercel 生产不提供写接口）
   if (url.pathname === '/api/xingce' && req.method === 'GET') {
     // 转发 api/data.ts GET（?id= 详情在 handler 内）
+    void respond(noStore(dataApi.GET(new Request(`${internalBase}${req.url}`))))
+    return
+  }
+  if (url.pathname === '/api/shenlun-book' && req.method === 'GET') {
+    // 转发 api/data.ts GET（整书 meta + 渲染单元）
     void respond(noStore(dataApi.GET(new Request(`${internalBase}${req.url}`))))
     return
   }

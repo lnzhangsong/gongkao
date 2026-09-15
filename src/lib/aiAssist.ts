@@ -6,6 +6,7 @@
 import type { Annotation, ArticleTopic } from '../types'
 import type { QuestionType } from '../stores/aiAssistStore'
 import { MATERIAL_TYPE_LABELS } from '../data/material'
+import { METHOD_DIGEST, METHOD_DIGEST_COMMON, METHOD_DIGEST_SOURCE } from './methodDigest'
 import { aiChat, extractJson } from './ai'
 
 /** 候选素材：收集自 annotationStore（materialType 高亮），主题/关键词过滤在页面层完成 */
@@ -70,6 +71,11 @@ export async function draftFramework(opts: {
 【题型】${opts.questionType}${opts.topic ? `\n【主题】${opts.topic}` : ''}
 
 要求：${TYPE_RULES[opts.questionType]}
+
+【方法论参考｜${METHOD_DIGEST_SOURCE}】
+${METHOD_DIGEST_COMMON}
+${METHOD_DIGEST[opts.questionType]}
+结合上述方法论审题与组织框架；若与题目、给定材料的具体要求冲突，以题目为准。
 输出 JSON：{"stance":"审题立意：题干关键信息、作答方向与结构策略，2~3 句话","points":[{"text":"要点/分论点正文","materials":[素材编号]}]}
 不要输出整篇文章，只输出结构化清单。${materialBlock}`
 

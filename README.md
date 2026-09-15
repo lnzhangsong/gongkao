@@ -40,7 +40,8 @@ vp preview         # 预览生产构建
 | `/practice` + `/practice/:paperId` | 行测刷题（答题卡、判分、解析、计时）                                             | 2026 卷由 `scripts/parse-xingce26.py`；2000–2025 卷由 `scripts/parse-xingce-pdf.py`（真题+答案解析双 PDF → `data/xingce/*.json`）+ `scripts/import-xingce.mjs`（入库），当前 2022 三卷已接入、其余年份整理进行中；设计与缺口见 `docs/行测做题模块设计方案.md` |
 | `/practice/wrong`                  | 行测错题本（接入复习队列，到期重做）                                             | 同上 X3                                                                                                                                                                                                                                                       |
 | `/terms`                           | 申论规范词库（1070+ 词，按主题检索）                                             | `scripts/import-guifanci.mjs` 入库                                                                                                                                                                                                                            |
-| `/assist`                          | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK）                               | `docs/申论写作AI辅助设计方案.md`                                                                                                                                                                                                                              |
+| `/method`                          | 申论方法论：《申论写作八讲》整书阅读（目录/锚点/已读进度）                       | EPUB → `scripts/parse-shenlun-book.py`（→`data/shenlun-book/`）→ `scripts/import-shenlun-book.mjs` 入库；见 `docs/申论方法论书融入方案.md`                                                                                                                    |
+| `/assist`                          | AI 审题立意 + 作答框架 + 反向考点联想/出题（BYOK）                               | `docs/申论写作AI辅助设计方案.md`；审题 prompt 注入《申论写作八讲》题型方法卡（`src/lib/methodDigest.ts`）                                                                                                                                                     |
 | `/admin` 系列                      | 文章管理（列表 + 录入/编辑编辑器）                                               | —                                                                                                                                                                                                                                                             |
 | `/login`                           | 登录（账号资料、同步状态、退出登录已并入 `/settings#account`）                   | `sql/profiles.sql` · `sql/sync.sql`                                                                                                                                                                                                                           |
 
@@ -166,13 +167,14 @@ vp run db:rebuild                             # = node scripts/rebuild-db.mjs，
 node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现库比对）
 ```
 
-| 源                                                | 表                                   |
-| ------------------------------------------------- | ------------------------------------ |
-| `data/shenlun/*.json`                             | `papers` / `materials` / `questions` |
-| `data/xingce/*.json`                              | `xg_papers` / `xg_questions`         |
-| `data/articles/{id}.json`（517 篇，每篇一个文件） | `articles`                           |
-| `data/guifan-terms.json`（3039 条，保留 id 空洞） | `guifan_terms`                       |
-| 派生（`migrate-fts.mjs`）                         | `articles_fts`（trigram FTS5）       |
+| 源                                                        | 表                                    |
+| --------------------------------------------------------- | ------------------------------------- |
+| `data/shenlun/*.json`                                     | `papers` / `materials` / `questions`  |
+| `data/xingce/*.json`                                      | `xg_papers` / `xg_questions`          |
+| `data/articles/{id}.json`（517 篇，每篇一个文件）         | `articles`                            |
+| `data/guifan-terms.json`（3039 条，保留 id 空洞）         | `guifan_terms`                        |
+| `data/shenlun-book/`（《申论写作八讲》书稿+60 图示 webp） | `shenlun_book` / `shenlun_book_units` |
+| 派生（`migrate-fts.mjs`）                                 | `articles_fts`（trigram FTS5）        |
 
 - 后两份源是 2026-09-13 用 `scripts/migrate-db-to-source.mjs` 从库里反导出来的：它们的原始
   上游在**仓库外**（年编 docx 在 `/Users/nif/…`，规范词合集 md 同样），此前 DB 是唯一副本。

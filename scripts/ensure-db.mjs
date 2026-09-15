@@ -34,6 +34,8 @@ const REQUIRED_TABLES = [
   'questions',
   'xg_papers',
   'xg_questions',
+  'shenlun_book',
+  'shenlun_book_units',
   'articles_fts',
 ]
 /** 这些表为空说明不是「重建链的产物」，而是某个 importer 单独跑出来的残件 */

@@ -8,6 +8,7 @@ const LINKS = [
   { to: '/exams', label: 'EXAMS' },
   { to: '/practice', label: 'PRACTICE' },
   { to: '/terms', label: 'TERMS' },
+  { to: '/method', label: 'METHOD' },
   { to: '/assist', label: 'ASSIST' },
   { to: '/notes', label: 'NOTES' },
   { to: '/settings', label: 'SETTINGS' },

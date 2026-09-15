@@ -14,6 +14,7 @@
  *   GET /api/terms              → 规范词；?theme=&q= 过滤
  *   GET /api/exams              → 申论试卷列表（?year=&level=）；?id= 详情
  *   GET /api/xingce             → 行测试卷列表；?id= 详情
+ *   GET /api/shenlun-book       → 《申论写作八讲》方法论书（meta + 渲染单元）
  *
  * 数据源：data/articles.db（node:sqlite 只读），经 vercel.json functions.includeFiles 随函数部署。
  * 注意：本文件自包含全部逻辑（不 import 兄弟模块）——Vercel 只打包入口文件
@@ -321,6 +322,33 @@ function xingceGet(request: Request): Response {
   return json({ papers: list, total: list.length })
 }
 
+// ---------- /api/shenlun-book ----------
+
+/** 《申论写作八讲》：meta（shenlun_book 单行 JSON）+ 渲染单元（shenlun_book_units，
+ *  一个单元 = 一个标题 + 其下内容块）。整书一次返回（~500KB），前端会话缓存。 */
+function shenlunBookGet(): Response {
+  const d = openDb()
+  const meta = d.prepare('SELECT value FROM shenlun_book WHERE key = ?').get('meta') as any
+  if (!meta) return json({ error: 'not found' }, 404)
+  const units = (
+    d
+      .prepare(
+        `SELECT id, lecture, idx, level, title, kind, blocks_json
+         FROM shenlun_book_units ORDER BY lecture, idx`,
+      )
+      .all() as any[]
+  ).map((u) => ({
+    id: u.id,
+    lecture: u.lecture,
+    idx: u.idx,
+    level: u.level,
+    title: u.title,
+    kind: u.kind,
+    blocks: JSON.parse(u.blocks_json),
+  }))
+  return json({ ...JSON.parse(meta.value), units })
+}
+
 // ---------- 路由分发 ----------
 
 export function GET(request: Request): Response {
@@ -329,5 +357,6 @@ export function GET(request: Request): Response {
   if (pathname === '/api/terms') return termsGet(request)
   if (pathname === '/api/exams') return examsGet(request)
   if (pathname === '/api/xingce') return xingceGet(request)
+  if (pathname === '/api/shenlun-book') return shenlunBookGet()
   return json({ error: 'not found' }, 404)
 }

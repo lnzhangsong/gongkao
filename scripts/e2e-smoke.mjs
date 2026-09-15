@@ -166,6 +166,7 @@ for (const [path, sel] of [
   ['/reading/p0001', '.reading-page'],
   ['/notes', '.notes-page'],
   ['/settings', '.settings-page'],
+  ['/method', '.method-page'],
 ]) {
   await open(path)
   check(`路由 ${path} 渲染`, (await page.locator(sel).count()) > 0)
@@ -176,6 +177,26 @@ await page.reload({ waitUntil: 'domcontentloaded' })
 await page.waitForSelector('.loading-screen', { state: 'detached', timeout: 5000 }).catch(() => {})
 await page.waitForTimeout(300)
 check('阅读页刷新不 404', (await page.locator('.reading-page').count()) > 0)
+
+// ---------- 方法论（申论写作八讲，/method） ----------
+await open('/method')
+await page.waitForSelector('.method-rail-item', { timeout: 8000 })
+check('方法论右栏讲次导航渲染（前言+八讲）', (await page.locator('.method-rail-item').count()) === 9)
+check('方法论一次只渲染一页', (await page.locator('.method-reader .article-head').count()) === 1)
+check('方法论右栏阅读辅助面板', (await page.locator('.method-layout .article-tools').count()) === 1)
+// 右栏切到第八讲（大作文）：讲头 kicker 切换，当前讲展开页列表
+await page.locator('.method-rail-item', { hasText: '大作文' }).first().click()
+await page.waitForTimeout(400)
+check('方法论讲次切换生效', (await page.locator('.method-reader .article-head .tag').innerText()).includes('大作文'))
+check('方法论页列表展开', (await page.locator('.method-rail-page').count()) > 3)
+// 切到「写好结尾」页：书内图示（模型图）随页渲染
+await page.locator('.method-rail-page', { hasText: '写好结尾' }).first().click()
+await page.waitForTimeout(400)
+check('方法论页切换生效', (await page.locator('.method-reader .article-head h1').innerText()).includes('写好结尾'))
+check('书内图示渲染（webp 资源）', (await page.locator('.method-fig img').count()) > 0)
+await page.locator('.method-read-toggle').first().click()
+await page.waitForTimeout(200)
+check('方法论已读标记生效', (await page.locator('.method-read-toggle.read').count()) >= 1)
 
 // ---------- 首页 ----------
 await open('/')

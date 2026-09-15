@@ -17,6 +17,7 @@ const XingcePracticePage = lazy(() =>
 const XingceWrongPage = lazy(() => import('./pages/XingceWrongPage').then((m) => ({ default: m.XingceWrongPage })))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const AssistPage = lazy(() => import('./pages/AssistPage').then((m) => ({ default: m.AssistPage })))
+const MethodPage = lazy(() => import('./pages/MethodPage'))
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })))
 import { useThemeStore, resolveTheme } from './stores/themeStore'
 import { useArticleStore } from './stores/articleStore'
@@ -103,6 +104,7 @@ function App() {
       void import('./pages/SettingsPage')
       void import('./pages/TermsPage')
       void import('./pages/AssistPage')
+      void import('./pages/MethodPage')
       void import('./pages/ExamPreviewPage')
       void import('./pages/AdminPage')
       void import('./pages/AdminEditPage')
@@ -140,6 +142,8 @@ function App() {
               <Route path="/practice/:paperId" element={<XingcePracticePage />} />
               {/* 申论规范词 */}
               <Route path="/terms" element={<TermsPage />} />
+              {/* 申论方法论（《申论写作八讲》整书阅读，docs/申论方法论书融入方案.md） */}
+              <Route path="/method" element={<MethodPage />} />
               {/* AI 审题 + 作答框架 */}
               <Route path="/assist" element={<AssistPage />} />
               {/* 账号：登录页 /login；资料与退出登录已并入设置页「账号」分区 */}

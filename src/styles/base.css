@@ -72,16 +72,16 @@ a {
 
 /* ---------- 按钮统一方框语言 ----------
    全站按钮：直角、无阴影。例外：开关 .toggle、划词菜单的取色圆点
-   （.hl-dot/.ul-dot）等圆形控件保持原状。 */
-button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle) {
+   （.hl-dot/.ul-dot）、方法论页的已读圈钮（.method-read-toggle）等圆形控件保持原状。 */
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):not(.method-read-toggle) {
   border-radius: 0 !important;
   box-shadow: none !important;
 }
 
 /* 方框语言下不再位移（原硬阴影配的 hover 平移已无意义） */
-button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):hover,
-button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):focus-visible,
-button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):active {
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):not(.method-read-toggle):hover,
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):not(.method-read-toggle):focus-visible,
+button:not(.toggle):not(.hl-dot):not(.ul-dot):not(.nav-mobile-toggle):not(.method-read-toggle):active {
   transform: none !important;
 }
 

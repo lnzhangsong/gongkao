@@ -47,6 +47,10 @@
       "destination": "/api/data"
     },
     {
+      "source": "/api/shenlun-book",
+      "destination": "/api/data"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

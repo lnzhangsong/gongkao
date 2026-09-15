@@ -10,12 +10,18 @@ const FOCUS_BAND_BOTTOM = 0.65
  * 避免首段/末段永远进不了带。直接切换 <p> 的 dim 类（不经 React 状态）；
  * 短文整页可见时不淡化任何段落。
  * 供 ReadingPage 与申论真题页共用（容器须挂 ref 且段落为其直接子节点）。
+ * 方法论书页（/method）的段落嵌在单元容器里，传 selector='p' 匹配全部后代段落。
  */
-export function useFocusMode(bodyRef: RefObject<HTMLElement | null>, enabled: boolean, ready = true) {
+export function useFocusMode(
+  bodyRef: RefObject<HTMLElement | null>,
+  enabled: boolean,
+  ready = true,
+  selector = ':scope > p',
+) {
   const updateFocus = useCallback(() => {
     const body = bodyRef.current
     if (!body) return
-    const paragraphs = body.querySelectorAll<HTMLParagraphElement>(':scope > p')
+    const paragraphs = body.querySelectorAll<HTMLParagraphElement>(selector)
     if (paragraphs.length === 0) return
 
     if (!enabled) {
@@ -42,7 +48,7 @@ export function useFocusMode(bodyRef: RefObject<HTMLElement | null>, enabled: bo
       const inBand = rect.top <= bandBottom && rect.bottom >= bandTop
       p.classList.toggle('dim', !inBand)
     })
-  }, [bodyRef, enabled])
+  }, [bodyRef, enabled, selector])
 
   // 滚动时随进随出（rAF 节流）
   useEffect(() => {

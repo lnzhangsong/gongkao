@@ -116,7 +116,8 @@ export function NotesPage() {
           key,
           anns: [ann],
           text: ann.text,
-          title: a?.title ?? '未知文章',
+          /* 方法论书页（/method）的标注没有 article 记录，来源显示书名 */
+          title: a?.title ?? (ann.articleId.startsWith('book:') ? '申论写作八讲' : '未知文章'),
           topic: a?.topic ?? '',
           source: a?.source ?? '',
           date: ann.createdAt,

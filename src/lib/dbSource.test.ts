@@ -176,7 +176,17 @@ describe('vp run db:rebuild 重建等价性', () => {
     })
     const rebuilt = new DatabaseSync(tmpDb, { readOnly: true })
     try {
-      const tables = ['articles', 'guifan_terms', 'papers', 'materials', 'questions', 'xg_papers', 'xg_questions']
+      const tables = [
+        'articles',
+        'guifan_terms',
+        'papers',
+        'materials',
+        'questions',
+        'xg_papers',
+        'xg_questions',
+        'shenlun_book',
+        'shenlun_book_units',
+      ]
       const mismatched: string[] = []
       for (const t of tables) {
         const cols = (db.prepare(`PRAGMA table_info("${t}")`).all() as { name: string }[])

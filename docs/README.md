@@ -94,6 +94,8 @@
 
 > 两条均经 e2e 155 项 + gate 全绿。
 
+> **FTS 前后因由（备忘）**：当初两段提交都是为了搜索性能——`e3596cf` 本地建 trigram 索引、`0806aa2` 把线上 API 对齐到 FTS（此前线上 LIKE/instr 全扫、`articles_fts` 形同虚设且与本地 api-server 行为不一致），防的是「文章量增长后含全文的 articles 表全表扫变慢」。实际语料停在 517 篇 / 0.72MB，LIKE 全扫亚毫秒级，收益从未兑现；而中文 trigram 索引膨胀 10 倍+ 的成本每次部署都要付。**若日后文章上千篇、搜索实测变慢，恢复路径：`git show 0806aa2`（migrate-fts 脚本 + 触发器 + API FTS 分支），并同步回滚 `1e69721`。**
+
 **2026-09-15 方法论书融入（M-2 兑现）**：《申论写作八讲》（半月谈教育 编著）整书入库为独立内容线 **/method**（Nav「METHOD」），兑现 M-2 决策「通用方法论回归走独立文档/页」——不向真题页 / AI 页塞静态卡。EPUB → `scripts/parse-shenlun-book.py` → `data/shenlun-book/`（96 渲染单元 + 60 图示 webp）→ `import-shenlun-book.mjs` 入库（`shenlun_book` / `shenlun_book_units` 两表，重建链已登记）→ `GET /api/shenlun-book` → `MethodPage`（粘性目录 + scroll-spy 锚点 + 每目已读进度，`methodStudyStore` 本地存储）。详见《申论方法论书融入方案.md》。
 
 > 配套两件：① `methodDigest.ts` 题型方法卡（从各讲小结提炼）注入 `/assist` 审题立意 prompt——AI 推导贴合本书方法（A4 边界内）；② 第三讲「仿写/改写」只作书中方法论阅读，不做站内互动练习（对齐 A1/A2）。读书记录进云同步/复习算法为后续项。

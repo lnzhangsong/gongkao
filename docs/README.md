@@ -90,6 +90,10 @@
 
 > 两条都先要「说清要什么」再动工：解析重写要先列「不好用」清单（否则没有验收标准）；大作文辅助要先裁定「辅助编写 vs 代写/升格」的边界（清单 §一 已列）。详见《设计与体验优化清单.md》§一 顶部两节。
 
+**2026-09-16 Functions 打包瘦身 + 真题版心**：① `articles_fts`（trigram FTS5）整体移除——中文语料索引膨胀 10 倍+、占库文件大半，517 篇语料 LIKE 全扫亚毫秒级且语义不变（当年 FTS 一致性断言随之作废）；`includeFiles` 只打包 `data/articles.db.gz`（≈4.6MB，库文件 16MB→打包 1/3），`api/data.ts` 冷启动解压到 `/tmp` 只读副本；重建链去掉 migrate-fts 步骤。② 真题详情版心改回阅读页响应式断点（900/1160/1420，解析面板仍钉 1244），删除 9-14 的 `--measure` 钉死覆写。
+
+> 两条均经 e2e 155 项 + gate 全绿。
+
 **2026-09-15 方法论书融入（M-2 兑现）**：《申论写作八讲》（半月谈教育 编著）整书入库为独立内容线 **/method**（Nav「METHOD」），兑现 M-2 决策「通用方法论回归走独立文档/页」——不向真题页 / AI 页塞静态卡。EPUB → `scripts/parse-shenlun-book.py` → `data/shenlun-book/`（96 渲染单元 + 60 图示 webp）→ `import-shenlun-book.mjs` 入库（`shenlun_book` / `shenlun_book_units` 两表，重建链已登记）→ `GET /api/shenlun-book` → `MethodPage`（粘性目录 + scroll-spy 锚点 + 每目已读进度，`methodStudyStore` 本地存储）。详见《申论方法论书融入方案.md》。
 
 > 配套两件：① `methodDigest.ts` 题型方法卡（从各讲小结提炼）注入 `/assist` 审题立意 prompt——AI 推导贴合本书方法（A4 边界内）；② 第三讲「仿写/改写」只作书中方法论阅读，不做站内互动练习（对齐 A1/A2）。读书记录进云同步/复习算法为后续项。

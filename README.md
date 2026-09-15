@@ -174,7 +174,6 @@ node scripts/rebuild-db.mjs --db /tmp/x.db    # 重建到别处（用于与现�
 | `data/articles/{id}.json`（517 篇，每篇一个文件）         | `articles`                            |
 | `data/guifan-terms.json`（3039 条，保留 id 空洞）         | `guifan_terms`                        |
 | `data/shenlun-book/`（《申论写作八讲》书稿+60 图示 webp） | `shenlun_book` / `shenlun_book_units` |
-| 派生（`migrate-fts.mjs`）                                 | `articles_fts`（trigram FTS5）        |
 
 - 后两份源是 2026-09-13 用 `scripts/migrate-db-to-source.mjs` 从库里反导出来的：它们的原始
   上游在**仓库外**（年编 docx 在 `/Users/nif/…`，规范词合集 md 同样），此前 DB 是唯一副本。
@@ -215,7 +214,10 @@ vp run test:e2e                    # 一键：自动起服务 + 跑冒烟 + 收�
 - **commit 前**：`vp staged` 对暂存文件跑 `vp check --fix`（规则见 `vite.config.ts` 的 `staged`）。
 - **Node 版本**由 `.nvmrc` + `package.json` 的 `engines` 固定（`node:sqlite` 需 ≥22.5）。
 - **lint 覆盖 jsx-a11y**：语义/标签关联/aria 等真实可达性问题纳入门禁；自定义 dialog/listbox 与模态 autofocus 两条纯风格规则关闭（见 `vite.config.ts` 注释）。
-- **API 端点有集成测试**：`api/*.test.ts` 直接调用 Vercel Function 的 `GET`，读真实 `articles.db`（含搜索走 FTS5 与本地 `api-server` 行为一致的断言）。
+- **API 端点有集成测试**：`api/*.test.ts` 直接调用 Vercel Function 的 `GET`，读真实 `articles.db`。
+- **Functions 打包瘦身（2026-09-16）**：库里的 FTS5 trigram 索引已移除（中文语料膨胀 10 倍+，占库文件大半；
+  517 篇语料 LIKE 全扫亚毫秒级，搜索语义不变），`includeFiles` 只打包 `data/articles.db.gz`（≈4.6MB，原 16MB+），
+  `api/data.ts` 冷启动解压到 `/tmp` 只读副本。
 - **安全响应头 / CSP**：`vercel.json` 注入 CSP、`X-Content-Type-Options`、`Referrer-Policy`、HSTS 等；`/assets`、`/fonts` 带一年不可变缓存。
 - **线上搜索走 FTS5**：`api/data.ts` 用 `articles_fts` trigram 索引（≥3 字符），短词回退 LIKE；本地 `scripts/api-server.mjs` 直调同一 handler，已无双实现需要同步。
 

@@ -2,8 +2,8 @@
  * GET /api/{articles|terms|exams|xingce} — 只读数据 API 合并入口（Vercel Function）
  *
  * 四个只读端点原先各占一个函数，每个都经 includeFiles 打包整份 data/articles.db
- * （16.7MB）——每个部署 4 × 17MB 的 Functions Storage 消耗，push 频繁时配额
- * （Hobby 10GB）肉眼可见地涨。合并为单函数后每部署只打包一份。
+ * ——每个部署 4 份库的 Functions Storage 消耗，push 频繁时配额（Hobby 10GB）
+ * 肉眼可见地涨。合并为单函数后每部署只打包一份（2026-09-16 移除 FTS 索引后库约 5MB）。
  *
  * 路由由 vercel.json 的 rewrites 指到本文件；request.url 保留原始路径，按
  * pathname 分发。URL 与响应形状与拆分版一致（api/api-server.test.ts 的 parity
@@ -16,21 +16,35 @@
  *   GET /api/xingce             → 行测试卷列表；?id= 详情
  *   GET /api/shenlun-book       → 《申论写作八讲》方法论书（meta + 渲染单元）
  *
- * 数据源：data/articles.db（node:sqlite 只读），经 vercel.json functions.includeFiles 随函数部署。
+ * 数据源：data/articles.db.gz（node:sqlite 只读）。includeFiles 只打包 gz（体积 1/3），
+ *       冷启动解压到 /tmp 只读副本；本地开发原库文件存在则直接用。
  * 注意：本文件自包含全部逻辑（不 import 兄弟模块）——Vercel 只打包入口文件
  *       （此前 api/db.ts 的教训）。
  * 写接口仅本地 scripts/api-server.mjs 提供（见 docs/规范词与试卷写路径决策.md），生产只读。
  */
 import { DatabaseSync } from 'node:sqlite'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { gunzipSync } from 'node:zlib'
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 let db: DatabaseSync | null = null
 function openDb(): DatabaseSync {
   if (db) return db
-  db = new DatabaseSync(path.join(PROJECT_ROOT, 'data', 'articles.db'), { readOnly: true })
+  // 线上打包的是 data/articles.db.gz（体积约 1/3），冷启动解到 /tmp 只读副本；
+  // 本地开发原库文件存在，直接用
+  let file = path.join(PROJECT_ROOT, 'data', 'articles.db')
+  const gz = file + '.gz'
+  if (!fs.existsSync(file) && fs.existsSync(gz)) {
+    const tmp = '/tmp/articles.db'
+    if (!fs.existsSync(tmp) || fs.statSync(tmp).mtimeMs < fs.statSync(gz).mtimeMs) {
+      fs.writeFileSync(tmp, gunzipSync(fs.readFileSync(gz)))
+    }
+    file = tmp
+  }
+  db = new DatabaseSync(file, { readOnly: true })
   return db
 }
 
@@ -78,29 +92,12 @@ function mapMetaRow(r: any): ArticleMeta {
 
 /**
  * 列表 meta 查询（不含正文，轻量）；kw 非空时全文搜索（标题/摘要/正文）。
- * ≥3 字符走 FTS5 trigram 索引（中文子串匹配，见 scripts/migrate-fts.mjs）；
- * 短词 trigram 无法命中，回退 LIKE/instr 全扫。
+ * 语料只有 517 篇 / 0.72MB，LIKE 全扫亚毫秒级——曾经的 FTS5 trigram 索引
+ * （中文文本膨胀 10 倍+，占了库文件的大头）已于 2026-09-16 移除，为 Function 打包瘦身。
  */
 function queryMetaList(kw?: string): ArticleMeta[] {
   const d = openDb()
   if (kw) {
-    if (kw.length >= 3) {
-      // trigram MATCH：kw 作为整体短语（转义内部双引号）= 精确子串匹配
-      const phrase = `"${kw.replace(/"/g, '""')}"`
-      try {
-        return d
-          .prepare(
-            `SELECT a.id, a.title, a.summary, a.source, a.topic, a.date, a.read_time, a.featured, a.pullquote, a.finish_note
-             FROM articles a JOIN articles_fts f ON a.rowid = f.rowid
-             WHERE articles_fts MATCH ?
-             ORDER BY a.date DESC, a.id`,
-          )
-          .all(phrase)
-          .map(mapMetaRow)
-      } catch {
-        /* 旧库没有 articles_fts（未跑 migrate-fts.mjs）：回退下面的 LIKE 全扫，功能不中断 */
-      }
-    }
     const like = `%${kw}%`
     // instr(content_json, kw)：正文检索（content_json 为 JSON 文本，中文原样存储）
     return d

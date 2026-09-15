@@ -12,6 +12,7 @@
  * 用法：node scripts/ensure-db.mjs [--db data/articles.db]
  */
 import { execFileSync } from 'node:child_process'
+import { gzipSync } from 'node:zlib'
 import fs from 'node:fs'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -25,7 +26,7 @@ const argOf = (flag, fallback) => {
 }
 const DB = argOf('--db', 'data/articles.db')
 
-/** 重建链应当产出的全部表（articles_fts 是 FTS5 虚表，代表索引建好了） */
+/** 重建链应当产出的全部表 */
 const REQUIRED_TABLES = [
   'articles',
   'guifan_terms',
@@ -36,7 +37,6 @@ const REQUIRED_TABLES = [
   'xg_questions',
   'shenlun_book',
   'shenlun_book_units',
-  'articles_fts',
 ]
 /** 这些表为空说明不是「重建链的产物」，而是某个 importer 单独跑出来的残件 */
 const NON_EMPTY_TABLES = ['articles', 'papers', 'xg_papers']
@@ -61,10 +61,21 @@ function dbIsComplete() {
   }
 }
 
-if (dbIsComplete()) process.exit(0)
+/* db 完整后保持 gzip 包新鲜（Vercel Function 只打包 .gz）：过期或缺失就重压 */
+function refreshGz() {
+  const gz = DB + '.gz'
+  if (fs.existsSync(gz) && fs.statSync(gz).mtimeMs >= fs.statSync(DB).mtimeMs) return
+  fs.writeFileSync(gz, gzipSync(fs.readFileSync(DB)))
+}
+
+if (dbIsComplete()) {
+  refreshGz()
+  process.exit(0)
+}
 
 console.log('data/articles.db 缺失或不完整（它是构建产物、未进 git），从 data/ 下的源重建…')
 execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'rebuild-db.mjs'), '--db', DB], {
   cwd: ROOT,
   stdio: 'inherit',
 })
+refreshGz()

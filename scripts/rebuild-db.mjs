@@ -8,10 +8,9 @@
  *   data/articles/*.json     articles                          （人民日报文章）
  *   data/guifan-terms.json   guifan_terms                      （规范词）
  *   data/shenlun-book/       shenlun_book / shenlun_book_units （申论写作八讲方法论书）
- *   articles_fts             派生索引，由 migrate-fts.mjs 全量重建
  *
  * 用法：node scripts/rebuild-db.mjs [--db data/articles.db]
- * 流程：删掉目标库 → import-shenlun → import-xingce → import-articles → import-guifanci → migrate-fts
+ * 流程：删掉目标库 → import-shenlun → import-xingce → import-articles → import-guifanci → import-shenlun-book
  *       （每一步都带 --db；任一步失败即中断，不做半成品）
  * 注意：import-xingce 会顺带重写 src/data/xingceImageDims.generated.ts（内容确定，正常无 diff）。
  *
@@ -49,7 +48,6 @@ const STEPS = [
   ['import-articles.mjs', '人民日报文章'],
   ['import-guifanci.mjs', '规范词'],
   ['import-shenlun-book.mjs', '申论写作八讲'],
-  ['migrate-fts.mjs', '全文索引'],
 ]
 
 for (const suffix of ['', '-wal', '-shm']) fs.rmSync(DB + suffix, { force: true })
@@ -68,6 +66,13 @@ for (const [script, label] of STEPS) {
   vacuum.close()
 }
 
+/* 输出 gzip 包供 Vercel Function 打包（includeFiles 只带 .gz，冷启动解到 /tmp）；
+   本地开发继续用原库文件，.gz 是构建产物不进 git */
+{
+  const { gzipSync } = await import('node:zlib')
+  fs.writeFileSync(DB + '.gz', gzipSync(fs.readFileSync(DB)))
+}
+
 const db = new DatabaseSync(DB, { readOnly: true })
 const counts = [
   'articles',
@@ -78,7 +83,6 @@ const counts = [
   'xg_papers',
   'xg_questions',
   'shenlun_book_units',
-  'articles_fts',
 ]
   .map((t) => `${t} ${db.prepare(`SELECT COUNT(*) AS n FROM "${t}"`).get().n}`)
   .join(' · ')

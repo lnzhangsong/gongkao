@@ -2,7 +2,7 @@
   "buildCommand": "pnpm build",
   "functions": {
     "api/data.ts": {
-      "includeFiles": "data/articles.db"
+      "includeFiles": "data/articles.db.gz"
     }
   },
   "headers": [

@@ -148,7 +148,7 @@ describe('库 → 源 的完整性与修复', () => {
           'materials',
           'questions',
           'xg_papers',
-          'articles_fts',
+          'shenlun_book',
         ]),
       )
       expect((fixed.prepare('SELECT COUNT(*) AS n FROM articles').get() as { n: number }).n).toBeGreaterThan(0)

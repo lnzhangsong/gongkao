@@ -5,7 +5,7 @@
  * 源格式：每篇一个 JSON，字段与 scripts/migrate-db-to-source.mjs 的 articleToSource() 对应：
  *   { id, title, summary, source, topic, column, date, readTime, content[], pullquote?, finishNote?, featured? }
  * 幂等：全量重建（DELETE 后按 id 顺序重灌）。id 顺序与原库 rowid 顺序一致；
- *       articles_fts 触发器会跟着写入，最终由 scripts/migrate-fts.mjs 全量重建索引。
+ *       （曾由 articles_fts 触发器跟随写入，FTS 已于 2026-09-16 移除。）
  *
  * 用法：node scripts/import-articles.mjs [--src data/articles] [--db data/articles.db] [--dry]
  */
